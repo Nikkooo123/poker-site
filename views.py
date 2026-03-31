@@ -1,52 +1,57 @@
 def build_tags_html(tags: str) -> str:
     tags_html = ""
 
-    if tags.strip():
-        for tag in tags.split(","):
-            tag = tag.strip()
-            lower_tag = tag.lower()
+    if not tags:
+        return tags_html
 
-            color = "#ff8c00"
-            display_text = tag
+    for tag in tags.split(","):
+        tag = tag.strip()
+        if not tag:
+            continue
 
-            if "bomb" in lower_tag:
-                color = "#e53935"
-                display_text = "BOMB"
+        lower_tag = tag.lower()
 
-            elif "clock" in lower_tag or "time" in lower_tag:
-                color = "#43a047"
-                display_text = "⏱"
+        color = "#ff8c00"
+        display_text = tag
 
-            elif "vpip" in lower_tag:
-                color = "#fb8c00"
-                if "30" in lower_tag:
-                    display_text = "VPIP 30%"
-                elif "40" in lower_tag:
-                    display_text = "VPIP 40%"
-                elif "50" in lower_tag:
-                    display_text = "VPIP 50%"
-                elif "60" in lower_tag:
-                    display_text = "VPIP 60%"
-                else:
-                    display_text = "VPIP"
+        if "bomb" in lower_tag:
+            color = "#e53935"
+            display_text = "BOMB"
 
-            elif "red" in lower_tag:
-                color = "#b71c1c"
-                display_text = "RED"
+        elif "clock" in lower_tag or "time" in lower_tag:
+            color = "#43a047"
+            display_text = "⏱"
 
-            if display_text:
-                tags_html += f"""
-                <span style="
-                    display:inline-block;
-                    background:{color};
-                    color:white;
-                    padding:4px 8px;
-                    border-radius:8px;
-                    margin-right:6px;
-                    font-size:12px;
-                    font-weight:bold;
-                ">{display_text}</span>
-                """
+        elif "vpip" in lower_tag:
+            color = "#fb8c00"
+            if "30" in lower_tag:
+                display_text = "VPIP 30%"
+            elif "40" in lower_tag:
+                display_text = "VPIP 40%"
+            elif "50" in lower_tag:
+                display_text = "VPIP 50%"
+            elif "60" in lower_tag:
+                display_text = "VPIP 60%"
+            else:
+                display_text = "VPIP"
+
+        elif "red" in lower_tag:
+            color = "#b71c1c"
+            display_text = "RED"
+
+        tags_html += f"""
+        <span style="
+            display:inline-block;
+            background:{color};
+            color:white;
+            padding:4px 8px;
+            border-radius:8px;
+            margin-right:6px;
+            margin-top:6px;
+            font-size:12px;
+            font-weight:bold;
+        ">{display_text}</span>
+        """
 
     return tags_html
 
@@ -54,8 +59,35 @@ def build_tags_html(tags: str) -> str:
 def build_public_cards(tables) -> str:
     html_tables = ""
 
+    if not isinstance(tables, list):
+        return """
+        <div style="
+            background:#2a2a2a;
+            padding:14px;
+            margin-top:12px;
+            border-radius:10px;
+            color:#bbb;
+        ">
+            Ошибка: tables не является списком
+        </div>
+        """
+
     for t in tables:
-        tags_html = build_tags_html(t["tags"])
+        if not isinstance(t, dict):
+            continue
+
+        club = str(t.get("club", "")).strip()
+        game = str(t.get("game", "")).strip()
+        blinds = str(t.get("blinds", "")).strip()
+        buyin = str(t.get("buyin", "")).strip()
+        players = str(t.get("players", "")).strip()
+        tags = str(t.get("tags", "")).strip()
+
+        # пропускаем полностью пустые записи
+        if not any([club, game, blinds, buyin, players, tags]):
+            continue
+
+        tags_html = build_tags_html(tags)
 
         html_tables += f"""
         <div style="
@@ -64,11 +96,11 @@ def build_public_cards(tables) -> str:
             margin-top:12px;
             border-radius:10px;
         ">
-            <div style="font-size:22px;font-weight:bold;">{t['club']}</div>
-            <div style="font-size:18px;margin-top:6px;">{t['game']}</div>
-            <div>Blinds: {t['blinds']}</div>
-            <div>Buy-in: {t['buyin']}</div>
-            <div>Players: {t['players']}</div>
+            <div style="font-size:22px;font-weight:bold;">{club or "No club name"}</div>
+            <div style="font-size:18px;margin-top:6px;">{game or "No game"}</div>
+            <div>Blinds: {blinds or "-"}</div>
+            <div>Buy-in: {buyin or "-"}</div>
+            <div>Players: {players or "-"}</div>
             <div style="margin-top:10px;">{tags_html}</div>
         </div>
         """
@@ -113,43 +145,70 @@ def render_public_page(tables) -> str:
 def render_admin_page(tables) -> str:
     html_tables = ""
 
-    for t in tables:
-        tags_html = build_tags_html(t["tags"])
-
-        html_tables += f"""
+    if not isinstance(tables, list):
+        html_tables = """
         <div style="
             background:#2a2a2a;
             padding:14px;
             margin-top:12px;
             border-radius:10px;
+            color:#bbb;
         ">
-            <div style="font-size:22px;font-weight:bold;">{t['club']}</div>
-            <div style="font-size:18px;margin-top:6px;">{t['game']}</div>
-            <div>Blinds: {t['blinds']}</div>
-            <div>Buy-in: {t['buyin']}</div>
-            <div>Players: {t['players']}</div>
-            <div style="margin-top:10px;">{tags_html}</div>
-
-            <div style="margin-top:14px;">
-                <form method="post" action="/update_players" style="display:inline-block; margin-right:10px;">
-                    <input type="hidden" name="table_id" value="{t['id']}">
-                    <input name="players" placeholder="New players (4/6)" style="padding:6px; width:140px;">
-                    <button type="submit" style="padding:6px 10px;">Save players</button>
-                </form>
-
-                <form method="post" action="/delete" style="display:inline-block;">
-                    <input type="hidden" name="table_id" value="{t['id']}">
-                    <button type="submit" style="
-                        padding:6px 10px;
-                        background:#b71c1c;
-                        color:white;
-                        border:none;
-                        border-radius:6px;
-                    ">Delete</button>
-                </form>
-            </div>
+            Ошибка: tables не является списком
         </div>
         """
+    else:
+        for t in tables:
+            if not isinstance(t, dict):
+                continue
+
+            table_id = t.get("id", "")
+            club = str(t.get("club", "")).strip()
+            game = str(t.get("game", "")).strip()
+            blinds = str(t.get("blinds", "")).strip()
+            buyin = str(t.get("buyin", "")).strip()
+            players = str(t.get("players", "")).strip()
+            tags = str(t.get("tags", "")).strip()
+
+            if not any([club, game, blinds, buyin, players, tags]):
+                continue
+
+            tags_html = build_tags_html(tags)
+
+            html_tables += f"""
+            <div style="
+                background:#2a2a2a;
+                padding:14px;
+                margin-top:12px;
+                border-radius:10px;
+            ">
+                <div style="font-size:22px;font-weight:bold;">{club or "No club name"}</div>
+                <div style="font-size:18px;margin-top:6px;">{game or "No game"}</div>
+                <div>Blinds: {blinds or "-"}</div>
+                <div>Buy-in: {buyin or "-"}</div>
+                <div>Players: {players or "-"}</div>
+                <div style="margin-top:10px;">{tags_html}</div>
+
+                <div style="margin-top:14px;">
+                    <form method="post" action="/update_players" style="display:inline-block; margin-right:10px;">
+                        <input type="hidden" name="table_id" value="{table_id}">
+                        <input name="players" placeholder="New players (4/6)" style="padding:6px; width:140px;">
+                        <button type="submit" style="padding:6px 10px;">Save players</button>
+                    </form>
+
+                    <form method="post" action="/delete" style="display:inline-block;">
+                        <input type="hidden" name="table_id" value="{table_id}">
+                        <button type="submit" style="
+                            padding:6px 10px;
+                            background:#b71c1c;
+                            color:white;
+                            border:none;
+                            border-radius:6px;
+                        ">Delete</button>
+                    </form>
+                </div>
+            </div>
+            """
 
     if not html_tables:
         html_tables = """
