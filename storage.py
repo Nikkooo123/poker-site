@@ -9,7 +9,13 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is not set")
 
-pool = ConnectionPool(conninfo=DATABASE_URL, min_size=1, max_size=5, open=False)
+
+pool = ConnectionPool(
+    conninfo=DATABASE_URL,
+    min_size=1,
+    max_size=5,
+    open=False
+)
 
 
 def init_db():
@@ -33,6 +39,9 @@ def init_db():
 
 
 def load_tables() -> List[Dict[str, Any]]:
+    if pool.closed:
+        pool.open()
+
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -53,10 +62,14 @@ def load_tables() -> List[Dict[str, Any]]:
             "players": row[5],
             "tags": row[6],
         })
+
     return tables
 
 
 def add_table(club: str, game: str, blinds: str, buyin: str, players: str, tags: str):
+    if pool.closed:
+        pool.open()
+
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -67,6 +80,9 @@ def add_table(club: str, game: str, blinds: str, buyin: str, players: str, tags:
 
 
 def update_players(table_id: int, players: str):
+    if pool.closed:
+        pool.open()
+
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -78,6 +94,9 @@ def update_players(table_id: int, players: str):
 
 
 def delete_table(table_id: int):
+    if pool.closed:
+        pool.open()
+
     with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
