@@ -1,20 +1,22 @@
 import os
 from typing import List, Dict, Any
 
-import psycopg
+from psycopg_pool import ConnectionPool
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
 
-def get_conn():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL is not set")
-    return psycopg.connect(DATABASE_URL)
+pool = ConnectionPool(conninfo=DATABASE_URL, min_size=1, max_size=5, open=False)
 
 
 def init_db():
-    with get_conn() as conn:
+    if pool.closed:
+        pool.open()
+
+    with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS poker_tables (
@@ -31,8 +33,7 @@ def init_db():
 
 
 def load_tables() -> List[Dict[str, Any]]:
-
-    with get_conn() as conn:
+    with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT id, club, game, blinds, buyin, players, tags
@@ -56,9 +57,7 @@ def load_tables() -> List[Dict[str, Any]]:
 
 
 def add_table(club: str, game: str, blinds: str, buyin: str, players: str, tags: str):
-    init_db()
-
-    with get_conn() as conn:
+    with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO poker_tables (club, game, blinds, buyin, players, tags)
@@ -68,9 +67,7 @@ def add_table(club: str, game: str, blinds: str, buyin: str, players: str, tags:
 
 
 def update_players(table_id: int, players: str):
-    init_db()
-
-    with get_conn() as conn:
+    with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE poker_tables
@@ -81,9 +78,7 @@ def update_players(table_id: int, players: str):
 
 
 def delete_table(table_id: int):
-    init_db()
-
-    with get_conn() as conn:
+    with pool.connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
                 DELETE FROM poker_tables
