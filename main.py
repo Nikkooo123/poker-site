@@ -1,20 +1,13 @@
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from storage import load_tables, save_tables
+from storage import load_tables, add_table, update_players, delete_table
 from views import render_public_page, render_admin_page
 
 app = FastAPI()
 
-tables = load_tables()
-
-if tables:
-    next_id = max(table["id"] for table in tables) + 1
-else:
-    next_id = 1
-
-ADMIN_USERNAME = "admin1234"
-ADMIN_PASSWORD = "12341234"
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "1234"
 
 
 def is_logged_in(request: Request) -> bool:
@@ -29,6 +22,7 @@ def require_login(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 def public_site():
+    tables = load_tables()
     return render_public_page(tables)
 
 
@@ -87,6 +81,7 @@ def admin_page(request: Request):
     if check:
         return check
 
+    tables = load_tables()
     admin_html = render_admin_page(tables)
 
     logout_link = """
@@ -109,7 +104,7 @@ def admin_page(request: Request):
 
 
 @app.post("/add")
-def add_table(
+def add_table_route(
     request: Request,
     club: str = Form(""),
     game: str = Form(""),
@@ -122,25 +117,12 @@ def add_table(
     if check:
         return check
 
-    global next_id
-
-    tables.append({
-        "id": next_id,
-        "club": club,
-        "game": game,
-        "blinds": blinds,
-        "buyin": buyin,
-        "players": players,
-        "tags": tags
-    })
-
-    next_id += 1
-    save_tables(tables)
+    add_table(club, game, blinds, buyin, players, tags)
     return RedirectResponse(url="/admin", status_code=303)
 
 
 @app.post("/update_players")
-def update_players(
+def update_players_route(
     request: Request,
     table_id: int = Form(...),
     players: str = Form("")
@@ -149,17 +131,12 @@ def update_players(
     if check:
         return check
 
-    for table in tables:
-        if table["id"] == table_id:
-            table["players"] = players
-            break
-
-    save_tables(tables)
+    update_players(table_id, players)
     return RedirectResponse(url="/admin", status_code=303)
 
 
 @app.post("/delete")
-def delete_table(
+def delete_table_route(
     request: Request,
     table_id: int = Form(...)
 ):
@@ -167,8 +144,5 @@ def delete_table(
     if check:
         return check
 
-    global tables
-    tables = [table for table in tables if table["id"] != table_id]
-    save_tables(tables)
-
+    delete_table(table_id)
     return RedirectResponse(url="/admin", status_code=303)
