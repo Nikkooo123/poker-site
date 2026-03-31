@@ -1,0 +1,11 @@
+[
+    {
+        "id": 1,
+        "club": "Playaa",
+        "game": "PLO5",
+        "blinds": "10/20",
+        "buyin": "600",
+        "players": "3/6",
+        "tags": "VPIP 40%, BOMB, CLOCK"
+    }
+]
