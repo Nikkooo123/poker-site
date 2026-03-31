@@ -1,13 +1,18 @@
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from storage import load_tables, add_table, update_players, delete_table
+from storage import load_tables, add_table, update_players, delete_table, init_db
 from views import render_public_page, render_admin_page
 
 app = FastAPI()
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "1234"
+
+
+@app.on_event("startup")
+def startup():
+    init_db()
 
 
 def is_logged_in(request: Request) -> bool:
