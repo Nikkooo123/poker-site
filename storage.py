@@ -31,7 +31,6 @@ def init_db():
 
 
 def load_tables() -> List[Dict[str, Any]]:
-    init_db()
 
     with get_conn() as conn:
         with conn.cursor() as cur:
