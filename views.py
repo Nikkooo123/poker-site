@@ -7,15 +7,17 @@ from html import escape
 
 def game_label(game: str) -> str:
     game = (game or "").strip().upper()
-    return "PLO4" if game == "PLO" else game
+    if game == "PLO":
+        return "PLO4"
+    return game
 
 
 def game_color(game: str) -> str:
     return {
-        "NLH": "#32d74b",   # green
-        "PLO4": "#1f5eff",  # dark blue
-        "PLO5": "#36cfff",  # light blue
-        "PLO6": "#8f63ff",  # purple
+        "NLH": "#2f7d32",   # darker green
+        "PLO4": "#1f4fa8",  # darker blue
+        "PLO5": "#1aa7b8",  # darker cyan
+        "PLO6": "#6f42c1",  # darker purple
     }.get(game_label(game), "#666666")
 
 
@@ -30,10 +32,14 @@ def to_number(value: str) -> float:
 
 def big_blind_value(blinds: str) -> float:
     s = (blinds or "").strip()
+
+    # "2/4 (1.20)" -> use only "2/4"
     if "(" in s:
         s = s.split("(", 1)[0].strip()
+
     s = s.replace("-", "/").replace("\\", "/")
     parts = [p.strip() for p in s.split("/") if p.strip()]
+
     if len(parts) >= 2:
         return to_number(parts[1])
     if len(parts) == 1:
@@ -44,13 +50,6 @@ def big_blind_value(blinds: str) -> float:
 def players_value(players: str) -> int:
     try:
         return int((players or "0").split("/")[0])
-    except Exception:
-        return 0
-
-
-def seats_value(players: str) -> int:
-    try:
-        return int((players or "0/0").split("/")[1])
     except Exception:
         return 0
 
@@ -77,7 +76,7 @@ def render_tags(tags: str) -> str:
         elif "clock" in low or "time" in low:
             result.append(small_badge("⏰", "#66d36e"))
         else:
-            result.append(small_badge(tag, "#777"))
+            result.append(small_badge(tag, "#777777"))
     return "".join(result)
 
 
@@ -199,8 +198,8 @@ def render_public_card(table: dict) -> str:
                 width:34px;
                 background:{stripe_color};
                 color:#fff;
-                font:600 15px Arial;
-                letter-spacing:.2px;
+                font:600 13px Arial;
+                letter-spacing:.1px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
@@ -242,18 +241,13 @@ def render_public_card(table: dict) -> str:
                     flex-direction:column;
                     justify-content:center;">
                     <div style="
-                        font:500 16px Arial;
+                        font:500 15px Arial;
                         color:#fff;
                         white-space:nowrap;
                         overflow:hidden;
                         text-overflow:ellipsis;
                         line-height:1.1;
-                        margin:0 0 6px 0;
-                        padding:1px 6px;
-                        border:1px solid rgba(255,255,255,0.28);
-                        border-radius:6px;
-                        width:max-content;
-                        max-width:90%;">
+                        margin:0 0 7px 0;">
                         {club}
                     </div>
 
@@ -329,6 +323,7 @@ def render_public_card(table: dict) -> str:
         </div>
     </div>
     """
+
 
 # =========================
 # PUBLIC PAGE SCRIPT
@@ -605,13 +600,14 @@ def render_public_page(tables):
 
                 <div style="font-size:58px;line-height:1;margin-left:8px;">🔥</div>
 
-                <div style="
+                <a href="/signin" style="
                     color:#f6f0ea;
                     font-size:16px;
                     padding-top:6px;
-                    margin-right:8px;">
+                    margin-right:8px;
+                    text-decoration:none;">
                     Sign In
-                </div>
+                </a>
             </div>
 
             <div style="
@@ -647,16 +643,16 @@ def render_public_page(tables):
                     </div>
 
                     <div style="
-    width:934px;
-    background:#4a4d53;
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:18px;
-    padding:10px 14px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:16px;
-    box-sizing:border-box;">
+                        width:934px;
+                        background:#4a4d53;
+                        border:1px solid rgba(255,255,255,.08);
+                        border-radius:18px;
+                        padding:10px 14px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:16px;
+                        box-sizing:border-box;">
 
                         <div style="
                             display:flex;
