@@ -12,36 +12,30 @@ def game_label(game: str) -> str:
 
 def game_color(game: str) -> str:
     return {
-        "NLH": "#35c84a",
-        "PLO4": "#45c7ea",
-        "PLO5": "#37b9df",
-        "PLO6": "#2e9fc6",
+        "NLH": "#32d74b",   # green
+        "PLO4": "#1f5eff",  # dark blue
+        "PLO5": "#36cfff",  # light blue
+        "PLO6": "#8f63ff",  # purple
     }.get(game_label(game), "#666666")
 
 
 def to_number(value: str) -> float:
     value = (value or "").replace(",", ".")
-    value = "".join(ch for ch in value if ch.isdigit() or ch == ".")
+    cleaned = "".join(ch for ch in value if ch.isdigit() or ch == ".")
     try:
-        return float(value)
+        return float(cleaned)
     except Exception:
         return 0.0
 
 
 def big_blind_value(blinds: str) -> float:
     s = (blinds or "").strip()
-
-    # если есть скобки, например "2/4 (1.20)", берём только часть до скобок
     if "(" in s:
         s = s.split("(", 1)[0].strip()
-
-    # нормализуем возможные тире
     s = s.replace("-", "/").replace("\\", "/")
-
     parts = [p.strip() for p in s.split("/") if p.strip()]
-
     if len(parts) >= 2:
-        return to_number(parts[1])   # большой блайнд
+        return to_number(parts[1])
     if len(parts) == 1:
         return to_number(parts[0])
     return 0.0
@@ -54,11 +48,21 @@ def players_value(players: str) -> int:
         return 0
 
 
-def small_badge(text: str, bg: str) -> str:
+def seats_value(players: str) -> int:
+    try:
+        return int((players or "0/0").split("/")[1])
+    except Exception:
+        return 0
+
+
+def small_badge(text: str, bg: str, fg: str = "#fff") -> str:
     return (
-        f'<span style="display:inline-block;background:{bg};color:#fff;'
-        f'font:700 8px Arial;padding:2px 5px;border-radius:7px;'
-        f'margin-left:3px;white-space:nowrap;">{escape(text)}</span>'
+        f'<span style="display:inline-block;'
+        f'background:{bg};color:{fg};'
+        f'font:700 8px Arial;line-height:1;'
+        f'padding:3px 6px;border-radius:7px;'
+        f'margin-left:3px;white-space:nowrap;">'
+        f'{escape(text)}</span>'
     )
 
 
@@ -67,11 +71,11 @@ def render_tags(tags: str) -> str:
     for tag in [x.strip() for x in (tags or "").split(",") if x.strip()]:
         low = tag.lower()
         if "vpip" in low:
-            result.append(small_badge(tag.upper(), "#d49a17"))
+            result.append(small_badge(tag.upper(), "#f4b62a", "#1b1b1b"))
         elif "bomb" in low:
-            result.append(small_badge("BOMB", "#d85d4a"))
+            result.append(small_badge("BOMB", "#ff6b4a"))
         elif "clock" in low or "time" in low:
-            result.append(small_badge("⏰", "#6abb5d"))
+            result.append(small_badge("⏰", "#66d36e"))
         else:
             result.append(small_badge(tag, "#777"))
     return "".join(result)
@@ -91,7 +95,7 @@ def input_style() -> str:
 def game_button(name: str) -> str:
     return f"""
     <button class="game-filter" data-game="{name}" style="
-        background:#2a2d33;
+        background:#343840;
         color:#fff;
         border:1px solid rgba(255,255,255,.08);
         border-radius:16px;
@@ -105,12 +109,14 @@ def game_button(name: str) -> str:
 
 def blinds_select(select_id: str, first_label: str) -> str:
     options = ["0.5", "1", "2", "4", "6", "8", "10", "15", "20", "25", "30", "50", "100", "200"]
+
     opts = [f'<option value="">{first_label}</option>'] + [
         f'<option value="{v}">{v}</option>' for v in options
     ]
+
     return f"""
     <select id="{select_id}" style="
-        width:86px;
+        width:90px;
         padding:8px 10px;
         border-radius:10px;
         border:none;
@@ -118,7 +124,7 @@ def blinds_select(select_id: str, first_label: str) -> str:
         color:#111;
         font-size:13px;
         box-sizing:border-box;">
-        {''.join(opts)}
+        {"".join(opts)}
     </select>
     """
 
@@ -134,8 +140,10 @@ def render_public_card(table: dict) -> str:
     game = game_label(str(table.get("game", "")))
     blinds = str(table.get("blinds", ""))
     buyin = str(table.get("buyin", ""))
-    players = str(table.get("players", ""))
+    players = str(table.get("players", "-"))
     tags = render_tags(str(table.get("tags", "")))
+
+    stripe_color = game_color(game)
 
     return f"""
     <div class="table-row"
@@ -179,73 +187,78 @@ def render_public_card(table: dict) -> str:
 
         <div style="
             width:866px;
-            background:#43464c;
-            border-radius:12px;
+            background:#4a4d53;
+            border-radius:14px;
             overflow:hidden;
-            height:58px;
+            height:62px;
             box-shadow:0 2px 6px rgba(0,0,0,.18);
             display:flex;
             box-sizing:border-box;">
 
             <div style="
-                width:30px;
-                background:{game_color(game)};
+                width:34px;
+                background:{stripe_color};
                 color:#fff;
-                font:800 12px Arial;
-                letter-spacing:.3px;
+                font:600 15px Arial;
+                letter-spacing:.2px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
                 writing-mode:vertical-rl;
                 transform:rotate(180deg);
-                flex:0 0 30px;">
+                flex:0 0 34px;">
                 {escape(game)}
             </div>
 
             <div style="
-                padding:5px 8px;
+                padding:6px 10px;
                 display:flex;
                 align-items:center;
-                gap:8px;
+                gap:10px;
                 width:100%;
                 box-sizing:border-box;">
 
                 <div style="
-                    width:40px;
-                    height:40px;
+                    width:42px;
+                    height:42px;
                     border-radius:50%;
-                    border:4px solid #5ad3ef;
+                    border:4px solid {stripe_color};
                     box-sizing:border-box;
                     display:flex;
                     align-items:center;
                     justify-content:center;
-                    font:500 15px Arial;
+                    font:600 15px Arial;
                     color:#fff;
-                    background:#555;
-                    flex:0 0 40px;">
-                    {escape(players or "-")}
+                    background:#5a5d63;
+                    flex:0 0 42px;">
+                    {escape(players)}
                 </div>
 
                 <div style="
                     flex:1;
                     min-width:0;
-                    padding-left:32px;
+                    padding-left:30px;
                     display:flex;
                     flex-direction:column;
                     justify-content:center;">
                     <div style="
-                        font:400 13px Arial;
+                        font:500 16px Arial;
                         color:#fff;
                         white-space:nowrap;
                         overflow:hidden;
                         text-overflow:ellipsis;
                         line-height:1.1;
-                        margin:0 0 3px 0;">
+                        margin:0 0 6px 0;
+                        padding:1px 6px;
+                        border:1px solid rgba(255,255,255,0.28);
+                        border-radius:6px;
+                        width:max-content;
+                        max-width:90%;">
                         {club}
                     </div>
 
                     <div style="
-                        font:700 12px Arial;
+                        font:700 13px Arial;
                         color:#fff;
                         line-height:1.1;
                         margin:0;">
@@ -254,8 +267,8 @@ def render_public_card(table: dict) -> str:
                 </div>
 
                 <div style="
-                    width:158px;
-                    min-width:158px;
+                    width:170px;
+                    min-width:170px;
                     text-align:right;
                     display:flex;
                     flex-direction:column;
@@ -274,7 +287,7 @@ def render_public_card(table: dict) -> str:
                         font:400 15px Arial;
                         color:#fff;
                         line-height:1;
-                        margin-bottom:4px;
+                        margin-bottom:5px;
                         white-space:nowrap;">
                         {escape(buyin)}
                     </div>
@@ -295,16 +308,16 @@ def render_public_card(table: dict) -> str:
 
         <div style="
             width:96px;
-            height:58px;
-            background:#43464c;
-            border-radius:12px;
+            height:62px;
+            background:#4a4d53;
+            border-radius:14px;
             display:flex;
             align-items:center;
             justify-content:center;
             box-shadow:0 2px 6px rgba(0,0,0,.18);">
             <button style="
                 min-width:62px;
-                height:30px;
+                height:32px;
                 border:none;
                 border-radius:16px;
                 background:#f3f3f3;
@@ -317,7 +330,6 @@ def render_public_card(table: dict) -> str:
     </div>
     """
 
-
 # =========================
 # PUBLIC PAGE SCRIPT
 # =========================
@@ -327,14 +339,14 @@ def render_public_script() -> str:
     <script>
         const K = {
           fav: "favorite_tables_ids_v1",
-          games: "filter_games_v7",
-          min: "filter_blinds_min_v7",
-          max: "filter_blinds_max_v7",
-          favOnly: "filter_favorite_only_v7",
-          sortField: "sort_field_v7",
-          sortPlayers: "sort_players_direction_v7",
-          sortBlinds: "sort_blinds_direction_v7",
-          search: "filter_search_v7"
+          games: "filter_games_v8",
+          min: "filter_blinds_min_v8",
+          max: "filter_blinds_max_v8",
+          favOnly: "filter_favorite_only_v8",
+          sortField: "sort_field_v8",
+          sortPlayers: "sort_players_direction_v8",
+          sortBlinds: "sort_blinds_direction_v8",
+          search: "filter_search_v8"
         };
 
         const FIRST_LOAD_COUNT = 15;
@@ -367,18 +379,20 @@ def render_public_script() -> str:
             $$(".favorite-btn").forEach(btn => {
                 const on = ids.includes(Number(btn.dataset.tableId));
                 btn.textContent = on ? "★" : "☆";
-                btn.style.color = on ? "#d0ac45" : "#bdbdbd";
+                btn.style.color = on ? "#f4b62a" : "#bdbdbd";
             });
 
             const topBtn = $("#favorite-only-btn");
-            topBtn.textContent = favoriteOnly ? "★" : "☆";
-            topBtn.style.color = favoriteOnly ? "#d0ac45" : "#bdbdbd";
+            if (topBtn) {
+                topBtn.textContent = favoriteOnly ? "★" : "☆";
+                topBtn.style.color = favoriteOnly ? "#f4b62a" : "#bdbdbd";
+            }
         }
 
         function paintGames() {
             $$(".game-filter").forEach(btn => {
                 const on = selectedGames.includes(btn.dataset.game);
-                btn.style.background = on ? "#50545b" : "#2a2d33";
+                btn.style.background = on ? "#555a63" : "#343840";
                 btn.style.border = on ? "none" : "1px solid rgba(255,255,255,.08)";
             });
         }
@@ -426,15 +440,8 @@ def render_public_script() -> str:
 
         function updateLoadMoreButton(totalShownRows) {
             const wrap = $("#load-more-wrap");
-            const btn = $("#load-more-btn");
-
-            if (!wrap || !btn) return;
-
-            if (totalShownRows > visibleCount) {
-                wrap.style.display = "flex";
-            } else {
-                wrap.style.display = "none";
-            }
+            if (!wrap) return;
+            wrap.style.display = totalShownRows > visibleCount ? "flex" : "none";
         }
 
         function applyAll(mode = "reset") {
@@ -449,7 +456,6 @@ def render_public_script() -> str:
 
             if (currentSort) {
                 const dir = currentSort === "players" ? sortPlayersDirection : sortBlindsDirection;
-
                 shown.sort((a, b) => {
                     const av = parseFloat(a.dataset[currentSort] || "0");
                     const bv = parseFloat(b.dataset[currentSort] || "0");
@@ -484,12 +490,15 @@ def render_public_script() -> str:
             };
         });
 
-        $("#favorite-only-btn").onclick = () => {
-            favoriteOnly = !favoriteOnly;
-            localStorage.setItem(K.favOnly, favoriteOnly ? "true" : "false");
-            paintFavs();
-            applyAll();
-        };
+        const favOnlyBtn = $("#favorite-only-btn");
+        if (favOnlyBtn) {
+            favOnlyBtn.onclick = () => {
+                favoriteOnly = !favoriteOnly;
+                localStorage.setItem(K.favOnly, favoriteOnly ? "true" : "false");
+                paintFavs();
+                applyAll();
+            };
+        }
 
         $$(".game-filter").forEach(btn => {
             btn.onclick = () => {
@@ -536,10 +545,13 @@ def render_public_script() -> str:
             applyAll();
         };
 
-        $("#load-more-btn").onclick = () => {
-            visibleCount += LOAD_MORE_STEP;
-            applyAll("loadmore");
-        };
+        const loadMoreBtn = $("#load-more-btn");
+        if (loadMoreBtn) {
+            loadMoreBtn.onclick = () => {
+                visibleCount += LOAD_MORE_STEP;
+                applyAll("loadmore");
+            };
+        }
 
         $("#club-search").value = localStorage.getItem(K.search) || "";
         $("#blinds-min").value = localStorage.getItem(K.min) || "";
@@ -551,6 +563,7 @@ def render_public_script() -> str:
         applyAll();
     </script>
     """
+
 
 # =========================
 # PUBLIC PAGE
@@ -577,7 +590,7 @@ def render_public_page(tables):
     </head>
     <body style="
         margin:0;
-        background:linear-gradient(180deg,#17181c,#0e0f12);
+        background:linear-gradient(180deg,#1c2328,#101316);
         color:#fff;
         font-family:Arial,sans-serif;
         padding:24px;">
@@ -593,7 +606,7 @@ def render_public_page(tables):
                 <div style="font-size:58px;line-height:1;margin-left:8px;">🔥</div>
 
                 <div style="
-                    color:#d8d8d8;
+                    color:#f6f0ea;
                     font-size:16px;
                     padding-top:6px;
                     margin-right:8px;">
@@ -634,16 +647,16 @@ def render_public_page(tables):
                     </div>
 
                     <div style="
-                        width:934px;
-                        background:#43464c;
-                        border:1px solid rgba(255,255,255,.06);
-                        border-radius:18px;
-                        padding:10px 14px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:space-between;
-                        gap:16px;
-                        box-sizing:border-box;">
+    width:934px;
+    background:#4a4d53;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;
+    padding:10px 14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    box-sizing:border-box;">
 
                         <div style="
                             display:flex;
@@ -684,7 +697,7 @@ def render_public_page(tables):
                                    border:none;
                                    border-radius:10px;
                                    box-sizing:border-box;
-                                   background:#f3f3f3;
+                                   background:#f3f3f0;
                                    color:#111;
                                    font-size:14px;">
                     </div>
@@ -696,7 +709,7 @@ def render_public_page(tables):
                     align-items:end;
                     gap:8px;
                     margin:0 0 6px 0;
-                    color:#d0d0d0;
+                    color:#f4efe9;
                     font-size:12px;
                     font-weight:700;
                     width:970px;">
@@ -720,7 +733,7 @@ def render_public_page(tables):
                         height:42px;
                         border:none;
                         border-radius:14px;
-                        background:#43464c;
+                        background:#4a4d53;
                         color:#fff;
                         font:700 14px Arial;
                         cursor:pointer;
@@ -735,6 +748,7 @@ def render_public_page(tables):
     </body>
     </html>
     """
+
 
 # =========================
 # ADMIN PAGE
