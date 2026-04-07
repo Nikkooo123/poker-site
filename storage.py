@@ -1,106 +1,121 @@
+from brand import OFFICIAL_AFFILIATE_NAME, normalize_affiliate_name
+import json
 import os
-from typing import List, Dict, Any
 
-from psycopg_pool import ConnectionPool
-
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-
-pool = ConnectionPool(
-    conninfo=DATABASE_URL,
-    min_size=2,
-    max_size=10,
-    open=False
-)
+FILE = "tables.json"
 
 
 def init_db():
-    if pool.closed:
-        pool.open()
-
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS poker_tables (
-                    id SERIAL PRIMARY KEY,
-                    club TEXT NOT NULL DEFAULT '',
-                    game TEXT NOT NULL DEFAULT '',
-                    blinds TEXT NOT NULL DEFAULT '',
-                    buyin TEXT NOT NULL DEFAULT '',
-                    players TEXT NOT NULL DEFAULT '',
-                    tags TEXT NOT NULL DEFAULT ''
-                )
-            """)
-        conn.commit()
+    if not os.path.exists(FILE):
+        with open(FILE, "w", encoding="utf-8") as f:
+            json.dump([], f, ensure_ascii=False, indent=2)
 
 
-def load_tables() -> List[Dict[str, Any]]:
-    if pool.closed:
-        pool.open()
-
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, club, game, blinds, buyin, players, tags
-                FROM poker_tables
-                ORDER BY id ASC
-            """)
-            rows = cur.fetchall()
-
-    tables = []
-    for row in rows:
-        tables.append({
-            "id": row[0],
-            "club": row[1],
-            "game": row[2],
-            "blinds": row[3],
-            "buyin": row[4],
-            "players": row[5],
-            "tags": row[6],
-        })
-
-    return tables
+def _extract_seats(players: str) -> str:
+    s = str(players or "").strip()
+    if "/" in s:
+        parts = s.split("/")
+        if len(parts) == 2:
+            return parts[1].strip()
+    return "6"
 
 
-def add_table(club: str, game: str, blinds: str, buyin: str, players: str, tags: str):
-    if pool.closed:
-        pool.open()
+def _normalize_table(table: dict) -> dict:
+    t = dict(table)
 
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO poker_tables (club, game, blinds, buyin, players, tags)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (club, game, blinds, buyin, players, tags))
-        conn.commit()
+    club = str(t.get("club", "Club")).strip() or "Club"
+
+    if "table_name" not in t or not str(t.get("table_name", "")).strip():
+        t["table_name"] = club
+
+    if "union_name" not in t:
+        t["union_name"] = ""
+
+    if "seats" not in t:
+        t["seats"] = _extract_seats(t.get("players", ""))
+
+    if "network" not in t:
+        t["network"] = ""
+
+    if not t.get("affiliate_name"):
+        t["affiliate_name"] = OFFICIAL_AFFILIATE_NAME
+    else:
+        t["affiliate_name"] = normalize_affiliate_name(str(t.get("affiliate_name", "")))
+
+    if "affiliate_telegram" not in t:
+        t["affiliate_telegram"] = ""
+
+    if not t.get("owner_name"):
+        t["owner_name"] = f"{club} Official"
+
+    if "owner_telegram" not in t:
+        t["owner_telegram"] = ""
+
+    return t
 
 
-def update_players(table_id: int, players: str):
-    if pool.closed:
-        pool.open()
-
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                UPDATE poker_tables
-                SET players = %s
-                WHERE id = %s
-            """, (players, table_id))
-        conn.commit()
+def load_tables():
+    init_db()
+    with open(FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return [_normalize_table(t) for t in data]
 
 
-def delete_table(table_id: int):
-    if pool.closed:
-        pool.open()
+def save_tables(data):
+    normalized = [_normalize_table(t) for t in data]
+    with open(FILE, "w", encoding="utf-8") as f:
+        json.dump(normalized, f, indent=2, ensure_ascii=False)
 
-    with pool.connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM poker_tables
-                WHERE id = %s
-            """, (table_id,))
-        conn.commit()
+
+def add_table(
+    club,
+    table_name,
+    union_name,
+    game,
+    blinds,
+    buyin,
+    players,
+    tags,
+    network="",
+    affiliate_name=OFFICIAL_AFFILIATE_NAME,
+    affiliate_telegram="",
+    owner_name="",
+    owner_telegram=""
+):
+    data = load_tables()
+    new_id = max([t.get("id", 0) for t in data], default=0) + 1
+
+    data.append({
+        "id": new_id,
+        "club": club,
+        "table_name": table_name or club,
+        "union_name": union_name,
+        "game": game,
+        "blinds": blinds,
+        "buyin": buyin,
+        "players": players,
+        "tags": tags,
+        "network": network,
+        "affiliate_name": normalize_affiliate_name(affiliate_name),
+        "affiliate_telegram": affiliate_telegram,
+        "owner_name": owner_name,
+        "owner_telegram": owner_telegram,
+        "seats": _extract_seats(players),
+    })
+
+    save_tables(data)
+
+
+def update_players(table_id, players):
+    data = load_tables()
+    for t in data:
+        if int(t.get("id", 0)) == int(table_id):
+            t["players"] = players
+            t["seats"] = _extract_seats(players)
+    save_tables(data)
+
+
+def delete_table(table_id):
+    data = load_tables()
+    data = [t for t in data if int(t.get("id", 0)) != int(table_id)]
+    save_tables(data)

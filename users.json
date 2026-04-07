@@ -1,0 +1,34 @@
+[
+  {
+    "username": "admin",
+    "nickname": "admin",
+    "email": "novikovs.poker55@gmail.com",
+    "password": "1234",
+    "plan": "host",
+    "role": "Host",
+    "country": "United Kingdom",
+    "phone": "Not added",
+    "company": "Not added",
+    "notes": "No additional notes",
+    "favorites": [],
+    "is_active": true,
+    "days_left": 30,
+    "registered_at": "01/04/2026"
+  },
+  {
+    "username": "nikita.novikovs@gmail.com",
+    "nickname": "nikita.novikovs@gmail.com",
+    "email": "nikita.novikovs@gmail.com",
+    "password": "1234",
+    "plan": "player",
+    "role": "Player",
+    "country": "United Kingdom",
+    "phone": "Not added",
+    "company": "Not added",
+    "notes": "No additional notes",
+    "favorites": [],
+    "is_active": true,
+    "days_left": 30,
+    "registered_at": "03/04/2026"
+  }
+]
