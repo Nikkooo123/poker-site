@@ -4,3 +4,4 @@ python-multipart
 psycopg[binary]
 psycopg-pool
 opencv-python
+itsdangerous==2.2.0
