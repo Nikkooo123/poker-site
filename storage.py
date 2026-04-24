@@ -25,7 +25,7 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 TABLES_JSON = Path("tables.json")
-
+_DB_READY = False
 
 def _connect():
     if not DATABASE_URL:
@@ -101,6 +101,11 @@ def _normalize_tags(tags: str) -> str:
 
 
 def init_db():
+    global _DB_READY
+
+    if _DB_READY:
+        return
+
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -147,6 +152,7 @@ def init_db():
         conn.commit()
 
     migrate_json_to_db_once()
+    _DB_READY = True
 
 
 def migrate_json_to_db_once():
