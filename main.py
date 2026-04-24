@@ -1,3 +1,11 @@
+from club_subscriptions_storage import (
+    load_club_subscriptions,
+    add_club_subscription,
+    extend_club_subscription,
+    disable_club_subscription,
+    delete_club_subscription,
+)
+from club_subscriptions_view import render_club_subscriptions_page
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
@@ -323,3 +331,76 @@ def profile(request: Request):
 def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/", status_code=303)
+
+@app.get("/admin/club-subscriptions", response_class=HTMLResponse)
+def admin_club_subscriptions_page(request: Request):
+    check = require_login(request)
+    if check:
+        return check
+
+    subscriptions = load_club_subscriptions()
+    return render_club_subscriptions_page(subscriptions)
+
+
+@app.post("/admin/club-subscriptions/add")
+def admin_add_club_subscription(
+    request: Request,
+    club_name: str = Form(""),
+    owner_name: str = Form(""),
+    owner_telegram: str = Form(""),
+    owner_email: str = Form(""),
+    application: str = Form(""),
+    plan: str = Form("host"),
+    duration_days: int = Form(30),
+    notes: str = Form(""),
+):
+    check = require_login(request)
+    if check:
+        return check
+
+    add_club_subscription(
+        club_name=club_name,
+        owner_name=owner_name,
+        owner_telegram=owner_telegram,
+        owner_email=owner_email,
+        application=application,
+        plan=plan,
+        duration_days=duration_days,
+        notes=notes,
+    )
+
+    return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
+
+
+@app.post("/admin/club-subscriptions/{subscription_id}/extend")
+def admin_extend_club_subscription(
+    request: Request,
+    subscription_id: int,
+    days: int = Form(30),
+):
+    check = require_login(request)
+    if check:
+        return check
+
+    extend_club_subscription(subscription_id, days)
+    return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
+
+
+@app.post("/admin/club-subscriptions/{subscription_id}/disable")
+def admin_disable_club_subscription(request: Request, subscription_id: int):
+    check = require_login(request)
+    if check:
+        return check
+
+    disable_club_subscription(subscription_id)
+    return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
+
+
+@app.post("/admin/club-subscriptions/{subscription_id}/delete")
+def admin_delete_club_subscription(request: Request, subscription_id: int):
+    check = require_login(request)
+    if check:
+        return check
+
+    delete_club_subscription(subscription_id)
+    return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
