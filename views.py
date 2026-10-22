@@ -1905,7 +1905,21 @@ def render_admin_card(table: dict) -> str:
     </div>
     """
 
-def render_admin_page(tables, manager=False, workspace="tables"):
+def render_operator_clubs(clubs):
+    if clubs is None:
+        return ''
+    items=[]
+    for club in clubs:
+        name=escape(str(club.get('club_name') or 'Unnamed club'))
+        application=escape(str(club.get('application') or 'Application not recorded'))
+        expiry=escape(str(club.get('expires_at_display') or 'Not recorded'))
+        code=escape(str(club.get('club_code') or ''))
+        items.append(f'<li><strong>{name}</strong><span>{application}{" · ID: "+code if code else ""}</span><small>Active until {expiry}</small></li>')
+    body='<ul>'+''.join(items)+'</ul>' if items else '<p>No active club placements. Ask the manager before adding tables.</p>'
+    return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
+
+
+def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None):
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
     staff_nav = ('<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
@@ -2009,6 +2023,8 @@ def render_admin_page(tables, manager=False, workspace="tables"):
             <div class="glass-bar" style="
                 border-radius:14px;
                 padding:12px;">
+
+                {render_operator_clubs(active_clubs)}
 
                 <div style="
                     font-size:18px;
