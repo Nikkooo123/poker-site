@@ -12,7 +12,7 @@ from brand import render_brand_logo, render_site_theme, render_site_footer
 
 def membership_state(user):
     result = dict(user)
-    if result.get("membership_test_enabled") or result.get("membership_source") == "manager":
+    if result.get("membership_test_enabled") or result.get("membership_source") in ("manager", "crypto"):
         try:
             expiry = datetime.fromisoformat(result.get("test_expires_at", "") if result.get("membership_test_enabled") else result.get("membership_expires_at", ""))
             remaining = max(0, int((expiry - datetime.now(timezone.utc)).total_seconds() + 86399) // 86400)
@@ -146,7 +146,7 @@ def install_account_routes(app, get_current_user):
             if club:
                 state = membership_state(user)
                 review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
-                cards.append(f'<section class="tr-info-card"><h2>{safe(club.get("club_name"))}</h2><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button></form></section>')
+                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{safe(club.get("club_name"))}</h2><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><details class="tr-request-review"><summary>Review request</summary><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button></form></details></section>')
         return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {}, manager=True)
 
     @app.post("/admin/club-requests/review")
