@@ -1,3 +1,5 @@
+import secrets
+from html import escape
 from club_subscriptions_storage import (
     load_club_subscriptions,
     add_club_subscription,
@@ -316,6 +318,11 @@ def logout(request: Request):
     request.session.clear()
     return RedirectResponse(url="/", status_code=303)
 
+def valid_subscription_csrf(request, csrf):
+    token = request.session.get("account_csrf", "")
+    return bool(token and secrets.compare_digest(token, csrf))
+
+
 @app.get("/admin/club-subscriptions", response_class=HTMLResponse)
 def admin_club_subscriptions_page(request: Request):
     check = require_manager(request)
@@ -323,7 +330,7 @@ def admin_club_subscriptions_page(request: Request):
         return check
 
     subscriptions = load_club_subscriptions()
-    return render_club_subscriptions_page(subscriptions)
+    return render_club_subscriptions_page(subscriptions, request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
 
 
 @app.post("/admin/club-subscriptions/add")
@@ -337,21 +344,27 @@ def admin_add_club_subscription(
     plan: str = Form("host"),
     duration_days: int = Form(30),
     notes: str = Form(""),
+    csrf: str = Form(""),
 ):
     check = require_manager(request)
     if check:
         return check
 
-    add_club_subscription(
-        club_name=club_name,
-        owner_name=owner_name,
-        owner_telegram=owner_telegram,
-        owner_email=owner_email,
-        application=application,
-        plan=plan,
-        duration_days=duration_days,
-        notes=notes,
-    )
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse("Refresh the page and try again.", status_code=403)
+    try:
+        add_club_subscription(
+            club_name=club_name,
+            owner_name=owner_name,
+            owner_telegram=owner_telegram,
+            owner_email=owner_email,
+            application=application,
+            plan=plan,
+            duration_days=duration_days,
+            notes=notes,
+        )
+    except ValueError as error:
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
 
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
@@ -361,32 +374,48 @@ def admin_extend_club_subscription(
     request: Request,
     subscription_id: int,
     days: int = Form(30),
+    csrf: str = Form(""),
 ):
     check = require_manager(request)
     if check:
         return check
 
-    extend_club_subscription(subscription_id, days)
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse("Refresh the page and try again.", status_code=403)
+    try:
+        extend_club_subscription(subscription_id, days)
+    except ValueError as error:
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
 @app.post("/admin/club-subscriptions/{subscription_id}/disable")
-def admin_disable_club_subscription(request: Request, subscription_id: int):
+def admin_disable_club_subscription(request: Request, subscription_id: int, csrf: str = Form("")):
     check = require_manager(request)
     if check:
         return check
 
-    disable_club_subscription(subscription_id)
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse("Refresh the page and try again.", status_code=403)
+    try:
+        disable_club_subscription(subscription_id)
+    except ValueError as error:
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
 @app.post("/admin/club-subscriptions/{subscription_id}/delete")
-def admin_delete_club_subscription(request: Request, subscription_id: int):
+def admin_delete_club_subscription(request: Request, subscription_id: int, csrf: str = Form("")):
     check = require_manager(request)
     if check:
         return check
 
-    delete_club_subscription(subscription_id)
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse("Refresh the page and try again.", status_code=403)
+    try:
+        delete_club_subscription(subscription_id)
+    except ValueError as error:
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
