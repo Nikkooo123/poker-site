@@ -1,5 +1,5 @@
 from html import escape
-from brand import render_brand_logo
+from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
 def _safe(value, default=""):
@@ -238,203 +238,14 @@ def render_profile_page(user: dict) -> str:
 
 
 def render_payment_page(*args, **kwargs) -> str:
-    user = None
-    username = kwargs.get("username", "")
-    title = kwargs.get("title", "Payment")
-    desc = kwargs.get("desc", "Complete payment to activate your selected plan.")
-    action_href = kwargs.get("action_href", "#")
-    button_text = kwargs.get("button_text", "Proceed to payment")
-    back_href = kwargs.get("back_href", "/profile")
-
-    remaining = list(args)
-
-    if remaining and isinstance(remaining[0], dict):
-        user = remaining.pop(0)
-        username = _safe(user.get("email", user.get("username", username)))
-
-    elif remaining:
-        username = _safe(remaining.pop(0))
-
-    if remaining and "title" not in kwargs:
-        title = _safe(remaining.pop(0))
-
-    if remaining and "desc" not in kwargs:
-        desc = _safe(remaining.pop(0))
-
-    if remaining and "action_href" not in kwargs:
-        action_href = _safe(remaining.pop(0))
-
-    if remaining and "button_text" not in kwargs:
-        button_text = _safe(remaining.pop(0))
-
-    plan_badge_html = _top_plan_badge(user or {"plan": "inactive", "is_active": False})
-
-    pay_button_html = f"""
-    <a href="{escape(action_href)}" style="
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-width:240px;
-        height:50px;
-        border:none;
-        border-radius:12px;
-        background:linear-gradient(180deg,#2f8f46,#236b34);
-        color:#eef8f0;
-        text-decoration:none;
-        font:700 17px Arial;
-        box-shadow:0 12px 24px rgba(0,0,0,.18);">
-        {escape(button_text)}
-    </a>
-    """ if action_href and action_href != "#" else """
-    <div style="
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        min-width:240px;
-        height:50px;
-        border-radius:12px;
-        background:rgba(255,255,255,.08);
-        color:#fff;
-        font:700 17px Arial;">
-        Payment setup pending
-    </div>
-    """
-
-    return f"""
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Payment</title>
-        <style>
-            .bg-orb {{
-                position: fixed;
-                border-radius: 999px;
-                filter: blur(90px);
-                opacity: .28;
-                pointer-events: none;
-                z-index: 0;
-            }}
-
-            .orb-a {{ width: 420px; height: 420px; top: 70px; left: -80px; background: #5ac8fa; }}
-            .orb-b {{ width: 360px; height: 360px; top: 180px; right: 120px; background: #7b65c4; }}
-            .orb-c {{ width: 420px; height: 420px; bottom: -120px; left: 30%; background: #57b84f; }}
-        </style>
-    </head>
-    <body style="
-        margin:0;
-        background:
-            radial-gradient(circle at 14% 18%, rgba(91,199,255,.20), transparent 26%),
-            radial-gradient(circle at 86% 20%, rgba(123,101,196,.16), transparent 24%),
-            radial-gradient(circle at 50% 100%, rgba(87,184,79,.16), transparent 28%),
-            linear-gradient(135deg,#12171b 0%, #0f1217 38%, #131922 100%);
-        color:white;
-        font-family:Arial,sans-serif;
-        min-height:100vh;
-        box-sizing:border-box;
-        padding:24px;">
-
-        <div class="bg-orb orb-a"></div>
-        <div class="bg-orb orb-b"></div>
-        <div class="bg-orb orb-c"></div>
-
-        <div style="position:relative;z-index:2;">
-
-            <div style="
-                width:100%;
-                display:flex;
-                justify-content:space-between;
-                align-items:flex-start;
-                margin-bottom:18px;">
-
-                {render_brand_logo("/")}
-
-                <div style="display:flex;align-items:center;gap:12px;">
-                    {plan_badge_html}
-
-                    <div style="
-                        background:rgba(255,255,255,.08);
-                        border:1px solid rgba(255,255,255,.08);
-                        border-radius:16px;
-                        padding:10px 16px;
-                        color:#fff;
-                        font:700 15px Arial;
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        min-width:220px;
-                        box-sizing:border-box;
-                        box-shadow:0 10px 24px rgba(0,0,0,.22);
-                        backdrop-filter:blur(8px);">
-
-                        <span style="
-                            width:30px;
-                            height:30px;
-                            border-radius:50%;
-                            background:linear-gradient(180deg,#9c3c48,#702430);
-                            display:inline-flex;
-                            align-items:center;
-                            justify-content:center;
-                            box-shadow:0 4px 10px rgba(0,0,0,.2);">
-                            {_person_icon(15)}
-                        </span>
-
-                        <span>{escape(username)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="
-                width:760px;
-                margin:40px auto 0 auto;
-                background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-                border:1px solid rgba(255,255,255,.08);
-                box-shadow:0 18px 42px rgba(0,0,0,.22);
-                backdrop-filter:blur(12px);
-                border-radius:22px;
-                padding:30px;
-                box-sizing:border-box;">
-
-                <div style="font:700 34px Arial;color:#fff;margin-bottom:10px;">Payment</div>
-                <div style="font:700 18px Arial;color:#6fce87;margin-bottom:22px;">{escape(username)}</div>
-
-                <div style="
-                    background:rgba(255,255,255,.08);
-                    border:1px solid rgba(63,174,90,.32);
-                    border-radius:18px;
-                    padding:24px;
-                    box-sizing:border-box;
-                    margin-bottom:24px;">
-
-                    <div style="font:700 28px Arial;color:#6fce87;margin-bottom:8px;">{escape(title)}</div>
-                    <div style="font:600 17px Arial;color:#fff;line-height:1.55;">{escape(desc)}</div>
-                </div>
-
-                <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-                    {pay_button_html}
-
-                    <a href="{escape(back_href)}" style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        min-width:180px;
-                        height:50px;
-                        border:none;
-                        border-radius:12px;
-                        background:linear-gradient(180deg,#9c3c48,#702430);
-                        color:#fff1f1;
-                        text-decoration:none;
-                        font:700 16px Arial;
-                        box-shadow:0 12px 24px rgba(0,0,0,.18);">
-                        Back to profile
-                    </a>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-from html import escape
+    user = args[0] if args and isinstance(args[0], dict) else {}
+    candidate = str(args[1] if len(args)>1 else kwargs.get('title', 'player')).lower()
+    plan = 'host' if candidate == 'host' else 'player'
+    price = '$600' if plan == 'host' else '$29.99'
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{plan.title()} membership · TableRadar</title>{render_site_theme()}</head>
+    <body style="margin:0"><header class="tr-site-header">{render_brand_logo('/')}{render_account_menu(user)}</header><main class="tr-site-main"><h1 class="tr-page-title">{plan.title()} membership.</h1><p class="tr-page-intro">{price} USD for 30 days. {'Listing and manual monitoring of one club, plus Player access.' if plan=='host' else 'Table information, filters, favorites and your profile.'}</p><span class="tr-status-pill">Payment setup in progress</span>
+    <div class="tr-payment-grid" style="margin:24px 0"><section class="tr-payment-choice"><h2>Crypto payment</h2><p>Choose your currency and network when crypto checkout becomes available.</p><ul><li>Bitcoin · Bitcoin</li><li>ETH · Ethereum</li><li>USDT · Ethereum (ERC-20)</li><li>USDT · TRON (TRC-20)</li><li>TRX · TRON</li></ul><button class="tr-button" disabled>Crypto checkout coming soon</button></section><section class="tr-payment-choice"><h2>Bank payment</h2><p>Bank payment details and available methods will appear here after the payment service is connected.</p><p>No bank or wallet details are collected on this page.</p><button class="tr-button" disabled>Bank payment coming soon</button></section></div>
+    <p class="tr-page-intro">Payments and automatic renewal are not enabled yet. Selecting a plan does not activate or charge a subscription.</p><a class="tr-button" href="/profile">← Back to membership</a></main>{render_site_footer()}</body></html>"""
 
 
 def render_account_menu(user):
@@ -446,12 +257,12 @@ def render_account_menu(user):
     .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
     .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
     .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
-    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">Profile & membership</a><a href="/">Explore tables</a><a href="/logout">Sign out</a></nav></details>'''
+    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">Profile & membership</a><a href="/">Explore tables</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
 
 
 """Responsive account page, with the existing plan and payment routes."""
 from html import escape
-from brand import render_brand_logo
+from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
 
@@ -488,8 +299,8 @@ def render_profile(user):
     a{{color:inherit;text-decoration:none}}a:focus-visible{{outline:3px solid var(--accent);outline-offset:5px}}header{{max-width:1200px;margin:auto;padding:25px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:20px}}.nav{{display:flex;gap:24px;align-items:center;color:var(--muted);font-size:13px}}.nav a:hover{{color:white}}.avatar{{width:44px;height:44px;border-radius:14px;background:#334b47;color:#d6f5e8;display:grid;place-items:center;font-weight:600;flex-shrink:0}}
     main{{max-width:1120px;margin:auto;padding:46px 36px 64px}}.eyebrow{{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}}h1,h2,h3,p{{margin:0}}h1{{font-size:clamp(30px,4vw,42px);font-weight:600;letter-spacing:-.04em;margin:6px 0 8px}}.intro{{color:var(--muted);max-width:530px}}.layout{{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px;margin-top:18px;align-items:stretch}}.panel,.plan{{border:1px solid var(--line);background:linear-gradient(145deg,#202d32e8,#172126e8);border-radius:22px;box-shadow:0 16px 40px #00000015}}
     .account{{padding:26px}}.identity{{display:flex;gap:14px;align-items:center;margin-bottom:24px}}.identity strong{{display:block;overflow-wrap:anywhere;font-size:16px;font-weight:600}}.identity small{{color:var(--muted)}}.pill{{display:inline-flex;align-items:center;border:1px solid #a8d8c435;background:#a8d8c40c;border-radius:100px;padding:4px 10px;color:var(--accent);font-size:11px;white-space:nowrap}}.status{{padding-bottom:22px;border-bottom:1px solid var(--line);color:{'#a8d8c4' if active else '#b7bcc0'};font-size:12px}}dl{{margin:0}}dl>div{{padding-top:20px}}dt{{color:var(--muted);font-size:12px;margin-bottom:4px}}dd{{margin:0;font-size:14px;overflow-wrap:anywhere}}.back{{margin-top:26px;padding-top:20px;border-top:1px solid var(--line);display:block;font-size:13px;color:var(--accent)}}.section-head{{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}}h2{{font-size:22px;font-weight:600;letter-spacing:-.025em}}.section-head p{{color:var(--muted);font-size:13px;margin-top:3px}}.plans{{height:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}.plan{{padding:24px;display:flex;flex-direction:column;min-width:0}}.plan.selected{{border-color:#a8d8c44d}}.plan-top{{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:29px}}.plan-top .eyebrow{{font-size:10px;letter-spacing:.08em}}h3{{font-size:28px;font-weight:500;letter-spacing:-.03em;margin:20px 0 5px}}.plan p{{color:var(--muted);font-size:13px;min-height:42px}}ul{{list-style:none;padding:24px 0;margin:0;flex:1}}li{{display:flex;gap:9px;font-size:12px;margin-bottom:13px}}li span{{color:var(--accent)}}.button{{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-radius:11px;font-size:13px;font-weight:600;border:1px solid var(--line);gap:10px}}.primary{{background:var(--accent);color:#152720;border-color:var(--accent)}}.primary:hover{{background:#bee9d8}}.secondary:hover{{background:#ffffff09}}.current{{color:var(--accent);background:#a8d8c409}}.note{{color:var(--muted);font-size:12px;margin-top:20px}}footer{{margin-top:42px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:#86999c;font-size:11px;gap:16px}}
-    @media(max-width:1000px){{.layout{{grid-template-columns:270px minmax(0,1fr)}}.plans{{grid-template-columns:1fr}}.plan p{{min-height:0}}}}@media(max-width:680px){{header{{padding:20px}}main{{padding:30px 20px}}.layout{{grid-template-columns:1fr;gap:28px}}.nav .nav-label{{display:none}}.plans{{grid-template-columns:1fr}}.account{{padding:22px}}footer{{flex-wrap:wrap}}}}
-    </style></head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
+    @media(max-width:1000px){{.layout{{grid-template-columns:270px minmax(0,1fr)}}.plans{{grid-template-columns:1fr}}.plan p{{min-height:0}}}}@media(max-width:680px){{header{{padding:20px;flex-wrap:wrap}}main{{padding:30px 20px}}.layout{{grid-template-columns:1fr;gap:28px}}.nav .nav-label{{display:none}}.plans{{grid-template-columns:1fr}}.account{{padding:22px}}footer{{flex-wrap:wrap}}}}
+    </style>{render_site_theme()}</head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
     <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your profile, membership and access. Everything in one place.</p>
     <div class="section-head" style="margin-top:34px"><div><h2 id="membership">Your membership</h2><p>Choose the access that fits you.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>{current} account</small></div></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
-    <section aria-labelledby="membership"><div class="plans">{player}{host}</div></section></div><p class="note">Membership details are linked to your TableRadar account.</p><footer><span>TableRadar · Find your next table.</span><span>Account / Membership</span></footer></main></body></html>'''
+    <section aria-labelledby="membership"><div class="plans">{player}{host}</div></section></div><p class="note">Membership details are linked to your TableRadar account.</p>{render_site_footer()}</main></body></html>'''
