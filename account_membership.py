@@ -12,14 +12,14 @@ from brand import render_brand_logo, render_site_theme, render_site_footer
 
 def membership_state(user):
     result = dict(user)
-    if result.get("membership_test_enabled"):
+    if result.get("membership_test_enabled") or result.get("membership_source") == "manager":
         try:
-            expiry = datetime.fromisoformat(result.get("test_expires_at", ""))
+            expiry = datetime.fromisoformat(result.get("test_expires_at", "") if result.get("membership_test_enabled") else result.get("membership_expires_at", ""))
             remaining = max(0, int((expiry - datetime.now(timezone.utc)).total_seconds() + 86399) // 86400)
         except (ValueError, TypeError):
             remaining = 0
         result["days_left"] = remaining
-        result["is_active"] = remaining > 0 and result.get("plan") in ("player", "host")
+        result["is_active"] = remaining > 0 and result.get("plan") in ("player", "host") and (result.get("membership_test_enabled") or result.get("is_active", False))
         result["auto_renew"] = False
     return result
 
