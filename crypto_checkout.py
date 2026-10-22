@@ -7,6 +7,7 @@ import json
 import os
 import secrets
 from html import escape
+from datetime import datetime, timezone
 from urllib.parse import urlparse
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -75,7 +76,19 @@ def order_page(request,user,order,error=''):
     status=str(order.get('status') or 'pending')
     if status in ('unresolved','review_required'):
         message='This payment needs review. Do not send a second payment. Contact TableRadar support.'
-    link=f'<a class="tr-button" href="{escape(url,quote=True)}" rel="noreferrer">Open secure payment page</a>' if url and not settled else ''
+    expired=False
+    try:
+        expiry=datetime.fromisoformat(str(order.get('expires_at','')).replace('Z','+00:00'))
+        expired=expiry.tzinfo is not None and expiry<=datetime.now(timezone.utc)
+    except (ValueError,TypeError):
+        pass
+    if not settled and status=='new' and expired:
+        message='This invoice has expired. Do not send funds to its old address. If you already paid, check the status or contact support before creating another invoice.'
+    elif not settled and status=='cancelled':
+        message='This invoice was cancelled. No membership was activated. If you sent funds, contact support before paying again.'
+    elif not settled and status=='refunded':
+        message='The provider marked this invoice as refunded. No membership was activated. Contact support if you need payment details.'
+    link=f'<a class="tr-button" href="{escape(url,quote=True)}" rel="noreferrer">Open secure payment page</a>' if url and not settled and status=='new' and not expired else ''
     refresh=f'<form method="post" action="/payments/crypto/order/{escape(order["id"],quote=True)}/refresh"><input type="hidden" name="csrf" value="{escape(token,quote=True)}"><button class="tr-button" type="submit">Check payment status</button></form>' if not settled else ''
     body=f'''<section class="tr-info-card"><h2>{escape(order['plan'].title())} · {escape(order['price_amount'])} USD</h2><p>{'Sandbox test · ' if sandbox else ''}{escape(order['pay_currency'])} · {escape(order['network'])}</p><p>Status: <strong>{escape(status.replace('_',' ').title())}</strong></p><p>{escape(message)}</p>{'<p role="alert">'+escape(error)+'</p>' if error else ''}{link}{refresh}</section>'''
     return HTMLResponse(page('Payment status',body,user))
