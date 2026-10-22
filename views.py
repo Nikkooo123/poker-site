@@ -1900,7 +1900,7 @@ def render_operator_clubs(clubs):
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
 
-def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None):
+def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0):
     fields = [
         ('Club name','club','Club name','','admin-club-input'),
         ('Table name','table_name','Table name','',''),
@@ -1916,8 +1916,10 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     entry_fields=''.join(f'<label class="tr-entry-field">{escape(label)}<input name="{name}" id="{ident}" placeholder="{escape(placeholder,quote=True)}" value="{escape(value,quote=True)}"></label>' for label,name,placeholder,value,ident in fields)
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
-    staff_nav = ('<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
-    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
+    request_count = max(0, int(pending_requests)) if manager else 0
+    request_badge = (f'<span class="tr-request-count" aria-label="{request_count} pending club requests" style="display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;margin-left:7px;border-radius:999px;background:#b44f55;color:#fff0f0;font-size:12px;font-weight:700;line-height:1">{request_count}</span>' if request_count else '')
+    staff_nav = (f'<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/admin/club-requests">Club requests{request_badge}</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
+    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/staff/chat">Live chat inbox</a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
 
     return f"""
     <html>
