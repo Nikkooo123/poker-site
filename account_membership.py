@@ -47,6 +47,34 @@ def page(title, body, user, manager=False):
 
 
 def install_account_routes(app, get_current_user):
+    @app.post('/account/security/password')
+    def update_password(request: Request, csrf: str = Form(''), current_password: str = Form(''), new_password: str = Form(''), confirm_password: str = Form('')):
+        from auth.auth_storage import change_password
+        from auth.profile_view import render_profile_page
+        user=get_current_user(request)
+        token=request.session.get('account_csrf','')
+        if not user:
+            return RedirectResponse('/signin_login',status_code=303)
+        if not token or not secrets.compare_digest(token,csrf):
+            return HTMLResponse('Refresh your account page and try again.',status_code=403)
+        error=''
+        if not 10 <= len(new_password) <= 256:
+            error='Use a new password between 10 and 256 characters.'
+        elif new_password != confirm_password:
+            error='The new passwords do not match.'
+        elif new_password == current_password:
+            error='Choose a password different from your current password.'
+        elif not change_password(user['email'],current_password,new_password):
+            error='Your current password is incorrect. Please try again.'
+        if error:
+            context=account_context(request,user)
+            context['_security_error']=error
+            return HTMLResponse(render_profile_page(context),status_code=400)
+        request.session.clear()
+        response=RedirectResponse('/signin_login?password_changed=1',status_code=303)
+        response.delete_cookie('admin_auth')
+        return response
+
     def permitted(request, csrf, allow_bootstrap=False):
         user = get_current_user(request)
         token = request.session.get("account_csrf", "")
