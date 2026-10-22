@@ -61,7 +61,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
         display_status = _safe(sub.get("display_status", sub.get("status", "active")))
 
         rows += f"""
-        <div style="
+        <div class="tr-subscription-row" style="
             display:grid;
             grid-template-columns:1.1fr 1fr .8fr .7fr .7fr .55fr .7fr 1.5fr;
             gap:10px;
@@ -177,6 +177,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
     <html>
     <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Club Subscriptions · TableRadar</title>
         <style>
             body {{
@@ -236,7 +237,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                 {render_brand_logo("/")}
 
                 <div style="display:flex;gap:10px;">
-                    <a href="/admin" style="
+                    <a href="/manager" style="
                         display:inline-flex;
                         align-items:center;
                         justify-content:center;
@@ -247,7 +248,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                         color:#fff;
                         text-decoration:none;
                         font:700 13px Arial;">
-                        Admin
+                        Manager
                     </a>
 
                     <a href="/" style="
@@ -282,7 +283,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                         Track club owners, subscription expiry dates and contact details.
                     </div>
 
-                    <form method="post" action="/admin/club-subscriptions/add" style="
+                    <form class="tr-subscription-form" method="post" action="/admin/club-subscriptions/add" style="
                         display:grid;
                         grid-template-columns:1fr 1fr 1fr 1fr;
                         gap:12px;
@@ -398,7 +399,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                     padding:16px;
                     box-sizing:border-box;">
 
-                    <div style="
+                    <div class="tr-subscription-header" style="
                         display:grid;
                         grid-template-columns:1.1fr 1fr .8fr .7fr .7fr .55fr .7fr 1.5fr;
                         gap:10px;
