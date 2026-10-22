@@ -1901,6 +1901,19 @@ def render_operator_clubs(clubs):
 
 
 def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None):
+    fields = [
+        ('Club name','club','Club name','','admin-club-input'),
+        ('Table name','table_name','Table name','',''),
+        ('Union name','union_name','Union name','',''),
+        ('Blinds','blinds','Blinds','',''),
+        ('Buy-in','buyin','Buy-in','',''),
+        ('Players','players','Players (ex. 4/6)','',''),
+        ('Affiliate name','affiliate_name','Affiliate name',OFFICIAL_AFFILIATE_NAME,''),
+        ('Affiliate Telegram URL','affiliate_telegram','https://t.me/boom247official','',''),
+        ('Club official name','owner_name','Club owner name','','admin-owner-input'),
+        ('Club Telegram URL','owner_telegram','https://t.me/playaofficial','',''),
+    ]
+    entry_fields=''.join(f'<label class="tr-entry-field">{escape(label)}<input name="{name}" id="{ident}" placeholder="{escape(placeholder,quote=True)}" value="{escape(value,quote=True)}"></label>' for label,name,placeholder,value,ident in fields)
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
     staff_nav = ('<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
@@ -1997,15 +2010,14 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
             max-width:1300px;
             margin:0 auto;
             display:grid;
-            grid-template-columns:480px 760px;
+            grid-template-columns:320px minmax(0,1fr);
             gap:14px;
             align-items:start;">
 
-            <div class="glass-bar" style="
+            <div class="glass-bar tr-add-table-panel" style="
                 border-radius:14px;
                 padding:12px;">
 
-                {render_operator_clubs(active_clubs)}
 
                 <div style="
                     font-size:18px;
@@ -2026,116 +2038,10 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     <input type="hidden" name="network" id="admin-network-input">
                     <input type="hidden" name="tags" id="admin-tags-input">
 
-                    <div style="
-                        display:grid;
-                        grid-template-columns:1fr 1fr;
-                        gap:12px;">
+                    <div class="tr-entry-fields">{entry_fields}</div>
 
-                        <div>
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Club name</div>
-                            <input id="admin-club-input" name="club" placeholder="Club name" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Table name</div>
-                            <input name="table_name" placeholder="Table name" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Union name</div>
-                            <input name="union_name" placeholder="Union name" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Blinds</div>
-                            <input name="blinds" placeholder="Blinds" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Buy-in</div>
-                            <input name="buyin" placeholder="Buy-in" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Players</div>
-                            <input name="players" placeholder="Players (ex. 4/6)" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;">
-                        </div>
-
-                        <div>
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Affiliate name</div>
-                            <input name="affiliate_name" value="TableRadar Official" placeholder="Affiliate name" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Affiliate Telegram URL</div>
-                            <input name="affiliate_telegram" placeholder="https://t.me/boom247official" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Club official name</div>
-                            <input id="admin-owner-input" name="owner_name" placeholder="Club owner name" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;
-                                margin-bottom:8px;">
-
-                            <div style="font:700 12px Arial;margin-bottom:4px;">Club Telegram URL</div>
-                            <input name="owner_telegram" placeholder="https://t.me/playaofficial" style="
-                                width:100%;
-                                box-sizing:border-box;
-                                padding:8px 10px;
-                                border:none;
-                                border-radius:8px;
-                                font:600 12px Arial;">
-                        </div>
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        <div style="font:700 12px Arial;margin-bottom:4px;">Application</div>
+                    <div class="tr-entry-options">
+                        <section><div style="font:700 12px Arial;margin-bottom:4px;">Application</div>
                         <div style="display:grid;grid-template-columns:repeat(2,84px);gap:6px 6px;margin-bottom:8px;">
                             <button type="button" class="admin-pick-btn admin-network-btn network-pppoker" data-value="pppoker">PP Poker</button>
                             <button type="button" class="admin-pick-btn admin-network-btn network-pokerbros" data-value="pokerbros">Poker Bros</button>
@@ -2143,7 +2049,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                             <button type="button" class="admin-pick-btn admin-network-btn network-xpoker" data-value="xpoker">X Poker</button>
                         </div>
 
-                       <div style="font:700 12px Arial;margin-bottom:4px;">Tags</div>
+                       </section><section><div style="font:700 12px Arial;margin-bottom:4px;">Tags</div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 30%">VPIP 30%</button>
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 35%">VPIP 35%</button>
@@ -2157,13 +2063,13 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="clock">⏱</button>
 </div>
 
-                        <div style="font:700 12px Arial;margin-bottom:4px;">Game format</div>
+                        </section><section><div style="font:700 12px Arial;margin-bottom:4px;">Game format</div>
                         <div style="display:grid;grid-template-columns:repeat(2,84px);gap:6px 6px;">
                             <button type="button" class="admin-pick-btn admin-game-btn" data-value="NLH">NLH</button>
                             <button type="button" class="admin-pick-btn admin-game-btn" data-value="PLO4">PLO4</button>
                             <button type="button" class="admin-pick-btn admin-game-btn" data-value="PLO5">PLO5</button>
                             <button type="button" class="admin-pick-btn admin-game-btn" data-value="PLO6">PLO6</button>
-                        </div>
+                        </div></section>
                     </div>
 
                     <div style="
@@ -2197,7 +2103,8 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 </form>
             </div>
 
-            <div>
+            <div class="tr-club-worklist-column">{render_operator_clubs(active_clubs)}</div>
+            <div class="tr-table-list-column">
                 <div class="glass-bar" style="
                     border-radius:12px;
                     padding:10px 12px;
