@@ -24,6 +24,12 @@ def membership_state(user):
     return result
 
 
+def pending_club_request_count():
+    return sum(1 for user in load_users()
+               if user.get("club_application")
+               and user["club_application"].get("status", "pending") == "pending")
+
+
 def account_context(request, user):
     result = membership_state(user)
     result["_is_manager"] = is_manager(request)
