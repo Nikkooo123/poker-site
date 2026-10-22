@@ -234,219 +234,7 @@ def _plans_html(user: dict) -> str:
 
 
 def render_profile_page(user: dict) -> str:
-    username = _safe(user.get("username", user.get("email", "User")))
-    email = _safe(user.get("email", ""))
-    registered_at = _safe(user.get("registered_at", user.get("registered", "-")))
-    days_left = int(user.get("days_left", 0))
-    is_active = bool(user.get("is_active", False))
-    status_text = f"Active ({days_left} days)" if is_active else "Inactive"
-    status_color = "#2f8f46" if is_active else "#666666"
-
-    return f"""
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Profile</title>
-        <style>
-            body {{
-                overflow-x: hidden;
-            }}
-
-            .bg-orb {{
-                position: fixed;
-                border-radius: 999px;
-                filter: blur(90px);
-                opacity: .28;
-                pointer-events: none;
-                z-index: 0;
-            }}
-
-            .orb-a {{ width: 420px; height: 420px; top: 70px; left: -80px; background: #5ac8fa; }}
-            .orb-b {{ width: 360px; height: 360px; top: 180px; right: 120px; background: #7b65c4; }}
-            .orb-c {{ width: 420px; height: 420px; bottom: -120px; left: 30%; background: #57b84f; }}
-
-            .glass {{
-                background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-                border: 1px solid rgba(255,255,255,.08);
-                box-shadow: 0 18px 42px rgba(0,0,0,.22);
-                backdrop-filter: blur(12px);
-            }}
-
-            .mini-card {{
-                background: rgba(255,255,255,.08);
-                border: 1px solid rgba(255,255,255,.05);
-                border-radius: 14px;
-                padding: 16px;
-                box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-            }}
-        </style>
-    </head>
-    <body style="
-        margin:0;
-        background:
-            radial-gradient(circle at 14% 18%, rgba(91,199,255,.20), transparent 26%),
-            radial-gradient(circle at 86% 20%, rgba(123,101,196,.16), transparent 24%),
-            radial-gradient(circle at 50% 100%, rgba(87,184,79,.16), transparent 28%),
-            linear-gradient(135deg,#12171b 0%, #0f1217 38%, #131922 100%);
-        color:white;
-        font-family:Arial,sans-serif;
-        min-height:100vh;
-        box-sizing:border-box;
-        padding:24px;">
-
-        <div class="bg-orb orb-a"></div>
-        <div class="bg-orb orb-b"></div>
-        <div class="bg-orb orb-c"></div>
-
-        <div style="position:relative;z-index:2;">
-
-            <div style="
-                width:100%;
-                display:flex;
-                justify-content:space-between;
-                align-items:flex-start;
-                margin-bottom:18px;">
-
-                {render_brand_logo("/")}
-
-                <div style="display:flex;align-items:center;gap:12px;">
-                    {_top_plan_badge(user)}
-
-                    <div style="
-                        background:rgba(255,255,255,.08);
-                        border:1px solid rgba(255,255,255,.08);
-                        border-radius:16px;
-                        padding:10px 16px;
-                        color:#fff;
-                        font:700 15px Arial;
-                        display:flex;
-                        align-items:center;
-                        gap:10px;
-                        min-width:220px;
-                        box-sizing:border-box;
-                        box-shadow:0 10px 24px rgba(0,0,0,.22);
-                        backdrop-filter:blur(8px);">
-
-                        <span style="
-                            width:30px;
-                            height:30px;
-                            border-radius:50%;
-                            background:linear-gradient(180deg,#9c3c48,#702430);
-                            display:inline-flex;
-                            align-items:center;
-                            justify-content:center;
-                            box-shadow:0 4px 10px rgba(0,0,0,.2);">
-                            {_person_icon(15)}
-                        </span>
-
-                        <span>{escape(email)}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="width:980px;margin:22px auto 0 auto;">
-
-                <div class="glass" style="
-                    border-radius:22px;
-                    padding:28px;
-                    box-sizing:border-box;">
-
-                    <div style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        gap:20px;
-                        margin-bottom:22px;">
-
-                        <div style="
-                            display:flex;
-                            align-items:center;
-                            gap:18px;">
-
-                            <div style="
-                                width:68px;
-                                height:68px;
-                                border-radius:50%;
-                                background:linear-gradient(180deg,#9c3c48,#702430);
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                box-shadow:0 12px 24px rgba(0,0,0,.18);">
-                                {_person_icon(28)}
-                            </div>
-
-                            <div style="
-                                font:700 22px Arial;
-                                color:#f1c40f;
-                                line-height:1.2;">
-                                {escape(email)}
-                            </div>
-                        </div>
-
-                        <div style="
-                            background:{status_color};
-                            padding:9px 14px;
-                            border-radius:20px;
-                            font:700 13px Arial;
-                            box-shadow:0 10px 20px rgba(0,0,0,.16);">
-                            {escape(status_text)}
-                        </div>
-                    </div>
-
-                    <div style="
-                        display:grid;
-                        grid-template-columns:1fr 1fr;
-                        gap:18px;">
-
-                        <div class="mini-card">
-                            <div style="color:#b9c0c9;font-size:13px;margin-bottom:8px;">Username</div>
-                            <div style="font:700 18px Arial;color:#fff;">{escape(username)}</div>
-                        </div>
-
-                        <div class="mini-card">
-                            <div style="color:#b9c0c9;font-size:13px;margin-bottom:8px;">Email</div>
-                            <div style="font:700 18px Arial;color:#fff;">{escape(email)}</div>
-                        </div>
-
-                        <div class="mini-card">
-                            <div style="color:#b9c0c9;font-size:13px;margin-bottom:8px;">Registered</div>
-                            <div style="font:700 18px Arial;color:#fff;">{escape(registered_at)}</div>
-                        </div>
-
-                        <div class="mini-card">
-                            <div style="color:#b9c0c9;font-size:13px;margin-bottom:8px;">Current plan</div>
-                            <div>{_current_plan_badge(user)}</div>
-                        </div>
-                    </div>
-
-                    {_plans_html(user)}
-
-                    <div style="margin-top:22px;">
-                        <a href="/" style="
-                            display:inline-flex;
-                            align-items:center;
-                            justify-content:center;
-                            min-width:160px;
-                            height:46px;
-                            border:none;
-                            border-radius:14px;
-                            background:linear-gradient(180deg,#9c3c48,#702430);
-                            color:#fff1f1;
-                            text-decoration:none;
-                            font:700 16px Arial;
-                            box-shadow:
-                                inset 0 1px 0 rgba(255,255,255,.12),
-                                0 12px 24px rgba(0,0,0,.18);">
-                            Back to home
-                        </a>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+    return render_profile(user)
 
 
 def render_payment_page(*args, **kwargs) -> str:
@@ -645,3 +433,63 @@ def render_payment_page(*args, **kwargs) -> str:
     </body>
     </html>
     """
+
+from html import escape
+
+
+def render_account_menu(user):
+    email = escape(str(user.get("email") or user.get("username") or "Account"))
+    return f'''<style>
+    .tr-account{{position:relative;font:13px/1.5 'Segoe UI',Arial,sans-serif;z-index:10;max-width:100%}}
+    .tr-account summary{{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid #ffffff20;border-radius:12px;background:#203035;color:#edf3f2}}
+    .tr-account summary::-webkit-details-marker{{display:none}}.tr-account summary:focus-visible{{outline:2px solid #a8d8c4;outline-offset:4px}}
+    .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+    .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
+    .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
+    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">Profile & membership</a><a href="/">Explore tables</a><a href="/logout">Sign out</a></nav></details>'''
+
+
+"""Responsive account page, with the existing plan and payment routes."""
+from html import escape
+from brand import render_brand_logo
+
+
+
+def render_profile(user):
+    def safe(value):
+        return escape(str(value if value is not None else ""))
+
+    email = safe(user.get("email", ""))
+    username = safe(user.get("username") or user.get("email") or "Player")
+    registered = safe(user.get("registered_at", user.get("registered", "—")))
+    active = bool(user.get("is_active", False))
+    plan = str(user.get("plan", "inactive")).lower()
+    current = plan.title() if active and plan in ("player", "host") else "Inactive"
+    days = safe(user.get("days_left", 0))
+    status = f"Active · {days} days remaining" if active else "Inactive membership"
+    initial = username[:1].upper() if username else "P"
+
+    def plan_card(name, caption, features, href):
+        selected = current.lower() == name.lower()
+        action = '<span class="button current">Current plan <span>✓</span></span>' if selected else f'<a class="button {"primary" if name == "Host" else "secondary"}" href="{href}">Choose {name} <span>↗</span></a>'
+        price = "$29.99" if name == "Player" else "$600"
+        return f'''<article class="plan {'selected' if selected else ''}">
+          <div class="plan-top"><span class="eyebrow">{name} membership</span>{'<span class="pill">Your plan</span>' if selected else ''}</div>
+          <h3>{name}</h3><div style="font-size:26px;margin-bottom:8px">{price}<span style="font-size:12px;color:var(--muted)"> / 30 days</span></div><p>{caption}</p>
+          <ul>{''.join(f'<li><span>✓</span>{item}</li>' for item in features)}</ul>{action}</article>'''
+
+    player = plan_card("Player", "Your place at the right table.", ["Access to all table information", "Filters and favorites", "Your personal profile"], "/pay/player")
+    host = plan_card("Host", "Bring your club to the radar.", ["Everything included in Player", "Add one of your own club listings", "Showcase your club to players"], "/pay/host")
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"><title>Profile · TableRadar</title>
+    <style>
+    :root{{--bg:#10171b;--panel:#192329;--text:#edf3f2;--muted:#a5b4b6;--line:rgba(200,223,221,.12);--accent:#a8d8c4}}
+    *{{box-sizing:border-box}}body{{margin:0;color:var(--text);font:15px/1.6 'Segoe UI',Arial,sans-serif;background:radial-gradient(ellipse at 12% 0%,#203d3c80,transparent 52%),radial-gradient(ellipse at 95% 60%,#332c3b60,transparent 50%),var(--bg);min-height:100vh}}
+    a{{color:inherit;text-decoration:none}}a:focus-visible{{outline:3px solid var(--accent);outline-offset:5px}}header{{max-width:1200px;margin:auto;padding:25px 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);gap:20px}}.nav{{display:flex;gap:24px;align-items:center;color:var(--muted);font-size:13px}}.nav a:hover{{color:white}}.avatar{{width:44px;height:44px;border-radius:14px;background:#334b47;color:#d6f5e8;display:grid;place-items:center;font-weight:600;flex-shrink:0}}
+    main{{max-width:1120px;margin:auto;padding:46px 36px 64px}}.eyebrow{{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}}h1,h2,h3,p{{margin:0}}h1{{font-size:clamp(30px,4vw,42px);font-weight:600;letter-spacing:-.04em;margin:6px 0 8px}}.intro{{color:var(--muted);max-width:530px}}.layout{{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px;margin-top:34px;align-items:start}}.panel,.plan{{border:1px solid var(--line);background:linear-gradient(145deg,#202d32e8,#172126e8);border-radius:22px;box-shadow:0 16px 40px #00000015}}
+    .account{{padding:26px}}.identity{{display:flex;gap:14px;align-items:center;margin-bottom:24px}}.identity strong{{display:block;overflow-wrap:anywhere;font-size:16px;font-weight:600}}.identity small{{color:var(--muted)}}.pill{{display:inline-flex;align-items:center;border:1px solid #a8d8c435;background:#a8d8c40c;border-radius:100px;padding:4px 10px;color:var(--accent);font-size:11px;white-space:nowrap}}.status{{padding-bottom:22px;border-bottom:1px solid var(--line);color:{'#a8d8c4' if active else '#b7bcc0'};font-size:12px}}dl{{margin:0}}dl>div{{padding-top:20px}}dt{{color:var(--muted);font-size:12px;margin-bottom:4px}}dd{{margin:0;font-size:14px;overflow-wrap:anywhere}}.back{{margin-top:26px;padding-top:20px;border-top:1px solid var(--line);display:block;font-size:13px;color:var(--accent)}}.section-head{{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}}h2{{font-size:22px;font-weight:600;letter-spacing:-.025em}}.section-head p{{color:var(--muted);font-size:13px;margin-top:3px}}.plans{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}}.plan{{padding:24px;display:flex;flex-direction:column;min-width:0}}.plan.selected{{border-color:#a8d8c44d}}.plan-top{{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:29px}}.plan-top .eyebrow{{font-size:10px;letter-spacing:.08em}}h3{{font-size:28px;font-weight:500;letter-spacing:-.03em;margin:20px 0 5px}}.plan p{{color:var(--muted);font-size:13px;min-height:42px}}ul{{list-style:none;padding:24px 0;margin:0;flex:1}}li{{display:flex;gap:9px;font-size:12px;margin-bottom:13px}}li span{{color:var(--accent)}}.button{{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-radius:11px;font-size:13px;font-weight:600;border:1px solid var(--line);gap:10px}}.primary{{background:var(--accent);color:#152720;border-color:var(--accent)}}.primary:hover{{background:#bee9d8}}.secondary:hover{{background:#ffffff09}}.current{{color:var(--accent);background:#a8d8c409}}.note{{color:var(--muted);font-size:12px;margin-top:20px}}footer{{margin-top:42px;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:#86999c;font-size:11px;gap:16px}}
+    @media(max-width:1000px){{.layout{{grid-template-columns:270px minmax(0,1fr)}}.plans{{grid-template-columns:1fr}}.plan p{{min-height:0}}}}@media(max-width:680px){{header{{padding:20px}}main{{padding:30px 20px}}.layout{{grid-template-columns:1fr;gap:28px}}.nav .nav-label{{display:none}}.plans{{grid-template-columns:1fr}}.account{{padding:22px}}footer{{flex-wrap:wrap}}}}
+    </style></head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
+    <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your profile, membership and access. Everything in one place.</p>
+    <div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>{current} account</small></div></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
+    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Your membership</h2><p>Choose the access that fits you.</p></div></div><div class="plans">{player}{host}</div><p class="note">Membership details are linked to your TableRadar account.</p></section></div><footer><span>TableRadar · Find your next table.</span><span>Account / Membership</span></footer></main></body></html>'''
