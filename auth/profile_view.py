@@ -249,6 +249,7 @@ def render_payment_page(*args, **kwargs) -> str:
 
 
 def render_account_menu(user):
+    host_link = '<a href="/host">Host dashboard</a>' if user.get('is_active') is True and user.get('plan') == 'host' else ''
     staff_links = ('<a href="/manager">Manager workspace</a>' if user.get("_is_manager") or user.get("staff_role") == "manager" else ('<a href="/admin">Table administration</a>' if user.get("staff_role") == "table_admin" else ''))
     email = escape(str(user.get("email") or user.get("username") or "Account"))
     return f'''<style>
@@ -258,7 +259,7 @@ def render_account_menu(user):
     .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
     .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
     .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
-    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}<a href="/host">Host dashboard</a><a href="/">Explore tables</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
+    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/">Explore tables</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
 
 
 """Responsive account page, with the existing plan and payment routes."""
@@ -291,6 +292,8 @@ def render_profile(user):
     elif user.get("_can_enable_test"):
         test_controls = '<p class="note">Owner preview: reset only this account and try both memberships free. Existing membership details are backed up.</p>' + test_form("reset", "Start private membership test")
     dashboard = '<a class="button secondary" href="/host">Open Host dashboard →</a>' if active and plan == "host" else ""
+    security_error = f'<p role="alert" class="tr-security-error">{safe(user.get("_security_error"))}</p>' if user.get('_security_error') else ''
+    security = f'''<section id="security" class="tr-security-panel" aria-labelledby="security-title"><div class="section-head"><div><h2 id="security-title">Security</h2><p>Manage your password. Your account email cannot be changed.</p></div></div><p class="tr-muted">Email address: <strong>{email}</strong></p>{security_error}<form method="post" action="/account/security/password"><input type="hidden" name="csrf" value="{csrf}"><div class="tr-security-fields"><label>Current password<input type="password" name="current_password" autocomplete="current-password" maxlength="256" required></label><label>New password<input type="password" name="new_password" autocomplete="new-password" minlength="10" maxlength="256" required></label><label>Confirm new password<input type="password" name="confirm_password" autocomplete="new-password" minlength="10" maxlength="256" required></label></div><p class="note">Use at least 10 characters. After changing your password, sign in again on your devices.</p><button class="tr-button" type="submit">Change password</button></form></section>'''
 
     def plan_card(name, caption, features, href):
         selected = current.lower() == name.lower()
@@ -318,5 +321,5 @@ def render_profile(user):
     </style>{render_site_theme()}</head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
     <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your account details and membership settings, clearly separated.</p>
     <div class="section-head" style="margin-top:34px"><div><h2>My profile</h2><p>Your personal account and current access.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>TableRadar account</small></div></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}{" · Free test" if testing and active else ""}</dd></div><div><dt>Valid until</dt><dd>{safe(user.get("plan_expires_at") or "Not recorded") if active else "No active subscription"}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
-    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{render_site_footer()}</main></body></html>'''
+    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{security}{render_site_footer()}</main></body></html>'''
 
