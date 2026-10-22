@@ -44,7 +44,9 @@ def _status_badge(status: str, days_left: int) -> str:
     """
 
 
-def render_club_subscriptions_page(subscriptions: list) -> str:
+def render_club_subscriptions_page(subscriptions: list, csrf="", error="") -> str:
+    token = f'<input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">'
+    error_notice = f'<p role="alert" style="color:#edaaa5">{escape(error)}</p>' if error else ""
     rows = ""
 
     for sub in subscriptions:
@@ -109,7 +111,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
             </div>
 
             <div style="display:flex;gap:6px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
-                <form method="post" action="/admin/club-subscriptions/{sub_id}/extend" style="display:flex;gap:4px;margin:0;">
+                <form method="post" action="/admin/club-subscriptions/{sub_id}/extend" style="display:flex;gap:4px;margin:0;">{token}
                     <input name="days" value="30" style="
                         width:46px;
                         height:28px;
@@ -130,7 +132,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                     </button>
                 </form>
 
-                <form method="post" action="/admin/club-subscriptions/{sub_id}/disable" style="margin:0;">
+                <form method="post" action="/admin/club-subscriptions/{sub_id}/disable" style="margin:0;">{token}
                     <button type="submit" style="
                         height:28px;
                         border:none;
@@ -144,7 +146,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                     </button>
                 </form>
 
-                <form method="post" action="/admin/club-subscriptions/{sub_id}/delete" style="margin:0;">
+                <form method="post" action="/admin/club-subscriptions/{sub_id}/delete" style="margin:0;">{token}
                     <button type="submit" style="
                         height:28px;
                         border:none;
@@ -280,14 +282,15 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                     </div>
 
                     <div style="font:600 15px Arial;color:#c9d1d9;margin-bottom:20px;">
-                        Track club owners, subscription expiry dates and contact details.
+                        Activate an existing account as Host for 30 days from now. No payment is recorded and automatic renewal is off.
                     </div>
 
+                    {error_notice}
                     <form class="tr-subscription-form" method="post" action="/admin/club-subscriptions/add" style="
                         display:grid;
                         grid-template-columns:1fr 1fr 1fr 1fr;
                         gap:12px;
-                        align-items:end;">
+                        align-items:end;">{token}
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Club name</label>
@@ -321,7 +324,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Owner email</label>
-                            <input name="owner_email" placeholder="email" style="
+                            <input type="email" name="owner_email" placeholder="Registered account email" required style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -353,14 +356,12 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                                 border-radius:10px;
                                 padding:0 12px;">
                                 <option value="host">Host</option>
-                                <option value="player">Player</option>
-                                <option value="custom">Custom</option>
                             </select>
                         </div>
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Days</label>
-                            <input name="duration_days" value="30" style="
+                            <input type="number" name="duration_days" value="30" min="30" max="30" readonly style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -378,7 +379,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                                 color:#eef8f0;
                                 font:800 14px Arial;
                                 cursor:pointer;">
-                                Add subscription
+                                Activate Host · 30 days
                             </button>
                         </div>
 
