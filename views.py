@@ -1953,6 +1953,7 @@ def render_admin_page(tables):
     justify-content:flex-start;
     align-items:center;">
     {render_brand_logo("/")}
+    <nav aria-label="Administration" style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto"><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a><a class="tr-button" href="/">View website</a></nav>
 </div>
 
         <div style="
