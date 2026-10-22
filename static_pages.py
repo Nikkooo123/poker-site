@@ -22,7 +22,7 @@ def render_contact_page() -> str:
     <p class="tr-page-intro">Questions about your membership or listing your club? Contact TableRadar.</p>
     <div class="glass" style="padding:28px;border-radius:22px"><h2 style="font-size:21px;font-weight:600;margin-top:0">Contact the team</h2>
     <p class="tr-muted">Email</p><a href="mailto:{escape(CONTACT_EMAIL)}" style="color:#a8d8c4;overflow-wrap:anywhere">{escape(CONTACT_EMAIL)}</a>
-    {telegram_html}</div>""")
+    {telegram_html}<h2 style="font-size:21px;font-weight:600;margin-top:26px">Live chat</h2><p class="tr-muted">Message our administrators and managers. Sign in to save your conversation and receive replies here.</p><button class="tr-button" type="button" data-open-live-chat>Open Live Chat</button></div>""")
 
 
 def render_terms_page() -> str:
