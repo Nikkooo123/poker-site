@@ -297,9 +297,10 @@ def render_profile(user):
         if testing and not selected:
             action = test_form(name.lower(), f"Try {name} free" if not active else f"Switch to {name} — free test")
         price = "$29.99" if name == "Player" else "$600"
+        price_html = (f'<div style="font-size:26px;margin-bottom:8px">Free test<span style="display:block;font-size:12px;color:var(--muted)">No charge · Standard price {price} / 30 days when payments launch</span></div>' if testing else f'<div style="font-size:26px;margin-bottom:8px">{price}<span style="font-size:12px;color:var(--muted)"> / 30 days</span></div>')
         return f'''<article class="plan {'selected' if selected else ''}">
           <div class="plan-top"><span class="eyebrow">{name} membership</span>{'<span class="pill">Your plan</span>' if selected else ''}</div>
-          <h3>{name}</h3><div style="font-size:26px;margin-bottom:8px">{price}<span style="font-size:12px;color:var(--muted)"> / 30 days</span></div><p>{caption}</p>
+          <h3>{name}</h3>{price_html}<p>{caption}</p>
           <ul>{''.join(f'<li><span>✓</span>{item}</li>' for item in features)}</ul>{action}</article>'''
 
     player = plan_card("Player", "Your place at the right table.", ["Access to all table information", "Filters and favorites", "Your personal profile"], "/pay/player")
@@ -316,5 +317,5 @@ def render_profile(user):
     </style>{render_site_theme()}</head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
     <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your account details and membership settings, clearly separated.</p>
     <div class="section-head" style="margin-top:34px"><div><h2>My profile</h2><p>Your personal account and current access.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>TableRadar account</small></div></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}{" · Free test" if testing and active else ""}</dd></div><div><dt>Valid until</dt><dd>{safe(user.get("plan_expires_at") or "Not recorded") if active else "No active subscription"}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
-    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>Player access or a Host membership for your club.</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{render_site_footer()}</main></body></html>'''
+    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{render_site_footer()}</main></body></html>'''
 
