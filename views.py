@@ -452,7 +452,7 @@ def render_public_card(table: dict) -> str:
             max-width:1066px;
             margin:0 0 12px 0;">
 
-        <div style="
+        <div class="tr-favorite-cell" style="
             width:28px;
             display:flex;
             justify-content:center;
@@ -471,7 +471,7 @@ def render_public_card(table: dict) -> str:
             </button>
         </div>
 
-        <div class="glass-bar" style="
+        <div class="glass-bar tr-game-cell" style="
             height:78px;
             width:758px;
             min-width:758px;
@@ -581,7 +581,7 @@ def render_public_card(table: dict) -> str:
             </div>
         </div>
 
-        <div class="glass-bar" style="
+        <div class="glass-bar tr-club-cell" style="
             width:160px;
             height:78px;
             border-radius:18px;
@@ -622,7 +622,7 @@ def render_public_card(table: dict) -> str:
             </div>
         </div>
 
-        <div style="
+        <div class="tr-join-cell" style="
             width:96px;
             height:78px;
             border-radius:18px;
@@ -1287,7 +1287,7 @@ def render_public_page(tables, request=None):
                 max-width:1066px;
                 margin:0 auto;">
 
-                <div style="
+                <div class="tr-filter-row" style="
                     display:grid;
                     grid-template-columns:28px 1030px;
                     gap:8px;
@@ -1316,7 +1316,7 @@ def render_public_page(tables, request=None):
                         </button>
                     </div>
 
-                    <div class="glass-bar" style="
+                    <div class="glass-bar tr-filter-panel" style="
                         width:1030px;
                         min-width:1030px;
                         border-radius:20px;
@@ -1363,7 +1363,7 @@ def render_public_page(tables, request=None):
                     </div>
                 </div>
 
-                <div style="
+                <div class="tr-search-row" style="
                     display:grid;
                     grid-template-columns:28px 1030px;
                     gap:8px;
@@ -1391,7 +1391,7 @@ def render_public_page(tables, request=None):
                     </div>
                 </div>
 
-                <div style="
+                <div class="tr-sort-row" style="
                     display:grid;
                     grid-template-columns:28px 112px 850px 96px;
                     gap:8px;
