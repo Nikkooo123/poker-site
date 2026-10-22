@@ -27,6 +27,7 @@ from auth.profile_view import render_profile_page, render_payment_page
 from account_membership import membership_state, account_context, install_account_routes, pending_club_request_count
 from staff_access import session_secret, staff_role, is_manager, can_edit_tables
 from support_chat import install_support_routes
+from crypto_checkout import checkout_page, install_crypto_routes
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
@@ -285,7 +286,7 @@ def pay_page(plan_name: str, request: Request):
     if plan_name not in ["player", "host"]:
         return RedirectResponse("/profile", status_code=303)
 
-    return render_payment_page(user, plan_name)
+    return checkout_page(request, user, plan_name)
 
 @app.post("/signin_login", response_class=HTMLResponse)
 def signin_login(
@@ -428,6 +429,7 @@ def admin_delete_club_subscription(request: Request, subscription_id: int, csrf:
 
 install_account_routes(app, get_current_user)
 install_support_routes(app, get_current_user)
+install_crypto_routes(app, get_current_user)
 
 
 def require_manager(request: Request):
