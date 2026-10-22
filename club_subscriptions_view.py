@@ -1,5 +1,5 @@
 from html import escape
-from brand import render_brand_logo
+from brand import render_brand_logo, render_site_theme
 
 
 def _safe(value, default=""):
@@ -207,6 +207,7 @@ def render_club_subscriptions_page(subscriptions: list) -> str:
                 box-sizing:border-box;
             }}
         </style>
+        {render_site_theme()}
     </head>
 
     <body style="
