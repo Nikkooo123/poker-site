@@ -439,4 +439,4 @@ def manager_page(request: Request):
     check = require_manager(request)
     if check:
         return check
-    return render_admin_page(load_tables(), manager=True, workspace="manager")
+    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs())
