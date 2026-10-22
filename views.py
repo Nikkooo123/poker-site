@@ -395,7 +395,11 @@ def _network_overlay_color(network: str) -> str:
     }
     return colors.get(network, "rgba(255,255,255,.10)")
 
-def render_public_card(table: dict) -> str:
+def render_public_card(table: dict, show_club=False) -> str:
+    if not show_club:
+        # Whitelist public game metadata before rendering any HTML or data-* fields.
+        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin")}
+        table.update(club="***", table_name="Active table", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
@@ -434,7 +438,7 @@ def render_public_card(table: dict) -> str:
     }
     game_color = game_colors.get(game, "#58c1d2")
 
-    return f"""
+    card = f"""
     <div class="table-row"
          data-id="{table_id}"
          data-game="{escape(game)}"
@@ -661,6 +665,11 @@ def render_public_card(table: dict) -> str:
     """
 
 # =========================
+    if not show_club:
+        card = card.replace("                Join\n", "                Join 🔒\n")
+        card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" title="Register or sign in to view club details and join." aria-label="Register or sign in to join"')
+    return card
+
 # PUBLIC PAGE SCRIPT
 # =========================
 
@@ -1119,7 +1128,7 @@ def render_public_script():
 # PUBLIC PAGE
 # =========================
 
-def render_public_page(tables, request=None):
+def render_public_page(tables, request=None, user=None):
     username = None
     user_email = None
     plan = "inactive"
@@ -1137,9 +1146,16 @@ def render_public_page(tables, request=None):
             plan = "inactive"
             is_active = False
 
+    # A real account loaded server-side is required; session display strings are not access rights.
+    if not user:
+        username = user_email = None
+        plan, is_active = "inactive", False
+    else:
+        username, user_email = user.get("username"), user.get("email")
+        plan, is_active = user.get("plan", "inactive"), bool(user.get("is_active"))
     display_name = user_email or username or ""
 
-    cards = "".join(render_public_card(t) for t in tables if players_value(t.get("players", "")) > 0)
+    cards = "".join(render_public_card(t, show_club=bool(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
     if not cards:
         cards = """
@@ -1160,7 +1176,7 @@ def render_public_page(tables, request=None):
 
     if username:
         label = plan.title() if is_active and plan in ('player', 'host') else 'Membership'
-        menu_user = {'email': display_name, 'plan': plan, 'is_active': is_active}
+        menu_user = dict(user or {}, email=display_name, plan=plan, is_active=is_active)
         right_top_html = f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><a href="/profile" class="tr-status-pill" style="text-decoration:none">{escape(label)}</a>{render_account_menu(menu_user)}</div>'
     else:
         right_top_html = '<a class="tr-button" href="/signin_login">Sign in →</a>'
@@ -1169,6 +1185,7 @@ def render_public_page(tables, request=None):
     <html>
     <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>TableRadar</title>
         <meta http-equiv="refresh" content="30">
         <style>
@@ -1478,6 +1495,7 @@ def render_public_page(tables, request=None):
         </div>
 
         </div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>Register or sign in to view club details and join. Membership payment is not required during this preview.</p><div><a class="tr-button tr-button-primary" href="/signup">Create account</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
@@ -1868,14 +1886,18 @@ def render_admin_card(table: dict) -> str:
     </div>
     """
 
-def render_admin_page(tables):
+def render_admin_page(tables, manager=False, workspace="tables"):
     cards = "".join(render_admin_card(t) for t in tables)
+    title = "Manager workspace" if workspace == "manager" else "Table administration"
+    staff_nav = ('<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
+    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
 
     return f"""
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Admin</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{title} · TableRadar</title>
         <style>
             .admin-pick-btn {{
                 min-width:84px;
@@ -1949,14 +1971,15 @@ def render_admin_page(tables):
 <div style="
     max-width:1300px;
     margin:0 auto 14px auto;
+    gap:16px;flex-wrap:wrap;
     display:flex;
     justify-content:flex-start;
     align-items:center;">
     {render_brand_logo("/")}
-    <nav aria-label="Administration" style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto"><a class="tr-button" href="/admin/club-requests">Club requests</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a><a class="tr-button" href="/">View website</a></nav>
+    <nav aria-label="Administration" style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto">{staff_nav}</nav>
 </div>
 
-        <div style="
+        <h1 style="max-width:1300px;margin:20px auto;font-size:28px">{title}</h1><div class="tr-staff-grid" style="
             max-width:1300px;
             margin:0 auto;
             display:grid;
