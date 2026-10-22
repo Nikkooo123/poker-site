@@ -25,6 +25,8 @@ def staff_role(request):
         return "manager"
     email = request.session.get("user_email")
     user = get_user_by_email(email) if email else None
+    if user and request.session.get('credential_version','') != user.get('credential_version',''):
+        return None
     role = (user or {}).get("staff_role")
     return role if role in ("table_admin", "manager") else None
 
