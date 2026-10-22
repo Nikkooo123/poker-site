@@ -1954,7 +1954,7 @@ def render_admin_card(table: dict) -> str:
                         </button>
                     </form>
 
-                    <form method="post" action="/delete" onsubmit="return confirm('Delete this table?')">
+                    <form method="post" action="/delete">
                         <input type="hidden" name="table_id" value="{table_id}">
                         <button type="submit" style="
                             padding:5px 10px;
