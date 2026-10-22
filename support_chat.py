@@ -51,7 +51,7 @@ def install_support_routes(app,get_current_user):
         storage.initialize()
         return private_json({'threads':storage.inbox()})
 
-    @app.get('/staff/chat')
+    @app.get('/staff/chat', response_class=HTMLResponse)
     def staff_inbox(request:Request):
         if not can_edit_tables(request):
             return HTMLResponse('Staff access required.',status_code=403)
@@ -71,7 +71,7 @@ def install_support_routes(app,get_current_user):
         item=storage.staff_messages(thread_id)
         return private_json(item or {'error':'Conversation not found.'},200 if item else 404)
 
-    @app.get('/staff/chat/{thread_id}')
+    @app.get('/staff/chat/{thread_id}', response_class=HTMLResponse)
     def staff_thread(request:Request,thread_id:int):
         if not can_edit_tables(request):
             return HTMLResponse('Staff access required.',status_code=403)
