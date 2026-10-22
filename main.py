@@ -2,6 +2,7 @@ import secrets
 from html import escape
 from club_subscriptions_storage import (
     load_club_subscriptions,
+    load_active_operator_clubs,
     add_club_subscription,
     extend_club_subscription,
     disable_club_subscription,
@@ -105,7 +106,7 @@ def admin_page(request: Request):
         return check
 
     tables = load_tables()
-    admin_html = render_admin_page(tables, manager=False)
+    admin_html = render_admin_page(tables, manager=False, active_clubs=load_active_operator_clubs())
 
     logout_link = """
     <div style="margin-bottom:20px;">
