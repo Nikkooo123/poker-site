@@ -575,18 +575,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 align-items:flex-end;
                 padding-right:12px;
                 box-sizing:border-box;">
-                <div style="
-                    font:700 10px Arial;
-                    color:#f0f0f0;
-                    opacity:.9;">
-                    Min. buy-in
-                </div>
-                <div style="
-                    font:700 16px Arial;
-                    color:#fff;
-                    line-height:1.05;">
-                    {buyin}
-                </div>
+                {f'<div style="font:700 10px Arial;color:#f0f0f0;opacity:.9;">Min. buy-in</div><div style="font:700 16px Arial;color:#fff;line-height:1.05;">{buyin}</div>' if buyin else ''}
                 {_render_tags(tags_raw)}
             </div>
         </div>
