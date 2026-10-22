@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta, timezone
 from html import escape
 import secrets
+from staff_access import is_manager
 
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -25,21 +26,24 @@ def membership_state(user):
 
 def account_context(request, user):
     result = membership_state(user)
+    result["_is_manager"] = is_manager(request)
     result["_can_test"] = bool(user.get("membership_test_enabled"))
-    result["_can_enable_test"] = request.cookies.get("admin_auth") == "yes"
+    result["_can_enable_test"] = is_manager(request)
     result["_csrf"] = request.session.setdefault("account_csrf", secrets.token_urlsafe(32))
     return result
 
 
 ACCOUNT_CSS = """<style>
 .tr-info-card{border:1px solid rgba(200,223,221,.12);border-radius:22px;padding:28px;margin:24px 0;background:linear-gradient(145deg,#202d32e8,#172126e8)}
-.tr-info-card h2{font-size:22px;margin:0 0 14px}.tr-info-card p{color:#a5b4b6;line-height:1.6}.tr-info-card form{max-width:620px;margin-top:26px}.tr-info-card label{display:block;font-size:13px;color:#dbe6e4}.tr-info-card input,.tr-info-card select,.tr-info-card textarea{display:block;width:100%;box-sizing:border-box;padding:12px 14px;margin-top:8px;border-radius:11px;border:1px solid #a8d8c430;background:#101b21;color:#edf3f2;font:inherit;min-height:46px}.tr-info-card textarea{min-height:110px;resize:vertical}.tr-info-card input:focus-visible,.tr-info-card select:focus-visible,.tr-info-card textarea:focus-visible{outline:2px solid #a8d8c4;outline-offset:2px}@media(max-width:600px){.tr-info-card{padding:22px}}
+.tr-status-changes{color:#edaaa5;background:#9e434326;border:1px solid #d98a8555;border-radius:8px;padding:4px 8px;display:inline-block}.tr-review-note{border-left:3px solid #d98a85;padding:10px 14px;background:#9e434310}.tr-info-card h2{font-size:22px;margin:0 0 14px}.tr-info-card p{color:#a5b4b6;line-height:1.6}.tr-info-card form{max-width:620px;margin-top:26px}.tr-info-card label{display:block;font-size:13px;color:#dbe6e4}.tr-info-card input,.tr-info-card select,.tr-info-card textarea{display:block;width:100%;box-sizing:border-box;padding:12px 14px;margin-top:8px;border-radius:11px;border:1px solid #a8d8c430;background:#101b21;color:#edf3f2;font:inherit;min-height:46px}.tr-info-card textarea{min-height:110px;resize:vertical}.tr-info-card input:focus-visible,.tr-info-card select:focus-visible,.tr-info-card textarea:focus-visible{outline:2px solid #a8d8c4;outline-offset:2px}@media(max-width:600px){.tr-info-card{padding:22px}}
 </style>"""
 
 
-def page(title, body, user):
+def page(title, body, user, manager=False):
     from auth.profile_view import render_account_menu
-    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · TableRadar</title>{render_site_theme()}{ACCOUNT_CSS}</head><body style="margin:0"><header class="tr-site-header">{render_brand_logo('/')}{render_account_menu(user)}</header><main class="tr-site-main"><h1 class="tr-page-title">{escape(title)}</h1>{body}<p><a class="tr-button" href="/profile">← My account</a></p></main>{render_site_footer()}</body></html>'''
+    header_account = '<a class="tr-button" href="/logout">Staff sign out</a>' if manager else render_account_menu(user)
+    workspace_nav = '<nav style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px"><a class="tr-button" href="/manager">← Back to manager</a><a class="tr-button" href="/admin">Table administration</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a></nav>' if manager else ""
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · TableRadar</title>{render_site_theme()}{ACCOUNT_CSS}</head><body style="margin:0"><header class="tr-site-header">{render_brand_logo('/')}{header_account}</header><main class="tr-site-main">{workspace_nav}<h1 class="tr-page-title">{escape(title)}</h1>{body}<p><a class="tr-button" href="/profile">← My account</a></p></main>{render_site_footer()}</body></html>'''
 
 
 def install_account_routes(app, get_current_user):
@@ -48,7 +52,7 @@ def install_account_routes(app, get_current_user):
         token = request.session.get("account_csrf", "")
         if not user or not token or not secrets.compare_digest(token, csrf):
             return None
-        if not user.get("membership_test_enabled") and not (allow_bootstrap and request.cookies.get("admin_auth") == "yes"):
+        if not user.get("membership_test_enabled") and not (allow_bootstrap and is_manager(request)):
             return None
         return user
 
@@ -86,8 +90,9 @@ def install_account_routes(app, get_current_user):
         csrf = safe(user["_csrf"])
         status_labels = {"pending": "Awaiting operator review", "approved": "Approved — operator manages table updates", "needs_changes": "Changes requested by the operator"}
         club_status = status_labels.get(club.get("status"), "Awaiting operator review") if club else "No club submitted"
-        review_note = f'<p>Operator note: {safe(club.get("review_note"))}</p>' if club.get("review_note") else ""
-        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p><section class="tr-info-card"><h2>Membership</h2><p>{'Free test membership — no payment or automatic renewal.' if user.get('membership_test_enabled') else 'Host membership'}</p><p>{int(user.get('days_left') or 0)} days remaining · Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}</p></section><section class="tr-info-card"><h2>Your club</h2><p>Status: <strong>{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Club name<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Club ID or code<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button></form></section>'''
+        review_note = f'<p class="tr-review-note">Operator note: {safe(club.get("review_note"))}</p>' if club.get("review_note") else ""
+        status_class = "tr-status-changes" if club.get("status") == "needs_changes" else ""
+        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p><section class="tr-info-card"><h2>Membership</h2><p>{'Free test membership — no payment or automatic renewal.' if user.get('membership_test_enabled') else 'Host membership'}</p><p>{int(user.get('days_left') or 0)} days remaining · Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}</p></section><section class="tr-info-card"><h2>Your club</h2><p>Status: <strong class="{status_class}">{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Club name<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Club ID or code<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button></form></section>'''
         return page("Host dashboard", body, user)
 
     @app.post("/host/club")
@@ -103,7 +108,7 @@ def install_account_routes(app, get_current_user):
 
     @app.get("/admin/club-requests", response_class=HTMLResponse)
     def club_requests(request: Request):
-        if request.cookies.get("admin_auth") != "yes":
+        if not is_manager(request):
             return RedirectResponse("/login", status_code=303)
         safe = lambda value: escape(str(value or ""), quote=True)
         csrf = safe(request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
@@ -114,12 +119,12 @@ def install_account_routes(app, get_current_user):
                 state = membership_state(user)
                 review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
                 cards.append(f'<section class="tr-info-card"><h2>{safe(club.get("club_name"))}</h2><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button></form></section>')
-        return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {})
+        return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {}, manager=True)
 
     @app.post("/admin/club-requests/review")
     def review_club(request: Request, csrf: str = Form(""), email: str = Form(""), submitted_at: str = Form(""), status: str = Form(""), review_note: str = Form("")):
         token = request.session.get("account_csrf", "")
-        if request.cookies.get("admin_auth") != "yes" or not token or not secrets.compare_digest(token, csrf):
+        if not is_manager(request) or not token or not secrets.compare_digest(token, csrf):
             return HTMLResponse("Operator access required.", status_code=403)
         if status not in ("pending", "approved", "needs_changes") or len(review_note) > 1000:
             return HTMLResponse("Invalid review.", status_code=400)
@@ -129,3 +134,26 @@ def install_account_routes(app, get_current_user):
             return HTMLResponse("The request changed. Reload the review page.", status_code=409)
         update_user(email, club_application=dict(club, status=status, review_note=review_note.strip(), reviewed_at=datetime.now(timezone.utc).isoformat()))
         return RedirectResponse("/admin/club-requests", status_code=303)
+
+    @app.get("/manager/team", response_class=HTMLResponse)
+    def team_page(request: Request):
+        if not is_manager(request):
+            return HTMLResponse("Manager access required.", status_code=403)
+        safe = lambda value: escape(str(value or ""), quote=True)
+        csrf = safe(request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
+        cards = []
+        for user in load_users():
+            role = user.get("staff_role", "")
+            options = ''.join(f'<option value="{value}"{" selected" if role == value else ""}>{label}</option>' for value, label in (("", "Customer only — no staff access"), ("table_admin", "Table administrator — tables only"), ("manager", "Manager — tables, requests and subscriptions")))
+            cards.append(f'<section class="tr-info-card"><h2>{safe(user.get("username") or user.get("email"))}</h2><p>{safe(user.get("email"))}</p><form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><p>Staff permissions are separate from the Player or Host membership. Saving grants the selected access to this account.</p><button class="tr-button" type="submit">Save staff access</button></form></section>')
+        return page("Staff access", '<p class="tr-page-intro">Assign staff access only to trusted operators with existing accounts. Table administrators use the Tables screen; managers can also review clubs and subscriptions.</p>' + ''.join(cards), get_current_user(request) or {}, manager=True)
+
+    @app.post("/manager/team")
+    def update_staff(request: Request, csrf: str = Form(""), email: str = Form(""), role: str = Form("")):
+        token = request.session.get("account_csrf", "")
+        if not is_manager(request) or not token or not secrets.compare_digest(token, csrf):
+            return HTMLResponse("Manager access required.", status_code=403)
+        if role not in ("", "table_admin", "manager") or not get_user_by_email(email):
+            return HTMLResponse("Invalid account or staff role.", status_code=400)
+        update_user(email, staff_role=role)
+        return RedirectResponse("/manager/team", status_code=303)
