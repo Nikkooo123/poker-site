@@ -2,6 +2,24 @@ from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, render_brand_logo, normal
 from html import escape
 from auth.profile_view import render_account_menu
 import re
+from datetime import datetime, timezone
+
+
+def render_table_updated(value):
+    """Show the recorded operator update, never imply a live lobby connection."""
+    try:
+        stamp = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            stamp = stamp.replace(tzinfo=timezone.utc)
+        stamp = stamp.astimezone(timezone.utc)
+        age = (datetime.now(timezone.utc) - stamp).total_seconds()
+        if age < -300:
+            raise ValueError("Future timestamp")
+    except (ValueError, TypeError, OverflowError):
+        return '<small class="tr-table-updated">Update time unavailable</small>'
+    old = age > 3600
+    label = stamp.strftime("%d %b %H:%M UTC")
+    return f'<small class="tr-table-updated{chr(32)+"tr-update-old" if old else ""}" title="Last recorded operator update; player numbers may have changed."><time datetime="{stamp.isoformat()}">Updated {label}</time>{" · Recheck advised" if old else ""}</small>'
 
 
 def _safe(value, default=""):
@@ -398,7 +416,7 @@ def _network_overlay_color(network: str) -> str:
 def render_public_card(table: dict, show_club=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
-        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin")}
+        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "updated_at")}
         table.update(club="***", table_name="Active table", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
@@ -559,6 +577,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                         line-height:1;">
                         {blinds}
                     </div>
+                    {render_table_updated(table.get("updated_at"))}
                 </div>
             </div>
 
