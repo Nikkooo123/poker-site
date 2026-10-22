@@ -2,6 +2,7 @@ import json
 import hashlib
 from pathlib import Path
 from datetime import datetime, timedelta
+import account_repository as account_db
 
 
 USERS_FILE = Path("users.json")
@@ -36,10 +37,10 @@ def _default_user(email: str, username: str = "") -> dict:
         "password_hash": "",
         "registered_at": _now_date(),
         "plan": "inactive",
-        "role": "player",
+        "role": "member",
         "is_active": False,
         "days_left": 0,
-        "auto_renew": True,
+        "auto_renew": False,
         "country": "United Kingdom",
         "favorites": [],
         "created_at": _now_date(),
@@ -83,6 +84,8 @@ def _normalize_user(user: dict) -> dict:
 
 
 def load_users() -> list:
+    if account_db.enabled():
+        return [_normalize_user(user) for user in account_db.load()]
     if not USERS_FILE.exists():
         USERS_FILE.write_text("[]", encoding="utf-8")
         return []
@@ -105,6 +108,9 @@ def load_users() -> list:
 
 def save_users(users: list) -> None:
     normalized_users = [_normalize_user(u) for u in users if isinstance(u, dict)]
+    if account_db.enabled():
+        account_db.upsert_many(normalized_users)
+        return
     USERS_FILE.write_text(
         json.dumps(normalized_users, ensure_ascii=False, indent=2),
         encoding="utf-8"
@@ -168,6 +174,8 @@ def create_user(*args, **kwargs):
     user = _default_user(email=email, username=username)
     user["password_hash"] = _hash_password(password)
 
+    if account_db.enabled():
+        return account_db.insert(user)
     users.append(user)
     save_users(users)
 
@@ -194,81 +202,42 @@ def authenticate_user(email: str, password: str):
         if user.get("password") and _safe(user.get("password")) == password:
             user["password_hash"] = password_hash
             user.pop("password", None)
-            save_users(users)
+            update_user(email, password_hash=user["password_hash"])
             return user
 
     return None
 
 
 def set_user_plan(email: str, plan: str, days: int = 30, active: bool = True):
-    email = _normalize_email(email)
-    plan = _safe(plan).lower()
-
-    users = load_users()
-
-    for user in users:
-        if _normalize_email(user.get("email")) == email:
-            user["plan"] = plan
-            user["is_active"] = bool(active)
-            user["days_left"] = int(days)
-            user["plan_started_at"] = _now_date()
-            user["plan_expires_at"] = (
-                datetime.now() + timedelta(days=int(days))
-            ).strftime("%d/%m/%Y")
-
-            save_users(users)
-            return True
-
-    return False
+    return update_user(email, plan=_safe(plan).lower(), is_active=bool(active), days_left=int(days),
+                       plan_started_at=_now_date(), plan_expires_at=(datetime.now()+timedelta(days=int(days))).strftime("%d/%m/%Y"))
 
 
 def set_user_auto_renew(email: str, enabled: bool):
-    email = _normalize_email(email)
-
-    users = load_users()
-
-    for user in users:
-        if _normalize_email(user.get("email")) == email:
-            user["auto_renew"] = bool(enabled)
-            save_users(users)
-            return True
-
-    return False
+    return update_user(email, auto_renew=bool(enabled))
 
 
 def deactivate_user_plan(email: str):
-    email = _normalize_email(email)
-
-    users = load_users()
-
-    for user in users:
-        if _normalize_email(user.get("email")) == email:
-            user["plan"] = "inactive"
-            user["is_active"] = False
-            user["days_left"] = 0
-            user["auto_renew"] = False
-            save_users(users)
-            return True
-
-    return False
+    return update_user(email, plan="inactive", role="member", is_active=False, days_left=0, auto_renew=False)
 
 
 def update_user(email: str, **fields):
     email = _normalize_email(email)
-
-    users = load_users()
-
-    for user in users:
-        if _normalize_email(user.get("email")) == email:
-            for key, value in fields.items():
-                if key == "email":
-                    continue
-                if key == "password":
-                    user["password_hash"] = _hash_password(value)
-                    continue
+    def apply_fields(user):
+        for key, value in fields.items():
+            if key == "email":
+                continue
+            if key == "password":
+                user["password_hash"] = _hash_password(value)
+            else:
                 user[key] = value
-
+        return _normalize_user(user)
+    if account_db.enabled():
+        return account_db.mutate(email, apply_fields)
+    users = load_users()
+    for index, user in enumerate(users):
+        if _normalize_email(user.get("email")) == email:
+            users[index] = apply_fields(user)
             save_users(users)
             return True
-
     return False
