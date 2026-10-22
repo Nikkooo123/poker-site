@@ -24,8 +24,9 @@ from auth.auth_views import (
     render_dashboard_page,
 )
 from auth.profile_view import render_profile_page, render_payment_page
-from account_membership import membership_state, account_context, install_account_routes
+from account_membership import membership_state, account_context, install_account_routes, pending_club_request_count
 from staff_access import session_secret, staff_role, is_manager, can_edit_tables
+from support_chat import install_support_routes
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
@@ -426,6 +427,7 @@ def admin_delete_club_subscription(request: Request, subscription_id: int, csrf:
 
 
 install_account_routes(app, get_current_user)
+install_support_routes(app, get_current_user)
 
 
 def require_manager(request: Request):
@@ -439,4 +441,4 @@ def manager_page(request: Request):
     check = require_manager(request)
     if check:
         return check
-    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs())
+    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs(), pending_requests=pending_club_request_count())
