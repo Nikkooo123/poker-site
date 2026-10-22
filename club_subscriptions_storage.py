@@ -140,6 +140,30 @@ def load_club_subscriptions():
     return result
 
 
+def load_active_operator_clubs():
+    """Limited read-only worklist; no owner emails, notes or account documents leave storage."""
+    init_club_subscriptions_db()
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""SELECT c.club_name,c.application,c.expires_at,c.access_expires_at,
+                a.document->'club_application'->>'club_name' AS submitted_club,
+                a.document->'club_application'->>'application' AS submitted_application,
+                a.document->'club_application'->>'club_code' AS submitted_code
+                FROM club_subscriptions c LEFT JOIN tableradar_accounts a ON a.email=lower(trim(c.owner_email))
+                WHERE c.plan='host' AND c.status='active'
+                AND COALESCE(c.access_expires_at,c.expires_at::timestamptz)>clock_timestamp()
+                ORDER BY c.expires_at,c.club_name,c.id""")
+            rows=cur.fetchall()
+    result=[]
+    normalize=lambda value: ''.join(ch for ch in str(value or '').casefold() if ch.isalnum())
+    for row in rows:
+        same_club=normalize(row['club_name'])==normalize(row['submitted_club']) and normalize(row['application'])==normalize(row['submitted_application'])
+        result.append(dict(club_name=row['club_name'],application=row['application'],
+                           expires_at_display=_date_display(row['expires_at']),
+                           club_code=row['submitted_code'] if same_club else ''))
+    return result
+
+
 def add_club_subscription(
     club_name: str,
     owner_name: str = "",
