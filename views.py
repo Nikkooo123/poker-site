@@ -10,6 +10,12 @@ def _safe(value, default=""):
     return str(value)
 
 
+def minimum_buyin(value):
+    text = _safe(value).strip()
+    match = re.fullmatch(r"([£$€]?\s*\d[\d,]*(?:\.\d+)?)\s*(?:[-–—]|to)\s*[£$€]?\s*\d[\d,]*(?:\.\d+)?", text, re.IGNORECASE)
+    return match.group(1).strip() if match else text
+
+
 def _game_label(game: str) -> str:
     game = _safe(game).strip().upper()
     if game in ("PLO 4", "PLO4"):
@@ -409,7 +415,7 @@ def render_public_card(table: dict, show_club=False) -> str:
     union_name = escape(union_name_raw if union_name_raw else "—")
 
     blinds = escape(_safe(table.get("blinds", "")))
-    buyin = escape(_safe(table.get("buyin", "")))
+    buyin = escape(minimum_buyin(table.get("buyin", "")))
     players_raw = _safe(table.get("players", "-")).strip()
     seats_raw = _safe(table.get("seats", "6")).strip()
     tags_raw = _safe(table.get("tags", ""))
@@ -520,7 +526,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 </div>
             </div>
 
-            <div style="
+            <div class="tr-table-identity" style="
                 position:relative;
                 display:flex;
                 flex-direction:column;
@@ -529,7 +535,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 height:100%;
                 padding-left:2px;">
 
-                <div style="
+                <div class="tr-network-label" style="
                     position:absolute;
                     inset:0;
                     display:flex;
@@ -544,7 +550,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                     {escape(network_label)}
                 </div>
 
-                <div style="position:relative;z-index:2;">
+                <div class="tr-table-copy" style="position:relative;z-index:2;">
                     <div style="
                         font:500 13px Arial;
                         color:#f2f4f7;
@@ -573,7 +579,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                     font:700 10px Arial;
                     color:#f0f0f0;
                     opacity:.9;">
-                    Buy-in
+                    Min. buy-in
                 </div>
                 <div style="
                     font:700 16px Arial;
@@ -600,7 +606,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 margin-bottom:2px;">
                 Club
             </div>
-            <div style="
+            <div class="tr-club-name" style="
                 font:700 15px 'Trebuchet MS', Arial;
                 font-style:italic;
                 letter-spacing:.3px;
@@ -616,7 +622,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 margin-bottom:2px;">
                 Union
             </div>
-            <div style="
+            <div class="tr-union-name" style="
                 font:700 15px 'Trebuchet MS', Arial;
                 font-style:italic;
                 letter-spacing:.3px;
@@ -1506,7 +1512,7 @@ def render_public_page(tables, request=None, user=None):
     z-index:1200;
     backdrop-filter:blur(4px);">
 
-    <div class="glass-bar" id="join-modal-card" style="
+    <div class="glass-bar" id="join-modal-card" role="dialog" aria-modal="true" aria-labelledby="join-club-title" style="
         width:760px;
         max-width:calc(100vw - 60px);
         border-radius:22px;
@@ -1532,7 +1538,7 @@ def render_public_page(tables, request=None, user=None):
                 </div>
             </div>
 
-            <button id="join-modal-close" type="button" style="
+            <button id="join-modal-close" type="button" aria-label="Close join options" style="
                 width:38px;
                 height:38px;
                 border:none;
@@ -1548,9 +1554,9 @@ def render_public_page(tables, request=None, user=None):
         <div style="
             display:grid;
             grid-template-columns:1fr 1fr;
-            gap:18px;">
+            gap:18px;" class="tr-join-options">
 
-            <div style="
+            <div class="tr-join-option tr-join-affiliate" style="
                 background:rgba(43,31,12,.42);
                 border:1px solid rgba(223,181,86,.32);
                 border-radius:18px;
@@ -1599,7 +1605,7 @@ def render_public_page(tables, request=None, user=None):
                 </a>
             </div>
 
-            <div style="
+            <div class="tr-join-option tr-join-owner" style="
                 background:rgba(54,20,24,.42);
                 border:1px solid rgba(207,92,106,.32);
                 border-radius:18px;
@@ -1686,7 +1692,7 @@ def render_admin_card(table: dict) -> str:
     union_name = escape(union_name_raw if union_name_raw else "—")
 
     blinds = escape(_safe(table.get("blinds", "")))
-    buyin = escape(_safe(table.get("buyin", "")))
+    buyin = escape(minimum_buyin(table.get("buyin", "")))
     players_raw = _safe(table.get("players", "-")).strip()
     seats_raw = _safe(table.get("seats", "6")).strip()
 
@@ -1906,7 +1912,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Table name','table_name','Table name','',''),
         ('Union name','union_name','Union name','',''),
         ('Blinds','blinds','Blinds','',''),
-        ('Buy-in','buyin','Buy-in','',''),
+        ('Minimum buy-in','buyin','Minimum amount','',''),
         ('Players','players','Players (ex. 4/6)','',''),
         ('Affiliate name','affiliate_name','Affiliate name',OFFICIAL_AFFILIATE_NAME,''),
         ('Affiliate Telegram URL','affiliate_telegram','https://t.me/boom247official','',''),
