@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from static_pages import render_contact_page, render_terms_page, render_faq_page
 from storage import load_tables, add_table, update_players, delete_table, init_db
-from views import render_public_page, render_admin_page
+from views import render_public_page, render_admin_page, minimum_buyin
 
 from auth.auth_storage import create_user, authenticate_user, get_user_by_email, set_user_plan
 from auth.auth_views import (
@@ -156,7 +156,7 @@ def add_table_route(
         union_name,
         game,
         blinds,
-        buyin,
+        minimum_buyin(buyin),
         players,
         tags,
         network,
