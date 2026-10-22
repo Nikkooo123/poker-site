@@ -103,7 +103,7 @@ def admin_page(request: Request):
         return check
 
     tables = load_tables()
-    admin_html = render_admin_page(tables, manager=is_manager(request))
+    admin_html = render_admin_page(tables, manager=False)
 
     logout_link = """
     <div style="margin-bottom:20px;">
