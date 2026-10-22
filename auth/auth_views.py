@@ -1,208 +1,48 @@
-from auth.profile_view import render_profile_page
 from html import escape
+from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
 def auth_shell(content: str, title: str = "Auth") -> str:
-    return f"""
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <title>{escape(title)}</title>
-    </head>
-    <body style="
-        margin:0;
-        min-height:100vh;
-        background:linear-gradient(180deg,#1c2328,#101316);
-        color:#fff;
-        font-family:Arial,sans-serif;">
-        {content}
-    </body>
-    </html>
-    """
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{escape(title)} · TableRadar</title>{render_site_theme()}</head><body style="margin:0">
+    <header class="tr-site-header">{render_brand_logo('/')}<a class="tr-button" href="/">← Back to tables</a></header>
+    <main class="tr-auth-body"><div class="tr-auth-wrap"><div class="tr-auth-panel">{content}</div></div></main>{render_site_footer()}</body></html>"""
 
 
 def back_home_logo() -> str:
-    return """
-    <a href="/" style="
-        position:absolute;
-        top:20px;
-        left:22px;
-        text-decoration:none;
-        font-size:46px;
-        line-height:1;
-        display:inline-block;">
-        🔥
-    </a>
-    """
+    return render_brand_logo('/')
 
 
-def input_block(label: str, name: str, input_type: str = "text", required: bool = True) -> str:
+def input_block(label: str, name: str, input_type: str = "text", required: bool = True, autocomplete: str = "") -> str:
     req = "required" if required else ""
-    return f"""
-    <div style="font:700 16px Arial;margin-bottom:8px;color:#f3e7b1;">{escape(label)}</div>
-    <input name="{escape(name)}" type="{escape(input_type)}" {req} style="
-        width:100%;
-        box-sizing:border-box;
-        height:52px;
-        border:none;
-        border-radius:10px;
-        background:#f5f5f5;
-        color:#111;
-        padding:0 14px;
-        font-size:15px;
-        margin-bottom:18px;">
-    """
+    complete = f'autocomplete="{escape(autocomplete)}"' if autocomplete else ''
+    return f'<label for="auth-{escape(name)}">{escape(label)}</label><input id="auth-{escape(name)}" name="{escape(name)}" type="{escape(input_type)}" {req} {complete}>'
 
 
 def message_block(error: str = "", success: str = "") -> str:
     if error:
-        return f"""
-        <div style="
-            color:#ff6b6b;
-            font-size:14px;
-            margin-bottom:18px;">
-            {escape(error)}
-        </div>
-        """
+        return f'<p role="alert" style="color:#f4a7a7">{escape(error)}</p>'
     if success:
-        return f"""
-        <div style="
-            color:#7dff5a;
-            font-size:14px;
-            margin-bottom:18px;">
-            {escape(success)}
-        </div>
-        """
-    return ""
+        return f'<p role="status" style="color:#a8d8c4">{escape(success)}</p>'
+    return ''
 
 
 def render_signin_page(error: str = "") -> str:
-    content = f"""
-    {back_home_logo()}
-
-    <div style="
-        display:flex;
-        justify-content:center;
-        align-items:flex-start;
-        min-height:100vh;
-        padding-top:110px;
-        box-sizing:border-box;">
-
-        <div style="width:430px;max-width:92vw;">
-            <div style="
-                font:800 42px Arial;
-                color:#fff;
-                margin-bottom:24px;
-                text-align:center;">
-                Create your account
-            </div>
-
-            {message_block(error=error)}
-
-            <form method="post" action="/signup">
-                {input_block("Username", "username")}
-                {input_block("Email", "email", "email")}
-                {input_block("Password", "password", "password")}
-                {input_block("Confirm password", "confirm_password", "password")}
-
-                <button type="submit" style="
-                    width:100%;
-                    height:56px;
-                    border:2px solid #7dff5a;
-                    border-radius:4px;
-                    background:transparent;
-                    color:#7dff5a;
-                    font:800 19px Arial;
-                    cursor:pointer;">
-                    Get Started
-                </button>
-            </form>
-
-            <div style="text-align:center;margin-top:16px;font-size:14px;">
-                <a href="/signin_login" style="color:#ffb347;text-decoration:none;">Already have account?</a>
-            </div>
-        </div>
-    </div>
-    """
-    return auth_shell(content, "Create your account")
+    content = f"""<h1>Your next table starts here.</h1><p class="tr-muted">Create your TableRadar account.</p>{message_block(error=error)}
+    <form method="post" action="/signup">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
+    <button class="tr-button tr-button-primary" type="submit">Create account →</button></form><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
+    return auth_shell(content, 'Create account')
 
 
 def render_signup_page(error: str = "", success: str = "") -> str:
-    return render_signin_page(error)
+    return render_signin_page(error) if not success else auth_shell(message_block(success=success) + '<a class="tr-button" href="/signin_login">Sign in</a>', 'Account created')
 
 
 def render_signin_login_page(error: str = "") -> str:
-    content = f"""
-    {back_home_logo()}
-
-    <div style="
-        display:flex;
-        justify-content:center;
-        align-items:flex-start;
-        min-height:100vh;
-        padding-top:110px;
-        box-sizing:border-box;">
-
-        <div style="width:420px;max-width:92vw;">
-
-            <div style="
-                display:flex;
-                justify-content:flex-end;
-                margin-bottom:16px;">
-                <a href="/signup" style="
-                    color:#f3e7b1;
-                    text-decoration:none;
-                    font:700 16px Arial;">
-                    Create an Account
-                </a>
-            </div>
-
-            <div style="
-                font:800 38px Arial;
-                color:#fff;
-                margin-bottom:24px;">
-                Sign In
-            </div>
-
-            {message_block(error=error)}
-
-            <form method="post" action="/signin_login">
-                {input_block("Email Address", "email", "email")}
-                {input_block("Password", "password", "password")}
-
-                <button type="submit" style="
-                    width:100%;
-                    height:60px;
-                    border:none;
-                    border-radius:10px;
-                    background:#ff2a2a;
-                    color:#fff;
-                    font:800 20px Arial;
-                    cursor:pointer;
-                    margin-bottom:18px;">
-                    Log In
-                </button>
-            </form>
-        </div>
-    </div>
-    """
-    return auth_shell(content, "Sign In")
+    content = f"""<h1>Welcome back.</h1><p class="tr-muted">Sign in to your TableRadar account.</p>{message_block(error=error)}
+    <form method="post" action="/signin_login">{input_block('Email address','email','email',autocomplete='email')}{input_block('Password','password','password',autocomplete='current-password')}<button class="tr-button tr-button-primary" type="submit">Sign in →</button></form><a class="tr-auth-link" href="/signup">New to TableRadar? Create an account</a>"""
+    return auth_shell(content, 'Sign in')
 
 
 def render_dashboard_page(username: str, email: str) -> str:
-    content = f"""
-    {back_home_logo()}
-    <div style="
-        max-width:820px;
-        margin:120px auto 0 auto;
-        background:rgba(255,255,255,.04);
-        border-radius:20px;
-        padding:34px;
-        box-sizing:border-box;">
-        <div style="font:800 42px Arial;color:#fff;margin-bottom:18px;">Welcome</div>
-        <div style="font:700 22px Arial;color:#ffb347;margin-bottom:12px;">{escape(username)}</div>
-        <div style="font-size:18px;color:#d6d6d6;">Logged in as: <b>{escape(email)}</b></div>
-    </div>
-    """
-    return auth_shell(content, "Dashboard")
-
+    return auth_shell(f'<h1>Welcome, {escape(username)}</h1><p class="tr-muted">{escape(email)}</p><a class="tr-button" href="/profile">Open your profile</a>', 'Dashboard')
