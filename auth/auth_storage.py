@@ -1,5 +1,7 @@
 import json
 import hashlib
+import hmac
+import secrets
 from pathlib import Path
 from datetime import datetime, timedelta
 import account_repository as account_db
@@ -14,7 +16,49 @@ def _now_date() -> str:
 
 def _hash_password(password: str) -> str:
     password = str(password or "")
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), bytes.fromhex(salt), 600000).hex()
+    return f'pbkdf2_sha256$600000${salt}${digest}'
+
+
+def _verify_password(password, stored_hash):
+    try:
+        if stored_hash.startswith('pbkdf2_sha256$'):
+            _, rounds, salt, expected = stored_hash.split('$')
+            if not 600000 <= int(rounds) <= 2000000:
+                return False
+            actual = hashlib.pbkdf2_hmac('sha256', str(password).encode('utf-8'), bytes.fromhex(salt), int(rounds)).hex()
+        else:
+            # Existing accounts keep working until their passwords are changed.
+            expected = stored_hash
+            actual = hashlib.sha256(str(password).encode('utf-8')).hexdigest()
+        return hmac.compare_digest(actual, expected)
+    except (ValueError, TypeError):
+        return False
+
+
+def change_password(email, current_password, new_password):
+    if not 10 <= len(new_password) <= 256 or len(current_password) > 256:
+        return False
+    new_hash = _hash_password(new_password)
+    def transform(user):
+        if not _verify_password(current_password, user.get('password_hash','')):
+            raise ValueError('Current password is incorrect')
+        user.update(password_hash=new_hash,credential_version=secrets.token_urlsafe(24))
+        user.pop('password',None)
+        return user
+    try:
+        if account_db.enabled():
+            return account_db.mutate(_normalize_email(email),transform)
+        users=load_users()
+        for index,user in enumerate(users):
+            if user['email']==_normalize_email(email):
+                users[index]=transform(user)
+                save_users(users)
+                return True
+    except ValueError:
+        return False
+    return False
 
 
 def _safe(value, default=""):
@@ -185,7 +229,6 @@ def create_user(*args, **kwargs):
 def authenticate_user(email: str, password: str):
     email = _normalize_email(email)
     password = _safe(password)
-    password_hash = _hash_password(password)
 
     users = load_users()
 
@@ -195,12 +238,12 @@ def authenticate_user(email: str, password: str):
 
         stored_hash = _safe(user.get("password_hash", ""))
 
-        if stored_hash == password_hash:
+        if _verify_password(password, stored_hash):
             return user
 
         # запасной вариант, если где-то временно остался plaintext password
         if user.get("password") and _safe(user.get("password")) == password:
-            user["password_hash"] = password_hash
+            user["password_hash"] = _hash_password(password)
             user.pop("password", None)
             update_user(email, password_hash=user["password_hash"])
             return user
