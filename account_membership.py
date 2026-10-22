@@ -5,7 +5,7 @@ import secrets
 
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from auth.auth_storage import update_user, load_users
+from auth.auth_storage import update_user, load_users, get_user_by_email
 from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
@@ -84,7 +84,10 @@ def install_account_routes(app, get_current_user):
         club = user.get("club_application") or {}
         safe = lambda value: escape(str(value or ""), quote=True)
         csrf = safe(user["_csrf"])
-        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p><section class="tr-info-card"><h2>Membership</h2><p>{'Free test membership — no payment or automatic renewal.' if user.get('membership_test_enabled') else 'Host membership'}</p><p>{int(user.get('days_left') or 0)} days remaining · Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}</p></section><section class="tr-info-card"><h2>Your club</h2><p>Status: <strong>{'Awaiting operator review' if club else 'No club submitted'}</strong></p><p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Club name<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Club ID or code<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button></form></section>'''
+        status_labels = {"pending": "Awaiting operator review", "approved": "Approved — operator manages table updates", "needs_changes": "Changes requested by the operator"}
+        club_status = status_labels.get(club.get("status"), "Awaiting operator review") if club else "No club submitted"
+        review_note = f'<p>Operator note: {safe(club.get("review_note"))}</p>' if club.get("review_note") else ""
+        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p><section class="tr-info-card"><h2>Membership</h2><p>{'Free test membership — no payment or automatic renewal.' if user.get('membership_test_enabled') else 'Host membership'}</p><p>{int(user.get('days_left') or 0)} days remaining · Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}</p></section><section class="tr-info-card"><h2>Your club</h2><p>Status: <strong>{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Club name<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Club ID or code<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button></form></section>'''
         return page("Host dashboard", body, user)
 
     @app.post("/host/club")
@@ -102,11 +105,27 @@ def install_account_routes(app, get_current_user):
     def club_requests(request: Request):
         if request.cookies.get("admin_auth") != "yes":
             return RedirectResponse("/login", status_code=303)
-        safe = lambda value: escape(str(value or ""))
+        safe = lambda value: escape(str(value or ""), quote=True)
+        csrf = safe(request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
         cards = []
         for user in load_users():
             club = user.get("club_application")
             if club:
                 state = membership_state(user)
-                cards.append(f'<section class="tr-info-card"><h2>{safe(club.get("club_name"))}</h2><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>Awaiting operator review · Host access: {"active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><p>{safe(club.get("notes"))}</p></section>')
+                review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
+                cards.append(f'<section class="tr-info-card"><h2>{safe(club.get("club_name"))}</h2><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button></form></section>')
         return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {})
+
+    @app.post("/admin/club-requests/review")
+    def review_club(request: Request, csrf: str = Form(""), email: str = Form(""), submitted_at: str = Form(""), status: str = Form(""), review_note: str = Form("")):
+        token = request.session.get("account_csrf", "")
+        if request.cookies.get("admin_auth") != "yes" or not token or not secrets.compare_digest(token, csrf):
+            return HTMLResponse("Operator access required.", status_code=403)
+        if status not in ("pending", "approved", "needs_changes") or len(review_note) > 1000:
+            return HTMLResponse("Invalid review.", status_code=400)
+        user = get_user_by_email(email)
+        club = (user or {}).get("club_application")
+        if not club or club.get("submitted_at", "") != submitted_at:
+            return HTMLResponse("The request changed. Reload the review page.", status_code=409)
+        update_user(email, club_application=dict(club, status=status, review_note=review_note.strip(), reviewed_at=datetime.now(timezone.utc).isoformat()))
+        return RedirectResponse("/admin/club-requests", status_code=303)
