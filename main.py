@@ -21,6 +21,7 @@ from auth.auth_views import (
     render_dashboard_page,
 )
 from auth.profile_view import render_profile_page, render_payment_page
+from account_membership import membership_state, account_context, install_account_routes
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key="change_this_secret_key_123456789")
@@ -213,7 +214,7 @@ def get_current_user(request: Request):
 
     user = get_user_by_email(email)
     if user:
-        return user
+        return membership_state(user)
 
     return None
 
@@ -276,13 +277,9 @@ def activate_plan(
     if plan not in ["player", "host"]:
         return RedirectResponse("/profile", status_code=303)
 
-    set_user_plan(email, plan)
-    user = get_user_by_email(email)
+    # Paid activation requires a verified payment; owner preview has its own protected route.
+    return HTMLResponse("Payments are not enabled. Use your account preview controls if available.", status_code=403)
 
-    request.session["plan"] = user.get("plan", "inactive")
-    request.session["is_active"] = "1" if user.get("is_active", False) else "0"
-
-    return RedirectResponse("/profile", status_code=303)
 
 @app.get("/pay/{plan_name}", response_class=HTMLResponse)
 def pay_page(plan_name: str, request: Request):
@@ -324,7 +321,7 @@ def profile(request: Request):
         return check
 
     user = get_current_user(request)
-    return render_profile_page(user)
+    return render_profile_page(account_context(request, user))
 
 
 @app.get("/logout")
@@ -404,3 +401,6 @@ def admin_delete_club_subscription(request: Request, subscription_id: int):
 
     delete_club_subscription(subscription_id)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
+
+
+install_account_routes(app, get_current_user)
