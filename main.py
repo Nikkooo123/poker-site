@@ -200,7 +200,7 @@ def get_current_user(request: Request):
         return None
 
     user = get_user_by_email(email)
-    if user:
+    if user and request.session.get('credential_version','') == user.get('credential_version',''):
         return membership_state(user)
 
     return None
@@ -242,6 +242,7 @@ def signup(
     user = get_user_by_email(email)
     request.session.clear()
     request.session["user_email"] = user.get("email", "")
+    request.session["credential_version"] = user.get("credential_version", "")
     request.session["username"] = user.get("username", "")
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
@@ -249,8 +250,11 @@ def signup(
     return RedirectResponse("/", status_code=303)
 
 @app.get("/signin_login", response_class=HTMLResponse)
-def signin_login_page():
-    return render_signin_login_page()
+def signin_login_page(request: Request):
+    html=render_signin_login_page()
+    if request.query_params.get('password_changed') == '1':
+        html=html.replace('<form method="post" action="/signin_login">','<p role="status" style="color:#b7dfc9">Password changed. Sign in with your new password.</p><form method="post" action="/signin_login">')
+    return html
 
 @app.post("/activate_plan")
 def activate_plan(
@@ -296,6 +300,7 @@ def signin_login(
 
     request.session.clear()
     request.session["user_email"] = user.get("email", "")
+    request.session["credential_version"] = user.get("credential_version", "")
     request.session["username"] = user.get("username", "")
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
