@@ -1,5 +1,6 @@
-from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, render_brand_logo, normalize_affiliate_name
+from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
+from auth.profile_view import render_account_menu
 import re
 
 
@@ -232,16 +233,16 @@ def game_button(game: str) -> str:
         type="button"
         class="game-filter-btn"
         data-game="{escape(game)}"
-        data-bg="#4a515b"
+        data-bg="#24343b"
         data-color="#eef2f5"
-        data-active-bg="#636d78"
+        data-active-bg="#3c6055"
         data-active-color="#ffffff"
         style="
             width:74px;
             height:34px;
             border:none;
             border-radius:12px;
-            background:#4a515b;
+            background:#24343b;
             color:#eef2f5;
             font:700 13px Arial;
             cursor:pointer;
@@ -340,7 +341,7 @@ def blinds_select(select_id: str, label: str) -> str:
         padding:0 12px;
         border:none;
         border-radius:12px;
-        background:#4a515b;
+        background:#24343b;
         color:#eef2f5;
         font:700 13px Arial;
         box-shadow:
@@ -1105,7 +1106,7 @@ def render_public_page(tables, request=None):
 
     display_name = user_email or username or ""
 
-    cards = "".join(render_public_card(t) for t in tables)
+    cards = "".join(render_public_card(t) for t in tables if players_value(t.get("players", "")) > 0)
 
     if not cards:
         cards = """
@@ -1125,183 +1126,11 @@ def render_public_page(tables, request=None):
         """
 
     if username:
-        if plan == "host" and is_active:
-            plan_button = """
-            <span style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                min-width:110px;
-                height:38px;
-                padding:0 16px;
-                border:1.5px solid #3fae5a;
-                border-radius:999px;
-                color:#6fce87;
-                background:rgba(14,33,18,.82);
-                font:700 14px Arial;
-                box-sizing:border-box;
-                box-shadow:0 8px 18px rgba(0,0,0,.16);">
-                Host
-            </span>
-            """
-        elif plan == "player" and is_active:
-            plan_button = """
-            <a href="/profile" style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                min-width:110px;
-                height:38px;
-                padding:0 16px;
-                border:1.5px solid #3fae5a;
-                border-radius:999px;
-                color:#6fce87;
-                background:rgba(14,33,18,.82);
-                text-decoration:none;
-                font:700 14px Arial;
-                box-sizing:border-box;
-                box-shadow:0 8px 18px rgba(0,0,0,.16);">
-                Player
-            </a>
-            """
-        else:
-            plan_button = """
-            <a href="/profile" style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                min-width:118px;
-                height:38px;
-                padding:0 16px;
-                border:1.5px solid #3fae5a;
-                border-radius:999px;
-                color:#6fce87;
-                background:rgba(14,33,18,.82);
-                text-decoration:none;
-                font:700 14px Arial;
-                box-sizing:border-box;
-                box-shadow:0 8px 18px rgba(0,0,0,.16);">
-                Upgrade
-            </a>
-            """
-
-        right_top_html = f"""
-        <div style="display:flex;align-items:center;gap:12px;">
-            {plan_button}
-
-            <div id="profile-menu-wrap" style="position:relative;">
-                <div id="profile-menu-btn" style="
-                    background:rgba(255,255,255,.08);
-                    border:1px solid rgba(255,255,255,.08);
-                    border-radius:16px;
-                    padding:10px 16px;
-                    color:#fff;
-                    font:700 15px Arial;
-                    cursor:pointer;
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    min-width:220px;
-                    justify-content:flex-start;
-                    box-sizing:border-box;
-                    box-shadow:0 10px 24px rgba(0,0,0,.22);
-                    backdrop-filter:blur(8px);">
-
-                    <span style="
-                        width:30px;
-                        height:30px;
-                        border-radius:50%;
-                        background:linear-gradient(180deg,#9c3c48,#702430);
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        box-shadow:0 4px 10px rgba(0,0,0,.2);">
-                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff1f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M20 21a8 8 0 0 0-16 0"></path>
-                            <circle cx="12" cy="7" r="4"></circle>
-                        </svg>
-                    </span>
-
-                    <span>{escape(display_name)}</span>
-                </div>
-
-                <div id="profile-dropdown" style="
-                    display:none;
-                    position:absolute;
-                    right:0;
-                    top:44px;
-                    width:230px;
-                    background:rgba(23,26,31,.96);
-                    border:1px solid rgba(255,255,255,.08);
-                    border-radius:16px;
-                    padding:8px 0;
-                    box-shadow:0 16px 34px rgba(0,0,0,.35);
-                    z-index:999;
-                    backdrop-filter:blur(10px);">
-                    <a href="/profile" style="
-                        display:block;
-                        padding:12px 16px;
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 14px Arial;">
-                        Profile
-                    </a>
-                    <a href="/faq" style="
-                        display:block;
-                        padding:12px 16px;
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 14px Arial;">
-                        FAQ
-                    </a>
-                    <a href="/contact" style="
-                        display:block;
-                        padding:12px 16px;
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 14px Arial;">
-                        Contact us
-                    </a>
-                    <a href="/terms" style="
-                        display:block;
-                        padding:12px 16px;
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 14px Arial;">
-                        Terms & Conditions
-                    </a>
-                    <a href="/logout" style="
-                        display:block;
-                        padding:12px 16px;
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 14px Arial;">
-                        Logout
-                    </a>
-                </div>
-            </div>
-        </div>
-        """
+        label = plan.title() if is_active and plan in ('player', 'host') else 'Membership'
+        menu_user = {'email': display_name, 'plan': plan, 'is_active': is_active}
+        right_top_html = f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><a href="/profile" class="tr-status-pill" style="text-decoration:none">{escape(label)}</a>{render_account_menu(menu_user)}</div>'
     else:
-        right_top_html = """
-        <a href="/signin_login" style="
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            min-width:120px;
-            height:54px;
-            padding:0 22px;
-            border:2px solid #ff7a2f;
-            border-radius:4px;
-            color:#ff7a2f;
-            background:rgba(0,0,0,.18);
-            text-decoration:none;
-            font:700 18px Arial;
-            box-sizing:border-box;
-            box-shadow:0 10px 24px rgba(0,0,0,.18);">
-            Sign In
-        </a>
-        """          
+        right_top_html = '<a class="tr-button" href="/signin_login">Sign in →</a>'
 
     return f"""
     <html>
@@ -1425,8 +1254,9 @@ def render_public_page(tables, request=None):
                 display:block;
             }}
         </style>
+        {render_site_theme()}
     </head>
-    <body data-username="{escape(display_name if display_name else 'guest')}" style="
+    <body class="tr-directory" data-username="{escape(display_name if display_name else 'guest')}" style="
         margin:0;
         background:
             radial-gradient(circle at 14% 18%, rgba(91,199,255,.20), transparent 26%),
@@ -1445,18 +1275,12 @@ def render_public_page(tables, request=None):
 
         <div class="page-shell">
 
-            <div style="
-    width:100%;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    margin-bottom:18px;">
-
+            <header class="tr-site-header" style="margin-bottom:24px">
     {render_brand_logo("/")}
-
     {right_top_html}
-</div>
+</header>
 
+<p class="tr-scroll-hint">Swipe across to see all table details.</p><div class="tr-table-scroll" aria-label="Table directory">
             <div style="
                 width:1066px;
                 min-width:1066px;
@@ -1554,7 +1378,7 @@ def render_public_page(tables, request=None):
                         width:1030px;
                         min-width:1030px;
                         box-sizing:border-box;">
-                        <input id="club-search" type="text" placeholder="Search club" style="
+                        <input id="club-search" aria-label="Search club" type="text" placeholder="Search club" style="
                             width:100%;
                             padding:12px 14px;
                             border:none;
@@ -1618,6 +1442,7 @@ def render_public_page(tables, request=None):
             </div>
         </div>
 
+        </div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
@@ -1788,6 +1613,7 @@ def render_public_page(tables, request=None):
             }}
         </script>
 
+        {render_site_footer()}
         {render_public_script()}
     </body>
     </html>
@@ -2021,7 +1847,7 @@ def render_admin_page(tables):
                 height:28px;
                 border:none;
                 border-radius:9px;
-                background:#4a515b;
+                background:#24343b;
                 color:#eef2f5;
                 font:700 12px Arial;
                 cursor:pointer;
@@ -2076,6 +1902,7 @@ def render_admin_page(tables):
                 backdrop-filter: blur(12px);
             }}
         </style>
+        {render_site_theme()}
     </head>
     <body style="
         margin:0;
