@@ -22,9 +22,10 @@ from auth.auth_views import (
 )
 from auth.profile_view import render_profile_page, render_payment_page
 from account_membership import membership_state, account_context, install_account_routes
+from staff_access import session_secret, staff_role, is_manager, can_edit_tables
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="change_this_secret_key_123456789")
+app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
 
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "1234"
@@ -36,7 +37,7 @@ def startup():
 
 
 def is_logged_in(request: Request) -> bool:
-    return request.cookies.get("admin_auth") == "yes"
+    return can_edit_tables(request)
 
 
 def require_login(request: Request):
@@ -48,7 +49,7 @@ def require_login(request: Request):
 @app.get("/", response_class=HTMLResponse)
 def public_site(request: Request):
     tables = load_tables()
-    return render_public_page(tables, request)
+    return render_public_page(tables, request, user=get_current_user(request))
 
 @app.get("/contact", response_class=HTMLResponse)
 def contact_page():
@@ -64,34 +65,17 @@ def terms_page():
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
-    return """
-    <html>
-    <head>
-        <title>Admin Login</title>
-    </head>
-    <body style="background:#111;color:white;font-family:Arial;padding:20px;">
-        <h1>🔐 Admin Login</h1>
-
-        <form method="post" action="/login" style="
-            background:#222;
-            padding:15px;
-            border-radius:10px;
-            max-width:320px;
-        ">
-            <input name="username" placeholder="Username" style="width:100%;margin-bottom:8px;padding:8px;">
-            <input name="password" type="password" placeholder="Password" style="width:100%;margin-bottom:8px;padding:8px;">
-            <button type="submit" style="padding:10px 14px;">Log in</button>
-        </form>
-    </body>
-    </html>
-    """
+    from brand import render_brand_logo, render_site_theme, render_site_footer
+    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Staff sign in · TableRadar</title>{render_site_theme()}</head><body class="tr-auth-body"><header class="tr-site-header">{render_brand_logo('/')}</header><main class="tr-auth-wrap"><section class="tr-auth-panel"><h1>Staff sign in.</h1><p class="tr-muted">The owner login opens the manager workspace. Assigned table administrators and managers can sign in with their personal accounts.</p><form method="post" action="/login"><label for="staff-username">Username</label><input id="staff-username" name="username" autocomplete="username" required><label for="staff-password">Password</label><input id="staff-password" name="password" type="password" autocomplete="current-password" required><button class="tr-button" type="submit">Open manager workspace</button></form><a class="tr-auth-link" href="/signin_login">Sign in with a personal staff account</a></section></main>{render_site_footer()}</body></html>'''
 
 
 @app.post("/login")
-def login(username: str = Form(""), password: str = Form("")):
+def login(request: Request, username: str = Form(""), password: str = Form("")):
     if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-        response = RedirectResponse(url="/admin", status_code=303)
-        response.set_cookie("admin_auth", "yes", httponly=True)
+        request.session.clear()
+        request.session["staff_role"] = "manager"
+        response = RedirectResponse(url="/manager", status_code=303)
+        response.delete_cookie("admin_auth")
         return response
 
     return HTMLResponse("""
@@ -119,7 +103,7 @@ def admin_page(request: Request):
         return check
 
     tables = load_tables()
-    admin_html = render_admin_page(tables)
+    admin_html = render_admin_page(tables, manager=is_manager(request))
 
     logout_link = """
     <div style="margin-bottom:20px;">
@@ -176,7 +160,7 @@ def add_table_route(
         owner_name,
         owner_telegram,
     )
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
 @app.post("/update_players")
@@ -190,7 +174,7 @@ def update_players_route(
         return check
 
     update_players(table_id, players)
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
 @app.post("/delete")
@@ -203,7 +187,7 @@ def delete_table_route(
         return check
 
     delete_table(table_id)
-    return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 def get_current_user(request: Request):
     email = request.session.get("user_email")
@@ -253,6 +237,7 @@ def signup(
         return render_signup_page(error="User already exists")
 
     user = get_user_by_email(email)
+    request.session.clear()
     request.session["user_email"] = user.get("email", "")
     request.session["username"] = user.get("username", "")
     request.session["plan"] = user.get("plan", "inactive")
@@ -306,12 +291,14 @@ def signin_login(
     if not user:
         return render_signin_login_page(error="Wrong email or password.")
 
+    request.session.clear()
     request.session["user_email"] = user.get("email", "")
     request.session["username"] = user.get("username", "")
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
 
-    return RedirectResponse(url="/", status_code=303)
+    destination = "/manager" if is_manager(request) else ("/admin" if can_edit_tables(request) else "/")
+    return RedirectResponse(url=destination, status_code=303)
 
 
 @app.get("/profile", response_class=HTMLResponse)
@@ -331,7 +318,7 @@ def logout(request: Request):
 
 @app.get("/admin/club-subscriptions", response_class=HTMLResponse)
 def admin_club_subscriptions_page(request: Request):
-    check = require_login(request)
+    check = require_manager(request)
     if check:
         return check
 
@@ -351,7 +338,7 @@ def admin_add_club_subscription(
     duration_days: int = Form(30),
     notes: str = Form(""),
 ):
-    check = require_login(request)
+    check = require_manager(request)
     if check:
         return check
 
@@ -375,7 +362,7 @@ def admin_extend_club_subscription(
     subscription_id: int,
     days: int = Form(30),
 ):
-    check = require_login(request)
+    check = require_manager(request)
     if check:
         return check
 
@@ -385,7 +372,7 @@ def admin_extend_club_subscription(
 
 @app.post("/admin/club-subscriptions/{subscription_id}/disable")
 def admin_disable_club_subscription(request: Request, subscription_id: int):
-    check = require_login(request)
+    check = require_manager(request)
     if check:
         return check
 
@@ -395,7 +382,7 @@ def admin_disable_club_subscription(request: Request, subscription_id: int):
 
 @app.post("/admin/club-subscriptions/{subscription_id}/delete")
 def admin_delete_club_subscription(request: Request, subscription_id: int):
-    check = require_login(request)
+    check = require_manager(request)
     if check:
         return check
 
@@ -404,3 +391,17 @@ def admin_delete_club_subscription(request: Request, subscription_id: int):
 
 
 install_account_routes(app, get_current_user)
+
+
+def require_manager(request: Request):
+    if not is_manager(request):
+        return HTMLResponse("Manager access required. Table administrators cannot view club requests or subscriptions.", status_code=403)
+    return None
+
+
+@app.get("/manager", response_class=HTMLResponse)
+def manager_page(request: Request):
+    check = require_manager(request)
+    if check:
+        return check
+    return render_admin_page(load_tables(), manager=True, workspace="manager")
