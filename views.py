@@ -708,6 +708,8 @@ def render_public_script():
         return $$(".table-row");
     }
 
+    const defaultOrder = new Map(getRows().map((row, index) => [row, index]));
+
     function getFavorites() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_KEYS.favorites) || "[]");
@@ -762,12 +764,16 @@ def render_public_script():
             const tableId = Number(btn.dataset.table);
             const active = favs.includes(tableId);
             btn.textContent = active ? "★" : "☆";
+            btn.setAttribute("aria-pressed", String(active));
+            btn.setAttribute("aria-label", active ? "Remove table from favorites" : "Add table to favorites");
             btn.style.color = active ? "#efb300" : "#d8d8d8";
         });
 
         const topBtn = $("#favorite-only-btn");
         if (topBtn) {
             topBtn.textContent = showOnlyFavorites ? "★" : "☆";
+            topBtn.setAttribute("aria-pressed", String(showOnlyFavorites));
+            topBtn.setAttribute("aria-label", "Show favorites only");
             topBtn.style.color = showOnlyFavorites ? "#efb300" : "#d8d8d8";
         }
     }
@@ -777,6 +783,7 @@ def render_public_script():
 
         $$(".game-filter-btn").forEach(btn => {
             const active = activeGames.includes(btn.dataset.game);
+            btn.setAttribute("aria-pressed", String(active));
             btn.style.background = active ? btn.dataset.activeBg : btn.dataset.bg;
             btn.style.color = active ? btn.dataset.activeColor : btn.dataset.color;
             btn.style.boxShadow = active
@@ -790,6 +797,7 @@ def render_public_script():
 
         $$(".club-filter-btn").forEach(btn => {
             const active = activeNetworks.includes(btn.dataset.network);
+            btn.setAttribute("aria-pressed", String(active));
             btn.style.background = active ? btn.dataset.activeBg : btn.dataset.bg;
             btn.style.color = active ? btn.dataset.activeColor : btn.dataset.color;
             btn.style.borderColor = active ? btn.dataset.activeBorder : btn.dataset.border;
@@ -841,7 +849,7 @@ def render_public_script():
             return false;
         });
 
-        if (!activeSorts.length) return rows;
+        if (!activeSorts.length) return rows.sort((a, b) => defaultOrder.get(a) - defaultOrder.get(b));
 
         rows.sort((a, b) => {
             for (const key of activeSorts) {
@@ -861,7 +869,7 @@ def render_public_script():
 
                 if (cmp !== 0) return cmp;
             }
-            return 0;
+            return defaultOrder.get(a) - defaultOrder.get(b);
         });
 
         return rows;
@@ -909,6 +917,16 @@ def render_public_script():
         filtered.slice(0, visibleCount).forEach(r => {
             r.style.display = "grid";
         });
+
+        const count = $("#table-count");
+        if (count) count.textContent = filtered.length + (filtered.length === 1 ? " table" : " tables") + (filtered.length > visibleCount ? " · showing " + visibleCount : "");
+        const empty = $("#table-empty");
+        if (empty) empty.hidden = rows.length === 0 || filtered.length > 0;
+        const reset = $("#clear-filters");
+        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || activeGames.length || activeNetworks.length || showOnlyFavorites);
+        const directions = {asc: "↑", desc: "↓"};
+        if ($("#sort-players")) $("#sort-players").textContent = "Players " + (directions[sortPlayersDir] || "↕");
+        if ($("#sort-blinds")) $("#sort-blinds").textContent = "Blinds " + (directions[sortBlindsDir] || "↕");
 
         const loadWrap = $("#load-more-wrap");
         if (loadWrap) {
@@ -1030,6 +1048,21 @@ def render_public_script():
         if (e.key === "Escape") {
             closeJoinModal();
         }
+    });
+
+    $("#clear-filters")?.addEventListener("click", function() {
+        setActiveGames([]);
+        setActiveNetworks([]);
+        showOnlyFavorites = false;
+        visibleCount = 15;
+        ["#club-search", "#blinds-min", "#blinds-max"].forEach(selector => {
+            const input = $(selector);
+            if (input) input.value = "";
+        });
+        paintFavoriteStars();
+        paintGameButtons();
+        paintClubButtons();
+        applyAll();
     });
 
     $("#favorite-only-btn")?.addEventListener("click", function() {
@@ -1391,6 +1424,7 @@ def render_public_page(tables, request=None):
                     </div>
                 </div>
 
+                <div class="tr-filter-summary"><span id="table-count" role="status" aria-live="polite"></span><button id="clear-filters" type="button" class="tr-button">Clear filters</button></div>
                 <div class="tr-sort-row" style="
                     display:grid;
                     grid-template-columns:28px 112px 850px 96px;
@@ -1403,17 +1437,17 @@ def render_public_page(tables, request=None):
                     width:1066px;
                     min-width:1066px;">
                     <div></div>
-                    <div id="sort-players" style="
+                    <button id="sort-players" type="button" class="tr-sort-button" title="Sort by players; click again to reverse or reset" style="
                         cursor:pointer;
                         text-align:left;
                         padding-left:28px;">
                         Players ↕
-                    </div>
-                    <div id="sort-blinds" style="
+                    </button>
+                    <button id="sort-blinds" type="button" class="tr-sort-button" title="Sort by blinds; click again to reverse or reset" style="
                         cursor:pointer;
                         text-align:left;">
                         Blinds ↕
-                    </div>
+                    </button>
                     <div></div>
                 </div>
 
@@ -1423,6 +1457,7 @@ def render_public_page(tables, request=None):
                     {cards}
                 </div>
 
+                <div id="table-empty" hidden class="glass-bar" style="padding:24px;border-radius:16px;margin:12px 0"><strong>No tables match your filters.</strong><p style="margin:8px 0 0;color:#a5b4b6">Try another club, game or blind range, or clear the filters above.</p></div>
                 <div id="load-more-wrap" style="
                     display:none;
                     justify-content:center;
