@@ -1,3 +1,4 @@
+from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
@@ -127,17 +128,21 @@ def _render_tags(tags_raw: str) -> str:
             </span>
         """)
 
+    selected = {token.strip() for token in raw.split(',')}
+    items.extend(render_feature_icon(key) for key in FEATURES if key in selected)
+
     if not items:
         return ""
 
     return f"""
-    <div style="
+    <div class="tr-feature-tags" style="
+        width:100%;max-width:138px;
         margin-top:6px;
         display:flex;
         align-items:center;
         justify-content:flex-end;
         gap:4px;
-        flex-wrap:nowrap;
+        flex-wrap:wrap;
         white-space:nowrap;">
         {"".join(items)}
     </div>
@@ -211,7 +216,9 @@ def render_tags(tags: str) -> str:
     result = []
     for tag in [x.strip() for x in (tags or "").split(",") if x.strip()]:
         low = tag.lower()
-        if "vpip" in low:
+        if low in FEATURES:
+            result.append(render_feature_icon(low))
+        elif "vpip" in low:
             result.append(small_badge(tag.upper(), "#f4b62a", "#1b1b1b"))
         elif "bomb" in low:
             result.append(small_badge("BOMB", "#ff6b4a"))
@@ -482,7 +489,7 @@ def render_public_card(table: dict, show_club=False) -> str:
         </div>
 
         <div class="glass-bar tr-game-cell" style="
-            height:78px;
+            min-height:78px;
             width:758px;
             min-width:758px;
             border-radius:18px;
@@ -573,7 +580,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 flex-direction:column;
                 justify-content:center;
                 align-items:flex-end;
-                padding-right:12px;
+                padding:5px 12px 5px 0;
                 box-sizing:border-box;">
                 {f'<div style="font:700 10px Arial;color:#f0f0f0;opacity:.9;">Min. buy-in</div><div style="font:700 16px Arial;color:#fff;line-height:1.05;">{buyin}</div>' if buyin else ''}
                 {_render_tags(tags_raw)}
@@ -1227,6 +1234,13 @@ def render_public_page(tables, request=None, user=None):
                 z-index: 2;
             }}
 
+            .admin-tag-btn.tr-feature-pick {{min-width:28px!important;width:28px;height:28px!important;padding:2px;background:transparent;border:1px solid transparent;box-shadow:none}}
+            .admin-tag-btn.tr-feature-pick.active {{border-color:#c7f2dd;background:#3c6152;box-shadow:0 0 0 1px #c7f2dd55}}
+            .tr-feature-pick .tr-feature-icon {{pointer-events:none}}
+            .admin-tag-btn.tr-feature-with-label {{width:auto!important;padding:2px 6px;gap:5px;display:inline-flex;align-items:center;font-size:11px}}
+            .tr-extra-features summary {{cursor:pointer;color:#c5ded5;font:600 11px Arial}}
+            .tr-extra-features small {{display:block;font-size:10px;color:#abc1bb;margin-top:6px}}
+            .tr-feature-tags>span {{flex-shrink:0}}
             .glass-bar {{
                 background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
                 border: 1px solid rgba(255,255,255,.08);
@@ -1943,6 +1957,13 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 color:#eef8f0;
             }}
 
+            .admin-tag-btn.tr-feature-pick {{min-width:28px!important;width:28px;height:28px!important;padding:2px;background:transparent;border:1px solid transparent;box-shadow:none}}
+            .admin-tag-btn.tr-feature-pick.active {{border-color:#c7f2dd;background:#3c6152;box-shadow:0 0 0 1px #c7f2dd55}}
+            .tr-feature-pick .tr-feature-icon {{pointer-events:none}}
+            .admin-tag-btn.tr-feature-with-label {{width:auto!important;padding:2px 6px;gap:5px;display:inline-flex;align-items:center;font-size:11px}}
+            .tr-extra-features summary {{cursor:pointer;color:#c5ded5;font:600 11px Arial}}
+            .tr-extra-features small {{display:block;font-size:10px;color:#abc1bb;margin-top:6px}}
+            .tr-feature-tags>span {{flex-shrink:0}}
             .glass-bar {{
                 background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
                 border: 1px solid rgba(255,255,255,.08);
@@ -2010,7 +2031,9 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
 
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="bomb">💣</button>
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="clock">⏱</button>
+    {feature_buttons(PRIMARY_FEATURES)}
 </div>
+<details class="tr-extra-features"><summary>More table features</summary><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">{feature_buttons((key for key in FEATURES if key not in PRIMARY_FEATURES), labels=True)}</div><small>Select only features enabled on this table. Availability varies by application.</small></details>
 
                         </section><section><div style="font:700 12px Arial;margin-bottom:4px;">Game format</div>
                         <div style="display:grid;grid-template-columns:repeat(2,84px);gap:6px 6px;">
@@ -2113,6 +2136,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                             selectedTags.push(value);
                             btn.classList.add("active");
                         }}
+                        btn.setAttribute("aria-pressed", String(btn.classList.contains("active")));
                         syncTags();
                     }});
                 }});
