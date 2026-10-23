@@ -952,10 +952,10 @@ def render_public_script():
         $("#join-owner-name").textContent = ownerName;
 
         $("#join-affiliate-tip").textContent =
-            "Contact " + affiliateName + " for help joining this club.";
+            "When you join through TableRadar Official, TableRadar takes responsibility for deposits, withdrawals and payouts arranged through our official contact and guarantees the security of these operations.";
 
         $("#join-owner-tip").textContent =
-            ownerName + ": contact the club for current table information and access requirements. TableRadar provides information only.";
+            "When you join directly through the club owner, you deal directly with that owner. TableRadar takes no responsibility for deposits, withdrawals, payouts or arrangements made directly with the club.";
 
         setJoinLink($("#join-affiliate-link"), affiliateUrl);
         setJoinLink($("#join-owner-link"), ownerUrl);
@@ -1300,7 +1300,7 @@ def render_public_page(tables, request=None, user=None):
                 z-index:30;
             }}
 
-            .join-help-wrap:hover .join-help-tip {{
+            .join-help-wrap:hover .join-help-tip, .join-help-wrap:focus-within .join-help-tip {{
                 display:block;
             }}
         </style>
@@ -1560,7 +1560,7 @@ def render_public_page(tables, request=None, user=None):
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
                     <div id="join-affiliate-name" style="font:700 23px Arial;color:#d7b258;">TableRadar Official</div>
 
-                    <div class="join-help-wrap">
+                    <div class="join-help-wrap" tabindex="0" aria-label="Joining information">
                         <span style="
                             width:22px;
                             height:22px;
@@ -1575,7 +1575,7 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-affiliate-tip">
-                            Contact TableRadar Official for help joining this club.
+                            When you join through TableRadar Official, TableRadar takes responsibility for deposits, withdrawals and payouts arranged through our official contact and guarantees the security of these operations.
                         </div>
                     </div>
                 </div>
@@ -1610,7 +1610,7 @@ def render_public_page(tables, request=None, user=None):
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
                     <div id="join-owner-name" style="font:700 23px Arial;color:#d8757d;">Club Official</div>
 
-                    <div class="join-help-wrap">
+                    <div class="join-help-wrap" tabindex="0" aria-label="Joining information">
                         <span style="
                             width:22px;
                             height:22px;
@@ -1625,7 +1625,7 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-owner-tip">
-                            Contact the club for current table information and access requirements. TableRadar provides information only.
+                            When you join directly through the club owner, you deal directly with that owner. TableRadar takes no responsibility for deposits, withdrawals, payouts or arrangements made directly with the club.
                         </div>
                     </div>
                 </div>
