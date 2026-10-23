@@ -335,7 +335,7 @@ def _network_overlay_color(network: str) -> str:
 def render_public_card(table: dict, show_club=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
-        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency", "updated_at")}
+        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
         table.update(club="***", table_name="Active table", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
@@ -593,7 +593,7 @@ def render_public_card(table: dict, show_club=False) -> str:
 # =========================
     if not show_club:
         card = card.replace("                Join\n", "                Join 🔒\n")
-        card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" title="Register or sign in to view club details and join." aria-label="Register or sign in to join"')
+        card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" title="Activate Player access to view club details and join." aria-label="Join locked — activate Player access"')
     return card
 
 # PUBLIC PAGE SCRIPT
@@ -1141,10 +1141,7 @@ def render_public_page(tables, request=None, user=None):
     filter_csrf = request.session.setdefault("account_csrf", secrets.token_urlsafe(32)) if user and request else ""
     filters_json = escape(json.dumps(saved_filters(user),ensure_ascii=True),quote=True)
 
-    if trial_enabled() and not directory_access(user):
-        cards = '<section class="tr-info-card" style="padding:24px;border-radius:18px"><h2>Full table information is locked</h2><p>Sign in, then activate a verified 14-day Player trial or a paid membership to view tables and club contacts.</p><a class="tr-button" href="' + ('/profile' if user else '/signin_login') + '">' + ('Choose Player access' if user else 'Sign in or register') + '</a></section>'
-    else:
-        cards = "".join(render_public_card(t, show_club=directory_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
+    cards = "".join(render_public_card(t, show_club=directory_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
     if not cards:
         cards = """
@@ -1496,7 +1493,7 @@ def render_public_page(tables, request=None, user=None):
         </div>
 
         </div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>{'Sign in and activate a verified Player trial or paid membership to view tables and club contacts. Registration alone does not unlock them.' if trial_enabled() else 'Register or sign in to view club details and join. Registered visitors can currently view full table information.'}</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>{'Table previews are available to everyone. Sign in and activate a verified Player trial or paid membership to reveal club names and Join contacts. Registration alone does not unlock these details.' if trial_enabled() else 'Register or sign in to view club details and join. Registered visitors can currently view full table information.'}</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
