@@ -282,7 +282,7 @@ def render_profile(user):
     plan = str(user.get("plan", "inactive")).lower()
     current = plan.title() if (active or awaiting_launch(user)) and plan in ("player", "host") else "No membership"
     days = safe(user.get("days_left", 0))
-    status = f"Active · {days} days remaining" if active else "No active membership — choose a plan below"
+    status = f"Active · {current} · {days} days remaining" if active else "No active membership — choose a plan below"
     if awaiting_launch(user):
         status = "Host payment confirmed - preparing your listing - service clock not started"
     if trial_enabled() and trial_remaining(user) and trial_entitled(user) and not active:
