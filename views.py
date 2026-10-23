@@ -337,6 +337,7 @@ def render_public_card(table: dict, show_club=False) -> str:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
         table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
         table.update(club="***", table_name="***", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
+    name_help_attrs = 'title="Register or sign in, then choose a membership or Free Trial to view table and club names." tabindex="0" aria-label="Hidden name. Register or sign in, then choose a membership or Free Trial to view table and club names."' if not show_club else ''
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
@@ -482,7 +483,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 </div>
 
                 <div class="tr-table-copy" style="position:relative;z-index:2;">
-                    <div style="
+                    <div {name_help_attrs} style="
                         font:500 13px Arial;
                         color:#f2f4f7;
                         line-height:1.05;
@@ -526,7 +527,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                 margin-bottom:2px;">
                 Club
             </div>
-            <div class="tr-club-name" style="
+            <div class="tr-club-name" {name_help_attrs} style="
                 font:700 15px 'Trebuchet MS', Arial;
                 font-style:italic;
                 letter-spacing:.3px;
