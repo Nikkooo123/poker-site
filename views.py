@@ -72,7 +72,7 @@ def _render_tags(tags_raw: str) -> str:
     items.extend(render_feature_icon(key) for key in FEATURES if key in selected)
     if not items:
         return ''
-    return '<div class="tr-feature-tags" style="width:100%;max-width:138px;margin-top:6px;display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;white-space:nowrap">'+''.join(items)+'</div>'
+    return '<div class="tr-feature-tags" style="width:100%;max-width:208px;margin-top:6px;display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:nowrap;white-space:nowrap">'+''.join(items)+'</div>'
 
 # =========================
 # HELPERS
@@ -664,7 +664,8 @@ def render_public_script():
         sortBlindsDir: userKey("sort_blinds_dir"),
         sortPriority: userKey("sort_priority"),
         onlyFav: userKey("only_favorites"),
-        pending: userKey("table_filters_pending")
+        pending: userKey("table_filters_pending"),
+        visibleCount: userKey("table_visible_count")
     };
 
     const FILTER_CSRF = document.body.dataset.filterCsrf || "";
@@ -725,7 +726,8 @@ def render_public_script():
         }
     } catch (e) {}
 
-    let visibleCount = 15;
+    const savedVisibleCount = Number(filterStorage.getItem(STORAGE_KEYS.visibleCount));
+    let visibleCount = Number.isSafeInteger(savedVisibleCount) && savedVisibleCount >= 15 && savedVisibleCount <= 100000 ? savedVisibleCount : 15;
     const LOAD_MORE_STEP = 10;
     let showOnlyFavorites = filterStorage.getItem(STORAGE_KEYS.onlyFav) === "1";
 
@@ -900,6 +902,8 @@ def render_public_script():
     }
 
     function applyAll() {
+        // Keep the expanded page size across the automatic 30-second refresh.
+        filterStorage.setItem(STORAGE_KEYS.visibleCount, String(visibleCount));
         saveInputs();
 
         const rows = getRows();
