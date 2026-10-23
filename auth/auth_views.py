@@ -32,12 +32,12 @@ def message_block(error: str = "", success: str = "") -> str:
 def render_signin_page(error: str = "") -> str:
     import player_access
     import verification_delivery
-    if player_access.enabled() and not verification_delivery.ready():
-        content = '<h1>Create your TableRadar account.</h1>' + message_block(error=error) + '<p class="tr-muted">Use Google or Discord with a verified email address. Email and password registration will be available after email verification is configured.</p>' + render_social_signin() + '<p class="tr-muted">Registration does not unlock table information. Player access requires an active membership or a verified 14-day trial. Phone verification and new trials are not available yet. Host has no free trial.</p><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>'
-        return auth_shell(content, 'Create account')
-    content = f"""<h1>Your next table starts here.</h1><p class="tr-muted">Create your TableRadar account.</p>{message_block(error=error)}{render_social_signin()}
-    <form method="post" action="/signup">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password (at least 8 characters)','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
-    <button class="tr-button tr-button-primary" type="submit">Create account →</button></form><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
+    email_pending = player_access.enabled() and not verification_delivery.email_ready()
+    availability = '<p role="status" class="tr-muted">Email registration requires an email confirmation code. Email delivery is being configured; this form will become available when it is ready. You can use Google or Discord now.</p>' if email_pending else '<p class="tr-muted">Create your account, then confirm your email with a six-digit code before accessing membership features.</p>'
+    disabled = ' disabled' if email_pending else ''
+    content = f"""<h1>Your next table starts here.</h1>{availability}{message_block(error=error)}{render_social_signin()}
+    <form method="post" action="/signup"><fieldset{disabled} style="border:0;padding:0;margin:0">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password (at least 8 characters)','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
+    <button class="tr-button tr-button-primary" type="submit">Create account →</button></fieldset></form><p class="tr-muted">Registration alone does not unlock tables. Email confirmation is required; SMS verification will be added later.</p><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
     return auth_shell(content, 'Create account')
 
 
