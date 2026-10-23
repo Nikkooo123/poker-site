@@ -51,7 +51,7 @@ def customer_activity_card(user, activity):
         ('Last sign-in',stamp(activity.get('last_login_at'))),('Last active',stamp(activity.get('last_seen_at'))),
         ('Sign-ins recorded',str(activity.get('login_count',0))),('Active time (approx.)',duration if activity else 'Not recorded yet'),
         ('Last section',safe(activity.get('last_page') or 'Not recorded yet')),('Tracking since',stamp(activity.get('tracking_started_at')))]
-    return '<dl style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:16px 0 0">'+''.join('<div><dt style="font-size:11px;color:var(--tr-muted)">'+title+'</dt><dd style="margin:3px 0 0;font-size:12px;overflow-wrap:anywhere">'+value+'</dd></div>' for title,value in fields)+'</dl>'
+    return '<dl class="tr-team-metrics">'+''.join('<div><dt style="font-size:11px;color:var(--tr-muted)">'+title+'</dt><dd style="margin:3px 0 0;font-size:12px;overflow-wrap:anywhere">'+value+'</dd></div>' for title,value in fields)+'</dl>'
 
 
 def pending_club_request_count():
@@ -325,15 +325,34 @@ def install_account_routes(app, get_current_user):
         query = str(getattr(request, "query_params", {}).get("q", "")).strip()[:254]
         users = load_users()
         matches = [user for user in users if not query or query.casefold() in str(user.get("username") or "").casefold() or query.casefold() in str(user.get("email") or "").casefold()]
-        search = f'<section class="tr-info-card"><form method="get" action="/manager/team" role="search"><label for="team-search">Find a customer by nickname or email</label><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input id="team-search" name="q" type="search" maxlength="254" autocomplete="off" placeholder="Nickname or email" value="{safe(query)}" style="flex:1;min-width:180px"><button class="tr-button" type="submit">Search</button>{"<a class=tr-button href=/manager/team>Clear</a>" if query else ""}</div></form><p class="tr-muted" role="status">{len(matches)} of {len(users)} customers</p></section>'
+        search = f'<section class="tr-info-card tr-team-search"><form method="get" action="/manager/team" role="search"><label class="tr-team-search-label" for="team-search">Find a customer by nickname or email</label><input id="team-search" name="q" type="search" maxlength="254" autocomplete="off" placeholder="Nickname or email" value="{safe(query)}"><button class="tr-button" type="submit">Search</button>{"<a class=tr-button href=/manager/team>Clear</a>" if query else ""}<span class="tr-muted" role="status">{len(matches)} of {len(users)} customers</span></form></section>'
+
         from staff_access import customer_activity_summary
         activity = customer_activity_summary()
         cards = []
         for user in matches:
             role = user.get("staff_role", "")
             options = ''.join(f'<option value="{value}"{" selected" if role == value else ""}>{label}</option>' for value, label in (("", "Customer only — no staff access"), ("table_admin", "Table administrator — tables only"), ("manager", "Manager — tables, requests and subscriptions")))
-            cards.append(f'<section class="tr-info-card tr-team-member"><div class="tr-team-identity"><h2>{safe(user.get("username") or user.get("email"))}</h2><p>{safe(user.get("email"))}</p>{customer_activity_card(user, activity.get(user.get("email"), {}))}</div><form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><button class="tr-button" type="submit">Save access</button></form></section>')
-        return page("Staff access", '<p class="tr-page-intro">Staff sign in with their personal accounts. Assign access only to trusted operators. Table administrators use the Tables screen; managers can also review clubs and subscriptions. Keep at least one manager account.</p>' + '<p class="tr-muted">Activity statistics start from this update. Active time is approximate, counts visible focused tabs with recent interaction, and excludes idle/background time. Dates are UTC.</p>' + search + (''.join(cards) or '<p class="tr-muted">No customers found. Try another nickname or email.</p>'), get_current_user(request) or {}, manager=True)
+            identity = f'<div class="tr-team-identity"><h2>{safe(user.get("username") or user.get("email"))}</h2>' + (f'<p>{safe(user.get("email"))}</p>' if user.get('username') and user.get('username') != user.get('email') else '') + '</div>'
+            cards.append(f'<section class="tr-info-card tr-team-member">{identity}<form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><button class="tr-button" type="submit">Save access</button></form>{customer_activity_card(user, activity.get(user.get("email"), {}))}</section>')
+
+        compact_css = """<style>
+        .tr-team-page .tr-team-search{padding:10px 12px!important;margin:10px 0!important;border-radius:12px}
+        .tr-team-page .tr-team-search form{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0!important;max-width:none!important}
+        .tr-team-page .tr-team-search input{flex:1;min-width:160px;max-width:460px;width:auto;height:34px;min-height:34px;margin:0;padding:6px 10px;font-size:12px}
+        .tr-team-page .tr-team-search .tr-button{height:34px;min-height:34px;padding:6px 12px;font-size:12px}
+        .tr-team-page .tr-team-search [role=status]{font-size:11px;margin-left:auto;white-space:nowrap}
+        .tr-team-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+        .tr-team-page .tr-team-member{padding:12px 14px!important;margin:8px 0!important;border-radius:12px;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px 16px}
+        .tr-team-page .tr-team-identity{min-width:0;align-self:center}.tr-team-page .tr-team-member h2{font-size:14px!important;line-height:1.3;margin:0!important;overflow-wrap:anywhere}.tr-team-page .tr-team-member p{font-size:11px;margin:3px 0 0!important}
+        .tr-team-page .tr-team-member form{gap:8px}.tr-team-page .tr-team-member form label{font-size:10px;min-width:0}.tr-team-page .tr-team-member select{height:32px;min-height:32px;margin:2px 0 0;padding:4px 8px;font-size:11px;max-width:290px}.tr-team-page .tr-team-member button{height:32px;min-height:32px;font-size:11px;padding:5px 10px}
+        .tr-team-page .tr-team-metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 18px;margin:0!important;padding-top:7px;border-top:1px solid var(--tr-line)}
+        .tr-team-page .tr-team-metrics dt{font-size:10px!important;line-height:1.3}.tr-team-page .tr-team-metrics dd{font-size:11px!important;line-height:1.3;margin-top:2px!important}
+        .tr-team-page .tr-team-note{font-size:11px;line-height:1.5;margin:8px 0}
+        @media(max-width:680px){.tr-team-page .tr-team-member{grid-template-columns:minmax(0,1fr);gap:8px}.tr-team-page .tr-team-member form{display:flex;flex-wrap:nowrap}.tr-team-page .tr-team-member form label{flex:1}.tr-team-page .tr-team-member select{max-width:none;width:100%}.tr-team-page .tr-team-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px}.tr-team-page .tr-team-search input{max-width:none}.tr-team-page .tr-team-search [role=status]{margin-left:0}}
+        </style>"""
+        return page("Staff access", compact_css + '<div class="tr-team-page"><p class="tr-muted tr-team-note">Personal accounts only. Keep at least one manager. Activity is approximate, excludes idle/background time and starts from this update. Dates: UTC.</p>' + search + (''.join(cards) or '<p class="tr-muted">No customers found. Try another nickname or email.</p>') + '</div>', get_current_user(request) or {}, manager=True)
+
 
     @app.post("/manager/team")
     def update_staff(request: Request, csrf: str = Form(""), email: str = Form(""), role: str = Form("")):
