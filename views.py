@@ -1,4 +1,4 @@
-from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
+from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
 import re
@@ -425,7 +425,7 @@ def render_public_card(table: dict, show_club=False) -> str:
     overlay_color = _network_overlay_color(network)
 
     affiliate_name = escape(normalize_affiliate_name(_safe(table.get("affiliate_name", OFFICIAL_AFFILIATE_NAME))))
-    affiliate_telegram = escape(_safe(table.get("affiliate_telegram", "")))
+    affiliate_telegram = escape(TELEGRAM_URL if affiliate_name == OFFICIAL_AFFILIATE_NAME and show_club else _safe(table.get("affiliate_telegram", "")))
     owner_name = escape(_safe(table.get("owner_name", f"{_safe(table.get('club', 'Club'))} Official")))
     owner_telegram = escape(_safe(table.get("owner_telegram", "")))
 
@@ -964,10 +964,11 @@ def render_public_script():
 
         $("#join-club-title").textContent = tableName ? (tableName + " · " + club) : club;
         $("#join-affiliate-name").textContent = affiliateName;
+        $("#join-affiliate-contact").textContent = affiliateUrl.startsWith("https://t.me/") ? "Telegram · @" + affiliateUrl.slice(13) : "Contact via Telegram";
         $("#join-owner-name").textContent = ownerName;
 
         $("#join-affiliate-tip").textContent =
-            affiliateName + " is responsible for deposits, payouts and winnings.";
+            "Contact " + affiliateName + " for help joining this club.";
 
         $("#join-owner-tip").textContent =
             ownerName + ": you deal directly with the club owner. We are not responsible for deposits, payouts or winnings.";
@@ -1569,16 +1570,17 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-affiliate-tip">
-                            Boom247 Official is responsible for deposits, payouts and winnings.
+                            Contact TableRadar Official for help joining this club.
                         </div>
                     </div>
                 </div>
 
                 <div style="font:600 15px Arial;color:#ece2c7;line-height:1.5;margin-bottom:20px;">
                     Official affiliate of the website.
+                    <div id="join-affiliate-contact" style="margin-top:7px;font-size:13px;overflow-wrap:anywhere">Telegram · @tableradar</div>
                 </div>
 
-                <a id="join-affiliate-link" href="#" target="_blank" style="
+                <a id="join-affiliate-link" href="#" target="_blank" rel="noopener noreferrer" style="
                     display:inline-flex;
                     align-items:center;
                     justify-content:center;
@@ -1689,8 +1691,8 @@ def render_admin_card(table: dict) -> str:
     network_label = _network_label(network)
     overlay_color = _network_overlay_color(network)
 
-    affiliate_name = escape(_safe(table.get("affiliate_name", "Boom247 Official")))
-    affiliate_telegram = escape(_safe(table.get("affiliate_telegram", "")))
+    affiliate_name = escape(normalize_affiliate_name(_safe(table.get("affiliate_name", OFFICIAL_AFFILIATE_NAME))))
+    affiliate_telegram = escape(TELEGRAM_URL if affiliate_name == OFFICIAL_AFFILIATE_NAME else _safe(table.get("affiliate_telegram", "")))
     owner_name = escape(_safe(table.get("owner_name", f"{_safe(table.get('club', 'Club'))} Official")))
     owner_telegram = escape(_safe(table.get("owner_telegram", "")))
 
@@ -1904,7 +1906,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Minimum buy-in','buyin','Minimum amount','',''),
         ('Players','players','Players (ex. 4/6)','',''),
         ('Affiliate name','affiliate_name','Affiliate name',OFFICIAL_AFFILIATE_NAME,''),
-        ('Affiliate Telegram URL','affiliate_telegram','https://t.me/boom247official','',''),
+        ('Affiliate Telegram URL','affiliate_telegram',TELEGRAM_URL,TELEGRAM_URL,''),
         ('Club official name','owner_name','Club owner name','','admin-owner-input'),
         ('Club Telegram URL','owner_telegram','https://t.me/playaofficial','',''),
     ]
