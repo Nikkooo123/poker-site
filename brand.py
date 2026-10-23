@@ -67,10 +67,15 @@ def render_site_theme() -> str:
     </style>"""
 
 
+def render_page_view_state():
+    """Keep this tab expanded on refresh; reset only after leaving the page."""
+    return "<script>(function(){\nconst KEY='tr-page-view-v1',page=()=>location.pathname+location.search;\nconst menu=document.querySelector('.tr-account');\nconst identity=document.body.dataset.username||menu?.querySelector('summary span')?.textContent||'guest';\nfunction read(){try{return JSON.parse(sessionStorage.getItem(KEY)||'null');}catch(e){return null;}}\nlet previous=read();\nfunction fresh(old){return old&&old.page===page()&&old.identity===identity?old:{page:page(),identity,expanded:old?15:null,menuOpen:false};}\nlet state=fresh(previous);\nfunction save(){try{sessionStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}\nwindow.trPageView={get expanded(){return state.expanded;},setExpanded(value){state.expanded=value;save();}};\nif(menu){menu.open=state.menuOpen===true;menu.addEventListener('toggle',()=>{if(state.page===page()){state.menuOpen=menu.open;save();}});}\nsave();\ndocument.addEventListener('click',event=>{\n if(event.defaultPrevented||event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;\n const link=event.target.closest?.('a[href]');if(!link||link.target==='_blank'||link.hasAttribute('download'))return;\n let url;try{url=new URL(link.href,location.href);}catch(e){return;}\n if(!['http:','https:'].includes(url.protocol))return;\n if(url.origin!==location.origin||url.pathname+url.search!==page()){\n  state={page:url.origin===location.origin?url.pathname+url.search:'away',identity,expanded:15,menuOpen:false};save();\n }\n},true);\nwindow.addEventListener('pagehide',()=>{if(state.page===page()&&menu)state.menuOpen=menu.open;save();});\nwindow.addEventListener('pageshow',event=>{\n if(!event.persisted)return;\n state=fresh(read());if(menu)menu.open=state.menuOpen===true;save();\n window.dispatchEvent(new Event('tr-page-view-restored'));\n});\n})();\n</script>"
+
+
 def render_site_footer() -> str:
     from support_chat_view import render_support_widget
     from staff_access import render_activity_tracker
-    return f'<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/privacy">Privacy Policy</a><a href="/contact">Contact</a><a href="{escape(TELEGRAM_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="TableRadar Official on Telegram">Telegram · @tableradar</a></nav></footer>' + render_support_widget() + render_activity_tracker()
+    return f'<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/privacy">Privacy Policy</a><a href="/contact">Contact</a><a href="{escape(TELEGRAM_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="TableRadar Official on Telegram">Telegram · @tableradar</a></nav></footer>' + render_page_view_state() + render_support_widget() + render_activity_tracker()
 
 
 def normalize_affiliate_name(value: str) -> str:
