@@ -36,7 +36,7 @@ def pending_club_request_count():
 def account_context(request, user):
     result = membership_state(user)
     result["_is_manager"] = is_manager(request)
-    result["_can_test"] = bool(user.get("membership_test_enabled"))
+    result["_can_test"] = is_manager(request) and bool(user.get("membership_test_enabled"))
     result["_can_enable_test"] = is_manager(request)
     result["_csrf"] = request.session.setdefault("account_csrf", secrets.token_urlsafe(32))
     return result
@@ -85,12 +85,41 @@ def install_account_routes(app, get_current_user):
         response.delete_cookie('admin_auth')
         return response
 
+    @app.get('/manager/membership-test', response_class=HTMLResponse)
+    def manager_membership_test(request: Request):
+        if not is_manager(request):
+            return HTMLResponse('Manager access required.',status_code=403)
+        csrf=escape(request.session.setdefault('account_csrf',secrets.token_urlsafe(32)),quote=True)
+        user=get_current_user(request)
+        if not user:
+            body=f'<p class="tr-page-intro">Sign in to your own existing customer account to test Host and Player. Your manager workspace stays available in this session.</p><section class="tr-info-card"><form method="post" action="/manager/membership-test/account"><input type="hidden" name="csrf" value="{csrf}"><p><label>Your account email<input name="email" type="email" autocomplete="username" required></label></p><p><label>Your account password<input name="password" type="password" autocomplete="current-password" required></label></p><button class="tr-button" type="submit">Use my account for testing</button></form></section>'
+        else:
+            forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {plan.title()} free</button></form>' for plan in ('host','player'))
+            body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
+        return page('Manager membership test',body,user or {},manager=True)
+
+    @app.post('/manager/membership-test/account')
+    def bind_manager_test_account(request: Request, csrf: str = Form(''), email: str = Form(''), password: str = Form('')):
+        token=request.session.get('account_csrf','')
+        if not is_manager(request) or not token or not secrets.compare_digest(token,csrf):
+            return HTMLResponse('Manager access required.',status_code=403)
+        if get_current_user(request):
+            return RedirectResponse('/manager/membership-test',status_code=303)
+        # Only the already-authenticated owner manager session can lack a personal account.
+        if request.session.get('staff_role') != 'manager':
+            return HTMLResponse('Sign in with your personal manager account.',status_code=403)
+        from auth.auth_storage import authenticate_user
+        user=authenticate_user(email.strip().lower(),password)
+        if not user:
+            return HTMLResponse('Account email or password is incorrect. Return to the manager test page and try again.',status_code=400)
+        request.session.clear()
+        request.session.update(staff_role='manager',user_email=user['email'],username=user.get('username') or user['email'],credential_version=user.get('credential_version',''))
+        return RedirectResponse('/manager/membership-test',status_code=303)
+
     def permitted(request, csrf, allow_bootstrap=False):
         user = get_current_user(request)
-        token = request.session.get("account_csrf", "")
-        if not user or not token or not secrets.compare_digest(token, csrf):
-            return None
-        if not user.get("membership_test_enabled") and not (allow_bootstrap and is_manager(request)):
+        token = request.session.get('account_csrf','')
+        if not user or not is_manager(request) or not token or not secrets.compare_digest(token,csrf):
             return None
         return user
 
@@ -99,9 +128,9 @@ def install_account_routes(app, get_current_user):
         user = permitted(request, csrf, allow_bootstrap=plan == "reset")
         if not user or plan not in ("reset", "player", "host"):
             return HTMLResponse("Membership preview is not available for this account.", status_code=403)
-        # One explicit reset enables this private test workflow for the signed-in account only.
+        # The manager explicitly chooses a free preview for their signed-in account only.
         now = datetime.now(timezone.utc)
-        previous = {key: user.get(key) for key in ("plan", "role", "is_active", "days_left", "auto_renew", "plan_started_at", "plan_expires_at")}
+        previous = {key: user.get(key) for key in ("plan", "role", "is_active", "days_left", "auto_renew", "plan_started_at", "plan_expires_at", "membership_source", "membership_expires_at", "manual_subscription_id", "host_service_state", "host_paid_days", "host_approved_submission")}
         fields = dict(membership_test_enabled=True, plan="inactive" if plan == "reset" else plan,
                       role="member" if plan == "reset" else plan, is_active=plan != "reset",
                       days_left=0 if plan == "reset" else 30, auto_renew=False,
@@ -113,7 +142,7 @@ def install_account_routes(app, get_current_user):
         update_user(user["email"], **fields)
         request.session["plan"] = fields["plan"]
         request.session["is_active"] = "1" if fields["is_active"] else "0"
-        return RedirectResponse("/profile", status_code=303)
+        return RedirectResponse("/host" if plan == "host" else "/profile", status_code=303)
 
     @app.get("/host", response_class=HTMLResponse)
     def host_account(request: Request):
