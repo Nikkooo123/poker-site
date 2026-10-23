@@ -1,4 +1,5 @@
 import os
+from currency_codes import normalize_currency
 import json
 from pathlib import Path
 from typing import Any
@@ -142,6 +143,7 @@ def init_db():
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS platform TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS blinds TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS buyin TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS players TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS seats TEXT DEFAULT '6';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '';")
@@ -289,6 +291,7 @@ def _normalize_table(table: dict) -> dict:
         "platform": platform,
         "blinds": blinds,
         "buyin": buyin,
+        "currency": normalize_currency(table.get("currency"), required=False),
         "players": players,
         "seats": seats,
         "tags": tags,
@@ -307,13 +310,13 @@ def _insert_table(cur, table: dict):
             club, table_name, union_name, game, network, platform,
             blinds, buyin, players, seats, tags,
             affiliate_name, affiliate_telegram,
-            owner_name, owner_telegram
+            owner_name, owner_telegram, currency
         )
         VALUES (
             %(club)s, %(table_name)s, %(union_name)s, %(game)s, %(network)s, %(platform)s,
             %(blinds)s, %(buyin)s, %(players)s, %(seats)s, %(tags)s,
             %(affiliate_name)s, %(affiliate_telegram)s,
-            %(owner_name)s, %(owner_telegram)s
+            %(owner_name)s, %(owner_telegram)s, %(currency)s
         )
         RETURNING id;
     """, t)
@@ -337,6 +340,7 @@ def load_tables():
                     platform,
                     blinds,
                     buyin,
+                    currency,
                     players,
                     seats,
                     tags,

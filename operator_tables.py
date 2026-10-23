@@ -1,10 +1,12 @@
 """Table creation restricted to active operator placements; contacts never come from staff input."""
 import re
+from currency_codes import normalize_currency
 from brand import OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL
 from storage import _connect, _insert_table, _normalize_network
 
 
-def add_operator_table(subscription_id, *, table_name, union_name, game, blinds, buyin, players, tags=""):
+def add_operator_table(subscription_id, *, table_name, union_name, game, blinds, buyin, players, tags="", currency=""):
+    currency = normalize_currency(currency)
     values = dict(table_name=table_name, union_name=union_name, blinds=blinds, buyin=buyin, players=players)
     for field, value in values.items():
         values[field] = str(value or "").strip()
@@ -40,6 +42,6 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
                 telegram = 'https://t.me/' + telegram[1:]
             if not re.fullmatch(r'https://t\.me/[A-Za-z0-9_]{3,64}/?', telegram):
                 raise ValueError("The manager must save the club owner's Telegram in Club subscriptions before adding tables.")
-            return _insert_table(cur, dict(values, game=game, tags=str(tags)[:250],
+            return _insert_table(cur, dict(values, currency=currency, game=game, tags=str(tags)[:250],
                 club=club['club_name'], network=network, affiliate_name=OFFICIAL_AFFILIATE_NAME,
                 affiliate_telegram=TELEGRAM_URL, owner_name=club['owner_name'], owner_telegram=telegram))

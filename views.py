@@ -1,3 +1,4 @@
+from currency_codes import normalize_currency, currency_options, currency_badge
 from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
@@ -330,7 +331,7 @@ def _network_overlay_color(network: str) -> str:
 def render_public_card(table: dict, show_club=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
-        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "updated_at")}
+        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency", "updated_at")}
         table.update(club="***", table_name="Active table", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
@@ -489,7 +490,7 @@ def render_public_card(table: dict, show_club=False) -> str:
                         font:600 17px Arial;
                         color:#ffffff;
                         line-height:1;">
-                        {blinds}
+                        {blinds}{currency_badge(table.get("currency"))}
                     </div>
                 </div>
             </div>
@@ -1733,7 +1734,7 @@ def render_admin_card(table: dict) -> str:
                             color:#f2f2f2;
                             line-height:1;
                             margin-top:2px;">
-                            {blinds} · {buyin}
+                            {blinds}{currency_badge(table.get("currency"))} · {buyin}
                         </div>
                     </div>
                 </div>
@@ -1795,7 +1796,7 @@ def render_operator_clubs(clubs):
         application=escape(str(club.get('application') or 'Application not recorded'))
         expiry=escape(str(club.get('expires_at_display') or 'Not recorded'))
         code=escape(str(club.get('club_code') or ''))
-        items.append(f'<li><strong>{name}</strong><span>{application}{" · ID: "+code if code else ""}</span><small>Active until {expiry}</small></li>')
+        items.append(f'<li><strong>{name}</strong><span>{application}{" · "+escape(normalize_currency(club.get("currency"),required=False)) if club.get("currency") else ""}{" · ID: "+code if code else ""}</span><small>Active until {expiry}</small></li>')
     body='<ul>'+''.join(items)+'</ul>' if items else '<p>No active club placements. Ask the manager before adding tables.</p>'
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
@@ -1806,12 +1807,13 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Table name','table_name','Table name'),
         ('Union name','union_name','Union name'),
         ('Blinds','blinds','Blinds'),
+        ('Game currency','currency','Select currency'),
         ('Minimum buy-in','buyin','Minimum amount'),
         ('Players','players','Players (ex. 4/6)'),
     ]
-    options=''.join(f'<option value="{int(c["subscription_id"])}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
+    options=''.join(f'<option value="{int(c["subscription_id"])}" data-currency="{normalize_currency(c.get('currency'),required=False)}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
     entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
-    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
+    entry_fields+=''.join((f'<label class="tr-entry-field">Game currency *<select name="currency" required>{currency_options(form_values.get("currency"))}</select></label>' if name=="currency" else f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>') for label,name,placeholder in fields)
     error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
@@ -2040,7 +2042,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 const entryForm = document.getElementById("admin-add-form");
                 const entrySubmit = document.getElementById("admin-add-submit");
                 const feedback = document.getElementById("admin-form-feedback");
-                const fieldLabels = {{subscription_id:"Club name",table_name:"Table name",union_name:"Union name",blinds:"Blinds",buyin:"Minimum buy-in",players:"Players"}};
+                const fieldLabels = {{subscription_id:"Club name",table_name:"Table name",union_name:"Union name",blinds:"Blinds",buyin:"Minimum buy-in",players:"Players",currency:"Game currency"}};
                 function validateEntry() {{
                     const missing = Object.entries(fieldLabels).filter(([name])=>!entryForm.elements[name].value.trim()).map(([,label])=>label);
                     if (!gameInput.value) missing.push("Game format");
@@ -2056,6 +2058,12 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     feedback.textContent=missing.length ? "Please complete: "+missing.join(", ")+"." : invalid || "Ready to add this table.";
                     return !entrySubmit.disabled;
                 }}
+                entryForm.elements.subscription_id.addEventListener("change",()=>{{
+                    const option=entryForm.elements.subscription_id.selectedOptions[0];
+                    const currency=option?.dataset.currency || "";
+                    entryForm.elements.currency.value=currency;
+                    validateEntry();
+                }});
                 entryForm.addEventListener("input",validateEntry);
                 entryForm.addEventListener("change",validateEntry);
                 entryForm.addEventListener("submit",event=>{{if(!validateEntry()) event.preventDefault();}});

@@ -1,3 +1,4 @@
+from currency_codes import normalize_currency
 import os
 from datetime import date, datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
@@ -98,6 +99,7 @@ def init_club_subscriptions_db():
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();")
 
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS access_expires_at TIMESTAMPTZ;")
+            cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
         conn.commit()
 
     _DB_READY = True
@@ -148,7 +150,7 @@ def load_active_operator_clubs():
     init_club_subscriptions_db()
     with _connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("""SELECT c.id,c.club_name,c.application,c.expires_at,c.access_expires_at,
+            cur.execute("""SELECT c.id,c.club_name,c.application,c.currency,c.expires_at,c.access_expires_at,
                 a.document->'club_application'->>'club_name' AS submitted_club,
                 a.document->'club_application'->>'application' AS submitted_application,
                 a.document->'club_application'->>'club_code' AS submitted_code
@@ -161,7 +163,7 @@ def load_active_operator_clubs():
     normalize=lambda value: ''.join(ch for ch in str(value or '').casefold() if ch.isalnum())
     for row in rows:
         same_club=normalize(row['club_name'])==normalize(row['submitted_club']) and normalize(row['application'])==normalize(row['submitted_application'])
-        result.append(dict(subscription_id=row['id'],club_name=row['club_name'],application=row['application'],
+        result.append(dict(subscription_id=row['id'],club_name=row['club_name'],application=row['application'],currency=normalize_currency(row.get('currency'),required=False),
                            expires_at_display=_date_display(row['expires_at']),
                            club_code=row['submitted_code'] if same_club else ''))
     return result

@@ -1,4 +1,5 @@
 """Host payment entitlement is separate from the listing's service clock."""
+from currency_codes import normalize_currency
 from datetime import datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
 import account_repository as repository
@@ -73,6 +74,7 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
             raise ValueError('Confirmed Host access is required before approving a listing.')
         if not all(str(club.get(key) or '').strip() for key in ('owner_name','telegram','club_name','club_code','application')):
             raise ValueError('The owner must provide their name or screen name, Telegram, club name and Club ID before approval.')
+        currency = normalize_currency(club.get('currency'))
         days=int(user['host_paid_days']) if preparing else 30
         expiry=now+timedelta(days=days)
         sub_id=user.get('manual_subscription_id')
@@ -84,10 +86,10 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
             sub=matches[0] if matches else None
         if sub:
             sub_id=sub[0]
-            conn.execute("UPDATE club_subscriptions SET club_name=%s,owner_name=%s,owner_telegram=%s,owner_email=%s,application=%s,status='active',started_at=%s,expires_at=%s,access_expires_at=%s,updated_at=NOW() WHERE id=%s",(club['club_name'],club['owner_name'],club['telegram'],email,club['application'],now.date(),expiry.date(),expiry,sub_id))
+            conn.execute("UPDATE club_subscriptions SET club_name=%s,owner_name=%s,owner_telegram=%s,owner_email=%s,application=%s,currency=%s,status='active',started_at=%s,expires_at=%s,access_expires_at=%s,updated_at=NOW() WHERE id=%s",(club['club_name'],club['owner_name'],club['telegram'],email,club['application'],currency,now.date(),expiry.date(),expiry,sub_id))
         else:
-            sub_id=conn.execute("""INSERT INTO club_subscriptions(club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,access_expires_at,notes)
-                VALUES(%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s) RETURNING id""",(club['club_name'],club['owner_name'],club['telegram'],email,club['application'],now.date(),expiry.date(),expiry,'Private owner preview - no payment' if user.get('membership_test_enabled') else '')).fetchone()[0]
+            sub_id=conn.execute("""INSERT INTO club_subscriptions(club_name,owner_name,owner_telegram,owner_email,application,currency,plan,status,started_at,expires_at,access_expires_at,notes)
+                VALUES(%s,%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s) RETURNING id""",(club['club_name'],club['owner_name'],club['telegram'],email,club['application'],currency,now.date(),expiry.date(),expiry,'Private owner preview - no payment' if user.get('membership_test_enabled') else '')).fetchone()[0]
         user.update(host_service_state='live',host_paid_days=0,host_launched_at=now.isoformat(),host_approved_submission=submitted_at,
                     manual_subscription_id=sub_id,is_active=True,days_left=days,auto_renew=False,
                     membership_expires_at=expiry.isoformat(),plan_started_at=now.strftime('%d/%m/%Y'),plan_expires_at=expiry.strftime('%d/%m/%Y'),
