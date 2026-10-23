@@ -1,7 +1,7 @@
 import os
 from datetime import date, datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
-from host_lifecycle import prepare_paid_host
+from host_lifecycle import prepare_paid_host, awaiting_launch
 
 import psycopg
 from psycopg.rows import dict_row
@@ -194,6 +194,8 @@ def add_club_subscription(
             if not account:
                 raise ValueError("No registered account matches this email. Ask the owner to create an account first.")
             user = dict(account["document"])
+            if awaiting_launch(user):
+                raise ValueError("This owner already has confirmed Host access awaiting launch. Review their Club request first.")
             cur.execute("SELECT id FROM club_subscriptions WHERE lower(owner_email)=%s AND plan='host' AND (status='preparing' OR (status='active' AND COALESCE(access_expires_at, expires_at::timestamptz)>NOW()))", (email,))
             if cur.fetchone():
                 raise ValueError("This owner already has an active club subscription. Use Extend on the existing entry.")
