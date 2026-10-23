@@ -8,10 +8,22 @@ class DeliveryUnavailable(ValueError):
     pass
 
 
+def _verification_secret_ready():
+    return len(os.getenv('TRIAL_PHONE_PEPPER', '').strip()) >= 32
+
+
+def email_ready():
+    return _verification_secret_ready() and all(os.getenv(name, '').strip()
+        for name in ('RESEND_API_KEY', 'VERIFICATION_EMAIL_FROM'))
+
+
+def phone_ready():
+    return _verification_secret_ready() and all(os.getenv(name, '').strip()
+        for name in ('TWILIO_API_KEY', 'TWILIO_API_SECRET', 'TWILIO_VERIFY_SERVICE_SID'))
+
+
 def ready():
-    names = ('RESEND_API_KEY', 'VERIFICATION_EMAIL_FROM', 'TWILIO_API_KEY',
-             'TWILIO_API_SECRET', 'TWILIO_VERIFY_SERVICE_SID', 'TRIAL_PHONE_PEPPER')
-    return all(os.getenv(name, '').strip() for name in names) and len(os.getenv('TRIAL_PHONE_PEPPER', '')) >= 32
+    return email_ready() and phone_ready()
 
 
 def phone_number(value):
