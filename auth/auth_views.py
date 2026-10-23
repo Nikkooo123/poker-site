@@ -1,4 +1,5 @@
 from html import escape
+from social_auth_config import render_social_signin
 from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
@@ -29,7 +30,7 @@ def message_block(error: str = "", success: str = "") -> str:
 
 
 def render_signin_page(error: str = "") -> str:
-    content = f"""<h1>Your next table starts here.</h1><p class="tr-muted">Create your TableRadar account.</p>{message_block(error=error)}
+    content = f"""<h1>Your next table starts here.</h1><p class="tr-muted">Create your TableRadar account.</p>{message_block(error=error)}{render_social_signin()}
     <form method="post" action="/signup">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password (at least 8 characters)','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
     <button class="tr-button tr-button-primary" type="submit">Create account →</button></form><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
     return auth_shell(content, 'Create account')
@@ -40,7 +41,7 @@ def render_signup_page(error: str = "", success: str = "") -> str:
 
 
 def render_signin_login_page(error: str = "") -> str:
-    content = f"""<h1>Welcome back.</h1><p class="tr-muted">Sign in to your TableRadar account.</p>{message_block(error=error)}
+    content = f"""<h1>Welcome back.</h1><p class="tr-muted">Sign in to your TableRadar account.</p>{message_block(error=error)}{render_social_signin()}
     <form method="post" action="/signin_login">{input_block('Email address','email','email',autocomplete='email')}{input_block('Password','password','password',autocomplete='current-password')}<button class="tr-button tr-button-primary" type="submit">Sign in →</button></form><a class="tr-auth-link" href="/signup">New to TableRadar? Create an account</a>"""
     return auth_shell(content, 'Sign in')
 
