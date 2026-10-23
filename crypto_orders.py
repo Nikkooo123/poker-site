@@ -5,6 +5,7 @@ from decimal import Decimal
 from psycopg.types.json import Jsonb
 import account_repository as repository
 from crypto_provider import completed_invoice_matches
+from host_lifecycle import prepare_paid_host
 
 PRICES = {'player': '29.99', 'host': '600.00'}
 
@@ -99,12 +100,20 @@ def settle(order_id, invoice):
                     start=max(now,expiry)
             except (ValueError,TypeError):
                 pass
-        expiry=start+timedelta(days=30)
-        user.update(plan=order['plan'],role=order['plan'],is_active=True,auto_renew=False,
-                    membership_test_enabled=False,membership_source='crypto',membership_expires_at=expiry.isoformat(),
-                    plan_started_at=now.strftime('%d/%m/%Y'),plan_expires_at=expiry.strftime('%d/%m/%Y'),
-                    last_payment_order=order_id,days_left=int((expiry-now).total_seconds()+86399)//86400)
-        order.update(status='completed',fulfilled=True,fulfilled_at=now.isoformat(),membership_expires_at=expiry.isoformat())
+        pending_host = order['plan']=='host' and start==now
+        if pending_host:
+            prepare_paid_host(user, now)
+            user.update(membership_source='crypto', last_payment_order=order_id)
+            order.update(status='completed',fulfilled=True,fulfilled_at=now.isoformat(),host_awaiting_launch=True)
+        else:
+            expiry=start+timedelta(days=30)
+            user.update(plan=order['plan'],role=order['plan'],is_active=True,auto_renew=False,
+                        membership_test_enabled=False,membership_source='crypto',membership_expires_at=expiry.isoformat(),
+                        plan_started_at=user.get('plan_started_at') or now.strftime('%d/%m/%Y'),plan_expires_at=expiry.strftime('%d/%m/%Y'),
+                        last_payment_order=order_id,days_left=int((expiry-now).total_seconds()+86399)//86400)
+            if order['plan']=='host' and user.get('manual_subscription_id'):
+                conn.execute("UPDATE club_subscriptions SET expires_at=%s,access_expires_at=%s,updated_at=NOW() WHERE id=%s AND lower(owner_email)=%s AND status='active'",(expiry.date(),expiry,user['manual_subscription_id'],order['email']))
+            order.update(status='completed',fulfilled=True,fulfilled_at=now.isoformat(),membership_expires_at=expiry.isoformat())
         conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s',(Jsonb(user),order['email']))
         conn.execute('UPDATE tableradar_crypto_orders SET document=%s,updated_at=NOW() WHERE id=%s',(Jsonb(order),order_id))
         return order
