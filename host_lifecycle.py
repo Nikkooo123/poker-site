@@ -17,6 +17,8 @@ def has_host_access(user):
 
 def prepare_paid_host(user, now):
     """Only called inside the confirmed-payment/manual-confirmation transaction."""
+    if not awaiting_launch(user):
+        user.pop('manual_subscription_id', None)
     user.update(plan='host', role='host', is_active=False, days_left=0, auto_renew=False,
                 membership_test_enabled=False, host_service_state='preparing',
                 host_paid_days=int(user.get('host_paid_days') or 0) + 30,
