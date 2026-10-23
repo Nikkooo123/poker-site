@@ -36,6 +36,7 @@ def render_about_page():
         ('What we provide', 'Browse game formats, table features, blinds, player counts and club contact details. Use filters and favourites to find the tables that interest you. Registered club owners can submit their club information for review.'),
         ('Our role', 'We publish information and help people find the appropriate club contact. TableRadar does not operate poker clubs or host games. We are not a financial organisation and do not provide financial services.'),
         ('How listings work', 'Our team reviews club submissions and maintains table information manually. Availability and settings can change, so check the current details with the club before joining.'),
+        ('Host coverage', 'Standard coverage is up to 20 active tables per club at blinds of $0.50/$1 or higher. If a club has more tables, eligible tables are prioritised from the highest blinds down. Heads-up tables are not listed. Contact Live Chat or Telegram @tableradar to discuss coverage beyond 20 tables.'),
         ('Talk to us', 'For help with your TableRadar account, the directory or a club listing, use Contact or Live Chat. Questions about a game or club access should go to that club’s contact.'),
     ])
 
@@ -47,6 +48,7 @@ def render_terms_page() -> str:
         ('3. Information and availability', 'Table details are maintained manually and may change between updates. Formats, player counts and availability are provided for reference. Confirm the current details and rules with the club.'),
         ('4. Your account', 'Keep your sign-in details secure and provide accurate information. Do not share access, impersonate another person, submit misleading listings or misuse other users’ information. Access to account features depends on the service option shown in your profile.'),
         ('5. Club listings', 'Club submissions are reviewed before placement. Service status and the listing period appear in the Host dashboard. Owners should keep their contact and club details current. TableRadar may correct, decline or remove inaccurate or inappropriate listings.'),
+        ('Host listing coverage', 'Standard Host coverage includes up to 20 active tables per club, with blinds of $0.50/$1 or higher. When a club has more than 20 tables, eligible tables are selected from the highest blinds down. Heads-up (one-on-one) tables are excluded. Contact Live Chat or Telegram @tableradar to discuss additional coverage beyond 20 tables.'),
         ('6. Responsible use', 'Use the directory only where permitted and meet the applicable age requirements, including a minimum age of 18. You are responsible for checking the rules of any third-party club or application you choose to use.'),
         ('7. Service support and updates', 'Contact TableRadar about your account or a directory listing. Contact the independent club about its games. The directory and these conditions may be updated as the service develops.'),
     ])
@@ -60,6 +62,7 @@ def render_faq_page() -> str:
         ('What do the table icons mean?', 'Icons describe features selected for a table, such as VPIP, Bomb Pot, Double Board or Squid Game. Hover over a feature to see its label. Availability and rules depend on the club and application.'),
         ('What does My Account include?', 'Your profile, account security, favourites and available service options. Registered visitors can currently view full table information without an active Player membership.'),
         ('What does the Host dashboard show?', 'Club owners with Host access can submit their club information and follow its review, preparation and placement status. The service countdown begins when the listing is approved and activated.'),
+        ('How many tables does Host coverage include?', 'Up to 20 active tables per club at blinds of $0.50/$1 or higher. We prioritise eligible tables from the highest blinds down and exclude heads-up tables. For more than 20 tables, contact Live Chat or Telegram @tableradar.'),
         ('What are TableRadar Official and Club Official?', 'TableRadar Official is our information and support contact. Club Official is the independent club’s own contact for current table details and access requirements.'),
         ('How can I get help?', 'Use Contact or Live Chat for TableRadar account and listing questions. For questions about a particular game, contact the club directly.'),
     ]

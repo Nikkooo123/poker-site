@@ -99,3 +99,7 @@ def render_brand_logo(home_href: str = "/") -> str:
       <span style="font:600 25px/1.1 'Segoe UI',Arial,sans-serif;letter-spacing:-1px;color:#eff5f2">Table<span style="color:#a8d8c4">Radar</span></span>
     </a>
     """
+
+
+def render_host_listing_notice():
+    return '<aside class="tr-host-listing-notice" aria-label="Host listing conditions" style="margin:18px 0;padding:16px 18px;border:1px solid #a8d8c466;border-left:3px solid #a8d8c4;border-radius:12px;background:#a8d8c410;font-size:13px;line-height:1.65;overflow-wrap:anywhere"><strong style="color:#d3f5e3">* Host listing conditions</strong><div style="margin-top:7px">Standard coverage includes up to <strong>20 active tables per club</strong>, with blinds of <strong>$0.50/$1 or higher</strong>. If your club has more than 20 tables, we prioritise eligible tables from the highest blinds down. <strong>Heads-up (one-on-one) tables are not listed.</strong></div><div style="margin-top:7px">Need coverage for more than 20 tables? Contact us in <button type="button" data-open-live-chat style="display:inline;padding:0;border:0;min-height:0;background:none;color:#c5eddf;font:inherit;text-decoration:underline;cursor:pointer">Live Chat</button> or on <a href="https://t.me/tableradar" target="_blank" rel="noopener noreferrer" style="color:#c5eddf;text-decoration:underline">Telegram @tableradar</a> to discuss additional coverage.</div></aside>'
