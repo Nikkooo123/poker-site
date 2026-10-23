@@ -21,4 +21,4 @@ def currency_input(value=''):
 
 def currency_badge(value):
     code = escape(normalize_currency(value, required=False), quote=True)
-    return f'<span class="tr-currency" aria-label="Game currency {code}" style="display:inline-block;max-width:100%;overflow-wrap:anywhere;margin-left:7px;vertical-align:middle;font-size:10px;font-weight:600;line-height:1.5;letter-spacing:.4px;color:#bcd8d0">{code}</span>' if code else ''
+    return f'<span class="tr-currency" aria-label="Game currency {code}" style="display:block;max-width:100%;overflow-wrap:anywhere;margin-top:3px;font-size:10px;font-weight:600;line-height:1.5;letter-spacing:.4px;color:#bcd8d0">{code}</span>' if code else ''

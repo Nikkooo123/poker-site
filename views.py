@@ -1734,7 +1734,7 @@ def render_admin_card(table: dict) -> str:
                             color:#f2f2f2;
                             line-height:1;
                             margin-top:2px;">
-                            {blinds}{currency_badge(table.get("currency"))} · {buyin}
+                            {blinds} · {buyin}{currency_badge(table.get("currency"))}
                         </div>
                     </div>
                 </div>
