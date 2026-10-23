@@ -27,6 +27,7 @@ from auth.auth_views import (
 from auth.profile_view import render_profile_page, render_payment_page
 from account_membership import membership_state, account_context, install_account_routes, pending_club_request_count
 from staff_access import session_secret, staff_role, is_manager, can_edit_tables
+from social_auth import install_social_routes
 from support_chat import install_support_routes
 from crypto_checkout import checkout_page, install_crypto_routes
 
@@ -422,6 +423,7 @@ def admin_delete_club_subscription(request: Request, subscription_id: int, csrf:
 
 
 install_account_routes(app, get_current_user)
+install_social_routes(app, get_current_user)
 install_support_routes(app, get_current_user)
 install_crypto_routes(app, get_current_user)
 
