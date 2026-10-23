@@ -16,7 +16,8 @@ def back_home_logo() -> str:
 def input_block(label: str, name: str, input_type: str = "text", required: bool = True, autocomplete: str = "") -> str:
     req = "required" if required else ""
     complete = f'autocomplete="{escape(autocomplete)}"' if autocomplete else ''
-    return f'<label for="auth-{escape(name)}">{escape(label)}</label><input id="auth-{escape(name)}" name="{escape(name)}" type="{escape(input_type)}" {req} {complete}>'
+    limits = 'minlength="8" maxlength="256"' if input_type == 'password' and autocomplete == 'new-password' else ''
+    return f'<label for="auth-{escape(name)}">{escape(label)}</label><input id="auth-{escape(name)}" name="{escape(name)}" type="{escape(input_type)}" {req} {complete} {limits}>'
 
 
 def message_block(error: str = "", success: str = "") -> str:
@@ -29,7 +30,7 @@ def message_block(error: str = "", success: str = "") -> str:
 
 def render_signin_page(error: str = "") -> str:
     content = f"""<h1>Your next table starts here.</h1><p class="tr-muted">Create your TableRadar account.</p>{message_block(error=error)}
-    <form method="post" action="/signup">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
+    <form method="post" action="/signup">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password (at least 8 characters)','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
     <button class="tr-button tr-button-primary" type="submit">Create account →</button></form><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
     return auth_shell(content, 'Create account')
 
