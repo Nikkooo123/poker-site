@@ -1,4 +1,4 @@
-from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons
+from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
@@ -55,98 +55,17 @@ def _parse_big_blind(blinds_text: str) -> float:
 
     return 0.0
 def _render_tags(tags_raw: str) -> str:
-    import re
-
-    raw = _safe(tags_raw, "").lower()
-    items = []
-
-    # VPIP badge
-    if "vpip" in raw or "vipip" in raw or "vip" in raw:
-        m = re.search(r"(\d+)", raw)
-        percent = f" {m.group(1)}%" if m else ""
-        items.append(f"""
-            <span style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                height:22px;
-                padding:0 8px;
-                border-radius:7px;
-                background:#eea11f;
-                color:rgba(255,245,215,.88);
-                font:700 10px Arial;
-                letter-spacing:.2px;
-                white-space:nowrap;
-                box-shadow:
-                    inset 0 1px 0 rgba(255,255,255,.12),
-                    0 2px 6px rgba(0,0,0,.16);">
-                VPIP{percent}
-            </span>
-        """)
-
-    # Bomb icon
-    if "bomb" in raw:
-        items.append("""
-            <span title="Bomb" style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                width:22px;
-                height:22px;
-                border-radius:6px;
-                background:#df5a47;
-                box-shadow:
-                    inset 0 1px 0 rgba(255,255,255,.10),
-                    0 2px 6px rgba(0,0,0,.16);">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#ffd6df" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 6l3-3"></path>
-                    <path d="M14 3h4v4"></path>
-                    <circle cx="10" cy="14" r="6" fill="#ffd6df" stroke="none"></circle>
-                </svg>
-            </span>
-        """)
-
-    # Clock icon
-    if "clock" in raw:
-        items.append("""
-            <span title="Clock" style="
-                display:inline-flex;
-                align-items:center;
-                justify-content:center;
-                width:22px;
-                height:22px;
-                border-radius:6px;
-                background:#73c95a;
-                box-shadow:
-                    inset 0 1px 0 rgba(255,255,255,.10),
-                    0 2px 6px rgba(0,0,0,.16);">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#ecffd8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="8"></circle>
-                    <path d="M12 8v5"></path>
-                    <path d="M12 12l3 2"></path>
-                </svg>
-            </span>
-        """)
-
+    raw = _safe(tags_raw).lower()
     selected = {token.strip() for token in raw.split(',')}
+    items = []
+    if 'vpip' in raw or 'vipip' in raw or 'vip' in raw:
+        match = re.search(r'(?:vpip|vipip|vip)\s*(\d+)', raw)
+        items.append(render_vpip_badge(match.group(1) if match else ''))
+    items.extend(render_feature_icon(key) for key in ('bomb', 'clock') if key in raw)
     items.extend(render_feature_icon(key) for key in FEATURES if key in selected)
-
     if not items:
-        return ""
-
-    return f"""
-    <div class="tr-feature-tags" style="
-        width:100%;max-width:138px;
-        margin-top:6px;
-        display:flex;
-        align-items:center;
-        justify-content:flex-end;
-        gap:4px;
-        flex-wrap:wrap;
-        white-space:nowrap;">
-        {"".join(items)}
-    </div>
-    """
+        return ''
+    return '<div class="tr-feature-tags" style="width:100%;max-width:138px;margin-top:6px;display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;white-space:nowrap">'+''.join(items)+'</div>'
 
 # =========================
 # HELPERS
@@ -935,9 +854,10 @@ def render_public_script():
         if (empty) empty.hidden = rows.length === 0 || filtered.length > 0;
         const reset = $("#clear-filters");
         if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || activeGames.length || activeNetworks.length || showOnlyFavorites);
-        const directions = {asc: "↑", desc: "↓"};
-        if ($("#sort-players")) $("#sort-players").textContent = "Players " + (directions[sortPlayersDir] || "↕");
-        if ($("#sort-blinds")) $("#sort-blinds").textContent = "Blinds " + (directions[sortBlindsDir] || "↕");
+        for (const [id,label,dir] of [["sort-players","Players",sortPlayersDir],["sort-blinds","Blinds",sortBlindsDir]]) {
+            const button=$("#"+id);
+            if(button){button.dataset.sort=dir;button.setAttribute("aria-label",label+" sort: "+(dir==="asc"?"ascending":dir==="desc"?"descending":"not sorted")+". Activate to change direction.");}
+        }
 
         const loadWrap = $("#load-more-wrap");
         if (loadWrap) {
@@ -978,7 +898,7 @@ def render_public_script():
             "Contact " + affiliateName + " for help joining this club.";
 
         $("#join-owner-tip").textContent =
-            ownerName + ": you deal directly with the club owner. We are not responsible for deposits, payouts or winnings.";
+            ownerName + ": contact the club for current table information and access requirements. TableRadar provides information only.";
 
         setJoinLink($("#join-affiliate-link"), affiliateUrl);
         setJoinLink($("#join-owner-link"), ownerUrl);
@@ -1234,6 +1154,8 @@ def render_public_page(tables, request=None, user=None):
                 z-index: 2;
             }}
 
+            .admin-tag-btn.tr-vpip-pick {{padding:2px;min-width:70px;background:transparent;border:1px solid transparent;box-shadow:none}}
+            .admin-tag-btn.tr-vpip-pick.active {{border-color:#f3dba5;background:#65522c;box-shadow:0 0 0 1px #f3dba555}}
             .admin-tag-btn.tr-feature-pick {{min-width:28px!important;width:28px;height:28px!important;padding:2px;background:transparent;border:1px solid transparent;box-shadow:none}}
             .admin-tag-btn.tr-feature-pick.active {{border-color:#c7f2dd;background:#3c6152;box-shadow:0 0 0 1px #c7f2dd55}}
             .tr-feature-pick .tr-feature-icon {{pointer-events:none}}
@@ -1468,12 +1390,12 @@ def render_public_page(tables, request=None, user=None):
                         cursor:pointer;
                         text-align:left;
                         padding-left:28px;">
-                        Players ↕
+                        Players <span class="tr-sort-arrows" aria-hidden="true"><svg viewBox="0 0 18 18" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="sort-up" d="M5 14V3M2 6l3-3 3 3"/><path class="sort-down" d="M13 4v11m-3-3l3 3 3-3"/></svg></span>
                     </button>
                     <button id="sort-blinds" type="button" class="tr-sort-button" title="Sort by blinds; click again to reverse or reset" style="
                         cursor:pointer;
                         text-align:left;">
-                        Blinds ↕
+                        Blinds <span class="tr-sort-arrows" aria-hidden="true"><svg viewBox="0 0 18 18" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="sort-up" d="M5 14V3M2 6l3-3 3 3"/><path class="sort-down" d="M13 4v11m-3-3l3 3 3-3"/></svg></span>
                     </button>
                     <div></div>
                 </div>
@@ -1505,7 +1427,7 @@ def render_public_page(tables, request=None, user=None):
         </div>
 
         </div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>Register or sign in to view club details and join. Membership payment is not required during this preview.</p><div><a class="tr-button tr-button-primary" href="/signup">Create account</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>Register or sign in to view club details and join. Registered visitors can currently view full table information.</p><div><a class="tr-button tr-button-primary" href="/signup">Create account</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
@@ -1634,7 +1556,7 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-owner-tip">
-                            You deal directly with the club owner. We are not responsible for deposits, payouts or winnings.
+                            Contact the club for current table information and access requirements. TableRadar provides information only.
                         </div>
                     </div>
                 </div>
@@ -1878,7 +1800,8 @@ def render_operator_clubs(clubs):
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
 
-def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0, csrf="", error=""):
+def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0, csrf="", error="", form_data=None):
+    form_values = dict(form_data or {})
     fields = [
         ('Table name','table_name','Table name'),
         ('Union name','union_name','Union name'),
@@ -1886,9 +1809,9 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Minimum buy-in','buyin','Minimum amount'),
         ('Players','players','Players (ex. 4/6)'),
     ]
-    options=''.join(f'<option value="{int(c["subscription_id"])}">{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
+    options=''.join(f'<option value="{int(c["subscription_id"])}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
     entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
-    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
+    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
     error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
@@ -1957,6 +1880,8 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 color:#eef8f0;
             }}
 
+            .admin-tag-btn.tr-vpip-pick {{padding:2px;min-width:70px;background:transparent;border:1px solid transparent;box-shadow:none}}
+            .admin-tag-btn.tr-vpip-pick.active {{border-color:#f3dba5;background:#65522c;box-shadow:0 0 0 1px #f3dba555}}
             .admin-tag-btn.tr-feature-pick {{min-width:28px!important;width:28px;height:28px!important;padding:2px;background:transparent;border:1px solid transparent;box-shadow:none}}
             .admin-tag-btn.tr-feature-pick.active {{border-color:#c7f2dd;background:#3c6152;box-shadow:0 0 0 1px #c7f2dd55}}
             .tr-feature-pick .tr-feature-icon {{pointer-events:none}}
@@ -2013,24 +1938,23 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
 
                 {error_html}<form method="post" action="/add" id="admin-add-form">
                     <input type="hidden" name="csrf" value="{escape(csrf,quote=True)}">
-                    <input type="hidden" name="game" id="admin-game-input">
-                    <input type="hidden" name="tags" id="admin-tags-input">
+                    <input type="hidden" name="game" id="admin-game-input" value="{escape(str(form_values.get("game", "")),quote=True)}">
+                    <input type="hidden" name="tags" id="admin-tags-input" value="{escape(str(form_values.get("tags", "")),quote=True)}">
 
                     <div class="tr-entry-fields">{entry_fields}</div>
 
                     <div class="tr-entry-options">
                         <section><div style="font:700 12px Arial;margin-bottom:4px;">Tags</div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 30%">VPIP 30%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 35%">VPIP 35%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 40%">VPIP 40%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 45%">VPIP 45%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 50%">VPIP 50%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 55%">VPIP 55%</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 60%">VPIP 60%</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 30%" aria-label="VPIP 30%">{render_vpip_badge("30")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 35%" aria-label="VPIP 35%">{render_vpip_badge("35")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 40%" aria-label="VPIP 40%">{render_vpip_badge("40")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 45%" aria-label="VPIP 45%">{render_vpip_badge("45")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 50%" aria-label="VPIP 50%">{render_vpip_badge("50")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 55%" aria-label="VPIP 55%">{render_vpip_badge("55")}</button>
+    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 60%" aria-label="VPIP 60%">{render_vpip_badge("60")}</button>
 
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="bomb">💣</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn" data-value="clock">⏱</button>
+    {feature_buttons(('bomb', 'clock'))}
     {feature_buttons(PRIMARY_FEATURES)}
 </div>
 <details class="tr-extra-features"><summary>More table features</summary><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">{feature_buttons((key for key in FEATURES if key not in PRIMARY_FEATURES), labels=True)}</div><small>Select only features enabled on this table. Availability varies by application.</small></details>
@@ -2044,6 +1968,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                         </div></section>
                     </div>
 
+                    <p id="admin-form-feedback" role="status" aria-live="polite" style="margin:6px 0 0;color:#d7c7a1;font-size:11px"></p>
                     <div class="tr-entry-submit" style="
                         margin-top:10px;
                         display:flex;
@@ -2051,7 +1976,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                         align-items:flex-end;
                         gap:10px;">
 
-                        <button type="submit" style="
+                        <button id="admin-add-submit" type="submit" style="
                             padding:8px 14px;
                             border:none;
                             border-radius:8px;
@@ -2112,7 +2037,32 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
 
                 const clubSearch = document.getElementById("admin-club-search");
 
-                let selectedTags = [];
+                const entryForm = document.getElementById("admin-add-form");
+                const entrySubmit = document.getElementById("admin-add-submit");
+                const feedback = document.getElementById("admin-form-feedback");
+                const fieldLabels = {{subscription_id:"Club name",table_name:"Table name",union_name:"Union name",blinds:"Blinds",buyin:"Minimum buy-in",players:"Players"}};
+                function validateEntry() {{
+                    const missing = Object.entries(fieldLabels).filter(([name])=>!entryForm.elements[name].value.trim()).map(([,label])=>label);
+                    if (!gameInput.value) missing.push("Game format");
+                    let invalid = "";
+                    const buyin = entryForm.elements.buyin.value.trim();
+                    const players = entryForm.elements.players.value.trim();
+                    if (buyin && (!/^[0-9]{{1,10}}(?:[.,][0-9]{{1,2}})?$/.test(buyin) || Number(buyin.replace(',','.'))<=0)) invalid="Minimum buy-in: enter a positive amount.";
+                    const seats = /^(\\d{{1,2}})\\s*\\/\\s*(\\d{{1,2}})$/.exec(players);
+                    if (players && (!seats || +seats[1]>+seats[2] || +seats[2]<2 || +seats[2]>10)) invalid="Players: use occupied / total seats, for example 4/6.";
+                    const tooLong = Object.keys(fieldLabels).find(name=>name!=="subscription_id" && entryForm.elements[name].value.length>160);
+                    if (tooLong) invalid=fieldLabels[tooLong]+": use up to 160 characters.";
+                    entrySubmit.disabled=!!(missing.length || invalid);
+                    feedback.textContent=missing.length ? "Please complete: "+missing.join(", ")+"." : invalid || "Ready to add this table.";
+                    return !entrySubmit.disabled;
+                }}
+                entryForm.addEventListener("input",validateEntry);
+                entryForm.addEventListener("change",validateEntry);
+                entryForm.addEventListener("submit",event=>{{if(!validateEntry()) event.preventDefault();}});
+                let selectedTags = tagsInput.value.split(",").filter(Boolean);
+                document.querySelectorAll(".admin-game-btn").forEach(btn=>btn.classList.toggle("active",btn.dataset.value===gameInput.value));
+                document.querySelectorAll(".admin-tag-btn").forEach(btn=>{{const on=selectedTags.includes(btn.dataset.value);btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",String(on));}});
+                validateEntry();
 
                 function syncTags() {{
                     tagsInput.value = selectedTags.join(",");
@@ -2123,6 +2073,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                         document.querySelectorAll(".admin-game-btn").forEach(b => b.classList.remove("active"));
                         btn.classList.add("active");
                         gameInput.value = btn.dataset.value;
+                        validateEntry();
                     }});
                 }});
 
