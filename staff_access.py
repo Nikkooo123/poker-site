@@ -99,6 +99,29 @@ def record_customer_login(email):
         pass
 
 
+def activity_statistics_enabled(user):
+    return isinstance(user,dict) and user.get('activity_statistics_enabled') is True
+
+
+def set_activity_statistics(email, enabled):
+    """Save an explicit, optional choice without changing account access."""
+    from datetime import datetime,timezone
+    fields=dict(activity_statistics_enabled=bool(enabled),activity_statistics_updated_at=datetime.now(timezone.utc).isoformat(),activity_statistics_version=1)
+    if repository.enabled():
+        _activity_schema()
+        with repository.connection() as conn:
+            row=conn.execute('SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE',(email,)).fetchone()
+            if not row:
+                raise ValueError('Account no longer exists.')
+            user=dict(row[0]);user.update(fields)
+            conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s',(Jsonb(user),email))
+            # Never bridge active time across a withdrawn or newly granted choice.
+            conn.execute('UPDATE tableradar_customer_activity SET last_beat_at=NULL,last_beat_active=FALSE WHERE email=%s',(email,))
+        return
+    if not update_user(email,**fields):
+        raise ValueError('Account no longer exists.')
+
+
 def record_customer_activity(email, active, section):
     if not repository.enabled():
         return
@@ -106,6 +129,11 @@ def record_customer_activity(email, active, section):
     allowed = {'Tables','My account','Host dashboard','Membership','Support','Staff workspace','Information'}
     section = section if section in allowed else 'Information'
     with repository.connection() as conn:
+        # Lock the current preference before any telemetry write. Withdrawal waits
+        # for an in-flight beat; later beats cannot restart it from a stale tab.
+        account=conn.execute('SELECT document FROM tableradar_accounts WHERE email=%s FOR SHARE',(email,)).fetchone()
+        if not account or not activity_statistics_enabled(account[0]):
+            return False
         conn.execute("""INSERT INTO tableradar_customer_activity(email)
             SELECT email FROM tableradar_accounts WHERE email=%s ON CONFLICT(email) DO NOTHING""",(email,))
         row=conn.execute('SELECT last_beat_at,last_beat_active FROM tableradar_customer_activity WHERE email=%s FOR UPDATE',(email,)).fetchone()
@@ -137,4 +165,4 @@ def customer_activity_summary():
 
 
 def render_activity_tracker():
-    return "<script>(function(){\nif(window.top!==window.self||window.trActivityStarted)return;\nwindow.trActivityStarted=true;\nlet csrf='',lastInput=Date.now(),busy=false;\n['pointerdown','keydown','scroll','touchstart','focus'].forEach(name=>window.addEventListener(name,()=>{lastInput=Date.now();},{passive:true}));\nfunction section(){const p=location.pathname;if(p==='/')return 'Tables';if(p==='/profile'||p==='/verify-account')return 'My account';if(p.includes('host'))return 'Host dashboard';if(p.startsWith('/pay'))return 'Membership';if(p.includes('chat')||p==='/contact')return 'Support';if(p.startsWith('/manager')||p.startsWith('/admin'))return 'Staff workspace';return 'Information';}\nasync function beat(){if(!csrf||busy)return;busy=true;try{await fetch('/account/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:csrf,active:document.visibilityState==='visible'&&document.hasFocus()&&Date.now()-lastInput<60000?'1':'0',section:section()})});}catch(e){}finally{busy=false;}}\nfetch('/account/activity',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(data&&data.csrf){csrf=data.csrf;beat();setInterval(beat,30000);}}).catch(()=>{});\n})();</script>"
+    return "<script>(function(){\nif(window.top!==window.self||window.trActivityStarted)return;\nwindow.trActivityStarted=true;\nlet csrf='',lastInput=Date.now(),busy=false;\n['pointerdown','keydown','scroll','touchstart','focus'].forEach(name=>window.addEventListener(name,()=>{lastInput=Date.now();},{passive:true}));\nfunction section(){const p=location.pathname;if(p==='/')return 'Tables';if(p==='/profile'||p==='/verify-account')return 'My account';if(p.includes('host'))return 'Host dashboard';if(p.startsWith('/pay'))return 'Membership';if(p.includes('chat')||p==='/contact')return 'Support';if(p.startsWith('/manager')||p.startsWith('/admin'))return 'Staff workspace';return 'Information';}\nasync function beat(){if(!csrf||busy)return;busy=true;try{const response=await fetch('/account/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:csrf,active:document.visibilityState==='visible'&&document.hasFocus()&&Date.now()-lastInput<60000?'1':'0',section:section()})});if(response.status===403){csrf='';}}catch(e){}finally{busy=false;}}\nfetch('/account/activity',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(data&&data.enabled&&data.csrf){csrf=data.csrf;beat();setInterval(beat,30000);}}).catch(()=>{});\n})();</script>"
