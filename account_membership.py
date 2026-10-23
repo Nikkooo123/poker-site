@@ -41,6 +41,8 @@ def customer_activity_card(user, activity):
             return dt.astimezone(timezone.utc).strftime('%d %b %Y, %H:%M UTC')
         except (ValueError,TypeError):
             return safe(value)
+    from staff_access import activity_statistics_enabled
+    shared=activity_statistics_enabled(user)
     seconds=max(0,int(activity.get('active_seconds',0)))
     duration=(str(seconds//3600)+'h '+str(seconds//60%60)+'m') if seconds>=3600 else (str(seconds//60)+'m '+str(seconds%60)+'s')
     state=membership_state(user)
@@ -48,9 +50,9 @@ def customer_activity_card(user, activity):
     label=plan.title() if plan in ('player','host') else 'No membership'
     fields=[('Membership',label+' · '+('Active' if state.get('is_active') else 'Inactive')),
         ('Registered',stamp(user.get('registered_at') or user.get('registered'))),
-        ('Last sign-in',stamp(activity.get('last_login_at'))),('Last active',stamp(activity.get('last_seen_at'))),
-        ('Sign-ins recorded',str(activity.get('login_count',0))),('Active time (approx.)',duration if activity else 'Not recorded yet'),
-        ('Last section',safe(activity.get('last_page') or 'Not recorded yet')),('Tracking since',stamp(activity.get('tracking_started_at')))]
+        ('Last sign-in',stamp(activity.get('last_login_at'))),('Last active',stamp(activity.get('last_seen_at')) if shared else 'Not shared'),
+        ('Sign-ins recorded',str(activity.get('login_count',0))),('Active time (approx.)',(duration if activity else 'Not recorded yet') if shared else 'Not shared'),
+        ('Last section',safe(activity.get('last_page') or 'Not recorded yet') if shared else 'Not shared'),('Activity sharing','Enabled' if shared else 'Off')]
     return '<dl class="tr-team-metrics">'+''.join('<div><dt style="font-size:11px;color:var(--tr-muted)">'+title+'</dt><dd style="margin:3px 0 0;font-size:12px;overflow-wrap:anywhere">'+value+'</dd></div>' for title,value in fields)+'</dl>'
 
 
@@ -296,12 +298,30 @@ def install_account_routes(app, get_current_user):
             return HTMLResponse(escape(str(error)),status_code=409)
         return RedirectResponse('/admin/club-requests',status_code=303)
 
+    @app.post('/account/privacy/activity')
+    def activity_preference(request: Request, csrf: str = Form(''), activity_statistics: str = Form('')):
+        user=get_current_user(request)
+        token=request.session.get('account_csrf','')
+        if not user or not token or not secrets.compare_digest(token,csrf):
+            return HTMLResponse('Sign in and refresh your account page.',status_code=403)
+        if activity_statistics not in ('','1'):
+            return HTMLResponse('Choose whether to share optional activity statistics.',status_code=400)
+        from staff_access import set_activity_statistics
+        try:
+            set_activity_statistics(user['email'],activity_statistics=='1')
+        except ValueError as error:
+            return HTMLResponse(escape(str(error)),status_code=409)
+        return RedirectResponse('/profile',status_code=303)
+
     @app.get("/account/activity")
     def activity_token(request: Request):
         user = get_current_user(request)
         if not user:
             return JSONResponse({}, status_code=401, headers={'Cache-Control':'no-store'})
-        return JSONResponse({'csrf':request.session.setdefault('account_csrf',secrets.token_urlsafe(32))}, headers={'Cache-Control':'no-store'})
+        from staff_access import activity_statistics_enabled
+        if not activity_statistics_enabled(user):
+            return JSONResponse({'enabled':False},headers={'Cache-Control':'no-store'})
+        return JSONResponse({'enabled':True,'csrf':request.session.setdefault('account_csrf',secrets.token_urlsafe(32))}, headers={'Cache-Control':'no-store'})
 
     @app.post("/account/activity")
     def activity_heartbeat(request: Request, csrf: str = Form(""), active: str = Form("0"), section: str = Form("Information")):
@@ -309,9 +329,12 @@ def install_account_routes(app, get_current_user):
         token = request.session.get('account_csrf','')
         if not user or not token or not secrets.compare_digest(token,csrf):
             return JSONResponse({}, status_code=403, headers={'Cache-Control':'no-store'})
-        from staff_access import record_customer_activity
+        from staff_access import record_customer_activity,activity_statistics_enabled
+        if not activity_statistics_enabled(user):
+            return JSONResponse({'enabled':False},status_code=403,headers={'Cache-Control':'no-store'})
         try:
-            record_customer_activity(user['email'],active=='1',section)
+            if record_customer_activity(user['email'],active=='1',section) is False:
+                return JSONResponse({'enabled':False},status_code=403,headers={'Cache-Control':'no-store'})
         except Exception:
             return JSONResponse({}, status_code=503, headers={'Cache-Control':'no-store'})
         return JSONResponse({'ok':True},headers={'Cache-Control':'no-store'})
