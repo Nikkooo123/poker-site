@@ -125,6 +125,9 @@ def install_social_routes(app, get_current_user):
             # Rotate the signed session and keep provider access/refresh tokens out of it.
             request.session.clear()
             request.session.update(user_email=user['email'],username=user['username'],credential_version=user.get('credential_version',''),social_authenticated_at=int(time.time()))
+            if not connect:
+                from staff_access import record_customer_login
+                await run_in_threadpool(record_customer_login,user['email'])
             from player_access import enabled, entitled
             destination = '/profile' if connect else '/verify-account' if enabled() and not entitled(user) else '/'
             response=RedirectResponse(destination,status_code=303)
