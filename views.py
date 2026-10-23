@@ -63,6 +63,8 @@ def _render_tags(tags_raw: str) -> str:
     raw = _safe(tags_raw).lower()
     selected = {token.strip() for token in raw.split(',')}
     items = []
+    if 'demo' in selected:
+        items.append('<span class="tr-demo-label" style="display:inline-flex;align-items:center;height:22px;padding:0 5px;border:1px solid #b9d8c855;border-radius:5px;background:#426257;color:#e5f8ed;font-size:9px;font-weight:600">Demo</span>')
     if 'vpip' in raw or 'vipip' in raw or 'vip' in raw:
         match = re.search(r'(?:vpip|vipip|vip)\s*(\d+)', raw)
         items.append(render_vpip_badge(match.group(1) if match else ''))
@@ -987,10 +989,10 @@ def render_public_script():
         $("#join-owner-name").textContent = ownerName;
 
         $("#join-affiliate-tip").textContent =
-            "When you join through TableRadar Official, TableRadar takes responsibility for deposits, withdrawals and payouts arranged through our official contact and guarantees the security of these operations.";
+            "TableRadar is responsible for the security of its service and for the official support we provide. When you join through TableRadar Official, our team is your point of contact for information and assistance.";
 
         $("#join-owner-tip").textContent =
-            "When you join directly through the club owner, you deal directly with that owner. TableRadar takes no responsibility for deposits, withdrawals, payouts or arrangements made directly with the club.";
+            "When you contact a club directly, you deal with the independent club owner. TableRadar is not responsible for the owner's actions, game arrangements or further interactions.";
 
         setJoinLink($("#join-affiliate-link"), affiliateUrl);
         setJoinLink($("#join-owner-link"), ownerUrl);
@@ -1608,7 +1610,7 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-affiliate-tip">
-                            When you join through TableRadar Official, TableRadar takes responsibility for deposits, withdrawals and payouts arranged through our official contact and guarantees the security of these operations.
+                            TableRadar is responsible for the security of its service and for the official support we provide. When you join through TableRadar Official, our team is your point of contact for information and assistance.
                         </div>
                     </div>
                 </div>
@@ -1658,7 +1660,7 @@ def render_public_page(tables, request=None, user=None):
                             cursor:default;">?</span>
 
                         <div class="join-help-tip" id="join-owner-tip">
-                            When you join directly through the club owner, you deal directly with that owner. TableRadar takes no responsibility for deposits, withdrawals, payouts or arrangements made directly with the club.
+                            When you contact a club directly, you deal with the independent club owner. TableRadar is not responsible for the owner's actions, game arrangements or further interactions.
                         </div>
                     </div>
                 </div>
