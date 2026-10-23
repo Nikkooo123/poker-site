@@ -222,6 +222,8 @@ def _sync_linked_account(cur, sub, expiry=None, inactive=False):
         return
     if inactive:
         user.update(is_active=False,days_left=0,auto_renew=False,host_service_state="disabled",host_paid_days=0)
+        if user.get("membership_test_enabled"):
+            user["test_expires_at"] = ""
     else:
         user.update(plan="host",role="host",is_active=True,auto_renew=False,membership_test_enabled=False,
                     membership_expires_at=expiry.isoformat(),plan_expires_at=expiry.strftime("%d/%m/%Y"))
