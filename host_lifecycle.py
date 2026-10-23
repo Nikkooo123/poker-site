@@ -35,7 +35,7 @@ def review_host_request(email, submitted_at, status, review_note):
         raise ValueError('Invalid review.')
     def transform(user):
         club=user.get('club_application') or {}
-        if not club or club.get('submitted_at','') != submitted_at:
+        if not club or club.get('deleted_at') or club.get('submitted_at','') != submitted_at:
             raise ValueError('The request changed. Reload the review page.')
         user['club_application']=dict(club,status=status,review_note=review_note.strip(),reviewed_at=datetime.now(timezone.utc).isoformat())
         return user
@@ -52,7 +52,7 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
         row=conn.execute('SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE',(email,)).fetchone()
         user=dict(row[0]) if row else {}
         club=user.get('club_application') or {}
-        if not club or club.get('submitted_at','') != submitted_at or (not approve and club.get('status') != 'approved'):
+        if not club or club.get('deleted_at') or club.get('submitted_at','') != submitted_at or (not approve and club.get('status') != 'approved'):
             raise ValueError('The request changed. Reload the review page.')
         now=datetime.now(timezone.utc)
         if approve:
@@ -96,3 +96,16 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
             user.update(test_expires_at=expiry.isoformat(),membership_source='manager')
         conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s',(Jsonb(user),email))
         return True
+
+
+def delete_club_request(email, submitted_at):
+    """Remove from the request queue while retaining placement identity and paid entitlement."""
+    def transform(user):
+        club=user.get('club_application') or {}
+        if not club or club.get('submitted_at','') != submitted_at:
+            raise ValueError('The request changed. Reload the review page.')
+        if not club.get('deleted_at'):
+            user['club_application']=dict(club,deleted_at=datetime.now(timezone.utc).isoformat(),previous_status=club.get('status','pending'),status='archived')
+        return user
+    if not repository.mutate(email.strip().lower(),transform):
+        raise ValueError('Account no longer exists.')
