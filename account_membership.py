@@ -2,6 +2,8 @@
 from datetime import datetime, timedelta, timezone
 from html import escape
 from currency_codes import normalize_currency, currency_input
+from club_request_changes import updated_request, field_html, changes_html
+import account_repository as account_db
 import secrets
 import re
 from staff_access import is_manager
@@ -44,6 +46,8 @@ def account_context(request, user):
 
 
 ACCOUNT_CSS = """<style>
+.tr-club-request .tr-request-changed{color:#ff999f;font-weight:650;overflow-wrap:anywhere;white-space:pre-wrap}.tr-request-diff{margin:10px 0;padding:10px 12px;border-left:2px solid #e47780;background:#be43510c;border-radius:0 8px 8px 0}.tr-club-request .tr-request-update-note{font-size:11px;color:#eeb0b5;margin:0 0 7px}.tr-request-diff dl{margin:0;display:grid;gap:8px}.tr-request-diff-row{display:grid;grid-template-columns:125px minmax(0,1fr);gap:8px;font-size:12px}.tr-request-diff-row dt{color:#c3cdce}.tr-request-diff-row dd{margin:0;min-width:0}.tr-request-before{display:block;color:#9baaad;font-size:11px;overflow-wrap:anywhere;white-space:pre-wrap;margin-bottom:2px}@media(max-width:600px){.tr-request-diff-row{grid-template-columns:1fr;gap:2px}}
+
 .tr-info-card{border:1px solid rgba(200,223,221,.12);border-radius:22px;padding:28px;margin:24px 0;background:linear-gradient(145deg,#202d32e8,#172126e8)}
 .tr-status-changes{color:#edaaa5;background:#9e434326;border:1px solid #d98a8555;border-radius:8px;padding:4px 8px;display:inline-block}.tr-review-note{border-left:3px solid #d98a85;padding:10px 14px;background:#9e434310}.tr-info-card h2{font-size:22px;margin:0 0 14px}.tr-info-card p{color:#a5b4b6;line-height:1.6}.tr-info-card form{max-width:620px;margin-top:26px}.tr-info-card label{display:block;font-size:13px;color:#dbe6e4}.tr-info-card input,.tr-info-card select,.tr-info-card textarea{display:block;width:100%;box-sizing:border-box;padding:12px 14px;margin-top:8px;border-radius:11px;border:1px solid #a8d8c430;background:#101b21;color:#edf3f2;font:inherit;min-height:46px}.tr-info-card textarea{min-height:110px;resize:vertical}.tr-info-card input:focus-visible,.tr-info-card select:focus-visible,.tr-info-card textarea:focus-visible{outline:2px solid #a8d8c4;outline-offset:2px}@media(max-width:600px){.tr-info-card{padding:22px}}
 .tr-host-club.tr-info-card{padding:18px 22px;margin:16px 0}.tr-host-club h2{font-size:19px;margin-bottom:8px}.tr-host-club p{margin:8px 0;font-size:13px}.tr-host-edit summary{cursor:pointer;color:#b9dfd0;font-size:13px;padding:8px 0}.tr-host-club form{margin-top:12px;max-width:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tr-host-club form p{margin:0}.tr-host-club textarea{min-height:72px}.tr-host-progress.tr-info-card{padding:22px;margin:18px 0}.tr-host-progress>p{margin:9px 0}.tr-host-steps{list-style:none;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:20px 0 0}.tr-host-steps li{border-top:2px solid #8cbba45c;padding-top:12px;font-size:13px}.tr-host-steps span{display:block;font-size:12px;color:#a5b4b6;margin-top:6px;line-height:1.5}.tr-host-notification{border:1px solid #a8d8c455;background:#a8d8c414;border-radius:12px;padding:14px;color:#c4e9d9}@media(max-width:680px){.tr-host-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.tr-host-club form{grid-template-columns:1fr}.tr-host-progress.tr-info-card,.tr-host-club.tr-info-card{padding:18px}}
@@ -204,7 +208,17 @@ def install_account_routes(app, get_current_user):
             currency = normalize_currency(currency)
         except ValueError as error:
             return HTMLResponse(escape(str(error)), status_code=400)
-        update_user(user["email"], club_application=dict(currency=currency, owner_name=owner_name.strip(), telegram=telegram, club_name=club_name.strip(), application=application, club_code=club_code.strip(), notes=notes.strip(), status="pending", submitted_at=datetime.now(timezone.utc).isoformat()))
+        details = dict(currency=currency, owner_name=owner_name.strip(), telegram=telegram, club_name=club_name.strip(), application=application, club_code=club_code.strip(), notes=notes.strip(), status="pending", submitted_at=datetime.now(timezone.utc).isoformat())
+        if account_db.enabled():
+            def apply_request(current):
+                current['club_application'] = updated_request(details, current.get('club_application'))
+                return current
+            saved = account_db.mutate(user['email'], apply_request)
+        else:
+            current = get_user_by_email(user['email']) or {}
+            saved = update_user(user['email'], club_application=updated_request(details, current.get('club_application')))
+        if not saved:
+            return HTMLResponse("Account no longer exists.", status_code=400)
         return RedirectResponse("/host", status_code=303)
 
     @app.get("/admin/club-requests", response_class=HTMLResponse)
@@ -220,7 +234,7 @@ def install_account_routes(app, get_current_user):
                 state = membership_state(user)
                 review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
                 launch = f'<form method="post" action="/admin/club-requests/delete" onsubmit="return confirm(\'Delete this request? Existing club subscriptions and monitoring will stay unchanged.\')"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><button class="tr-button" type="submit">Delete request</button></form>' 
-                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{safe(club.get("club_name"))}</h2><p>{safe(club.get("owner_name") or "Owner name not provided")} · {safe(club.get("telegram") or "Telegram not provided")}</p><p>{safe(user.get("email"))} · {safe(club.get("application"))}{(" · "+safe(club.get("currency"))) if club.get("currency") else ""} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><details class="tr-request-review"><summary>Review request</summary><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button> <button class="tr-button" type="submit" formaction="/admin/club-requests/approve">Approve listing request</button><p class="tr-muted" style="grid-column:1/-1">Approving starts the service period, activates Club subscriptions and adds the club to Clubs to monitor. Approve only when the placement is ready.</p></form>{launch}</details></section>')
+                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{field_html(club,"club_name")}</h2><p>{field_html(club,"owner_name","Owner name not provided")} · {field_html(club,"telegram","Telegram not provided")}</p><p>{safe(user.get("email"))} · {field_html(club,"application")}{(" · "+field_html(club,"currency")) if club.get("currency") else ""} · Club code: {field_html(club,"club_code")}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p>{changes_html(club)}<details class="tr-request-review"><summary>Review request</summary><p>{field_html(club,"notes")}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button> <button class="tr-button" type="submit" formaction="/admin/club-requests/approve">Approve listing request</button><p class="tr-muted" style="grid-column:1/-1">Approving starts the service period, activates Club subscriptions and adds the club to Clubs to monitor. Approve only when the placement is ready.</p></form>{launch}</details></section>')
         return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {}, manager=True)
 
     @app.post("/admin/club-requests/review")

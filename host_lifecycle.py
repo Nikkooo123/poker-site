@@ -1,5 +1,6 @@
 """Host payment entitlement is separate from the listing's service clock."""
 from currency_codes import normalize_currency
+from club_request_changes import reviewed_request
 from datetime import datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
 import account_repository as repository
@@ -38,7 +39,7 @@ def review_host_request(email, submitted_at, status, review_note):
         club=user.get('club_application') or {}
         if not club or club.get('deleted_at') or club.get('submitted_at','') != submitted_at:
             raise ValueError('The request changed. Reload the review page.')
-        user['club_application']=dict(club,status=status,review_note=review_note.strip(),reviewed_at=datetime.now(timezone.utc).isoformat())
+        user['club_application']=reviewed_request(club,status=status,review_note=review_note.strip(),reviewed_at=datetime.now(timezone.utc).isoformat())
         return user
     if not repository.mutate(email.strip().lower(),transform):
         raise ValueError('Account no longer exists.')
@@ -57,7 +58,7 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
             raise ValueError('The request changed. Reload the review page.')
         now=datetime.now(timezone.utc)
         if approve:
-            club=dict(club,status='approved',review_note=review_note.strip(),reviewed_at=now.isoformat())
+            club=reviewed_request(club,status='approved',review_note=review_note.strip(),reviewed_at=now.isoformat())
             user['club_application']=club
         if user.get('host_approved_submission') == submitted_at or (not approve and user.get('host_service_state') == 'live'):
             if approve:
