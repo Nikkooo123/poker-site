@@ -13,6 +13,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from static_pages import render_contact_page, render_terms_page, render_faq_page
+from operator_tables import add_operator_table
 from storage import load_tables, add_table, update_players, delete_table, init_db
 from views import render_public_page, render_admin_page, minimum_buyin
 
@@ -108,7 +109,7 @@ def admin_page(request: Request):
         return check
 
     tables = load_tables()
-    admin_html = render_admin_page(tables, manager=False, active_clubs=load_active_operator_clubs())
+    admin_html = render_admin_page(tables, manager=False, active_clubs=load_active_operator_clubs(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
 
     logout_link = """
     <div style="margin-bottom:20px;">
@@ -132,39 +133,25 @@ def admin_page(request: Request):
 @app.post("/add")
 def add_table_route(
     request: Request,
-    club: str = Form(""),
-    table_name: str = Form(""),
-    union_name: str = Form(""),
-    game: str = Form(""),
-    blinds: str = Form(""),
-    buyin: str = Form(""),
-    players: str = Form(""),
-    tags: str = Form(""),
-    network: str = Form(""),
-    affiliate_name: str = Form("Boom247 Official"),
-    affiliate_telegram: str = Form(""),
-    owner_name: str = Form(""),
-    owner_telegram: str = Form("")
+    subscription_id: str = Form(""),
+    table_name: str = Form(""), union_name: str = Form(""),
+    game: str = Form(""), blinds: str = Form(""), buyin: str = Form(""),
+    players: str = Form(""), tags: str = Form(""), csrf: str = Form(""),
 ):
     check = require_login(request)
     if check:
         return check
-
-    add_table(
-        club,
-        table_name,
-        union_name,
-        game,
-        blinds,
-        minimum_buyin(buyin),
-        players,
-        tags,
-        network,
-        affiliate_name,
-        affiliate_telegram,
-        owner_name,
-        owner_telegram,
-    )
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse("Refresh the page and try again.", status_code=403)
+    try:
+        add_operator_table(subscription_id, table_name=table_name, union_name=union_name,
+                           game=game, blinds=blinds, buyin=minimum_buyin(buyin), players=players, tags=tags)
+    except ValueError as error:
+        manager = is_manager(request)
+        return HTMLResponse(render_admin_page(load_tables(), manager=manager,
+            workspace="manager" if manager else "tables", active_clubs=load_active_operator_clubs(),
+            pending_requests=pending_club_request_count() if manager else 0,
+            csrf=csrf, error=str(error)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
@@ -443,4 +430,4 @@ def manager_page(request: Request):
     check = require_manager(request)
     if check:
         return check
-    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs(), pending_requests=pending_club_request_count())
+    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs(), pending_requests=pending_club_request_count(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
