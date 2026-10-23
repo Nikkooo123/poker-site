@@ -4,7 +4,7 @@ from html import escape
 import secrets
 import re
 from staff_access import is_manager
-from host_lifecycle import awaiting_launch, has_host_access, launch_host
+from host_lifecycle import awaiting_launch, has_host_access, launch_host, review_host_request, delete_club_request
 
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -29,6 +29,7 @@ def membership_state(user):
 def pending_club_request_count():
     return sum(1 for user in load_users()
                if user.get("club_application")
+               and not user["club_application"].get("deleted_at")
                and user["club_application"].get("status", "pending") == "pending")
 
 
@@ -125,7 +126,7 @@ def install_account_routes(app, get_current_user):
         club = user.get("club_application") or {}
         safe = lambda value: escape(str(value or ""), quote=True)
         csrf = safe(user["_csrf"])
-        status_labels = {"pending": "Awaiting operator review", "approved": "Approved — operator manages table updates", "needs_changes": "Changes requested by the operator"}
+        status_labels = {"pending": "Awaiting operator review", "approved": "Approved — operator manages table updates", "needs_changes": "Changes requested by the operator", "archived": "Request removed - submit updated details to request a new review"}
         club_status = status_labels.get(club.get("status"), "Awaiting operator review") if club else "No club submitted"
         review_note = f'<p class="tr-review-note">Operator note: {safe(club.get("review_note"))}</p>' if club.get("review_note") else ""
         status_class = "tr-status-changes" if club.get("status") == "needs_changes" else ""
@@ -133,16 +134,19 @@ def install_account_routes(app, get_current_user):
         stage = ('Changes requested' if club.get('status')=='needs_changes' else 'Preparing your listing' if club.get('status')=='approved' else 'Request received - under review' if club else 'Your club details are needed')
         if preparing:
             period = f"{int(user.get('host_paid_days') or 30)} paid service days reserved. The countdown has not started."
-            next_step = ('Please update the details below using the operator note.' if club.get('status')=='needs_changes' else 'We are checking your club and preparing its placement. When it is ready, the manager will start the service period and a confirmation will appear here.' if club else 'Submit your club name, application and code below so our team can begin the review.')
+            next_step = ('Please update the details below using the operator note.' if club.get('status')=='needs_changes' else 'We are checking your club and preparing its placement. When it is ready, approval will start the service period and a confirmation will appear here.' if club else 'Submit your club name, application and code below so our team can begin the review.')
         else:
             stage = 'Placement active' if club.get('status')=='approved' else stage
             period = f"{int(user.get('days_left') or 0)} days remaining. Service started: {safe(user.get('plan_started_at') or 'Not recorded')}. Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}."
             next_step = 'Your existing service dates are shown above. The operator reviews your request and maintains table information manually.'
+        if club.get('deleted_at'):
+            stage = 'Request removed'
+            next_step = 'Your previous request was removed from the review queue. You can update the details below and submit a new request. Any existing club placement keeps its current service dates.'
         timeline = ''.join(f'<li><strong>{title}</strong><span>{detail}</span></li>' for title,detail in (
             ('1. Host access confirmed', 'Your payment opens this private dashboard.' if preparing else 'Your Host access is available.'),
             ('2. Club review', 'Request received.' if club else 'Submit your club details.'),
             ('3. Preparation', 'Our team checks the details and prepares the placement.'),
-            ('4. Placement starts', 'Your service countdown begins at launch; the confirmation appears in this dashboard.')))
+            ('4. Placement starts', 'Approval activates your placement and starts the service countdown. Confirmation appears here.')))
         progress = f'<section class="tr-info-card tr-host-progress"><h2>{stage}</h2><p>{period}</p><p>{next_step}</p><ol class="tr-host-steps">{timeline}</ol></section>'
         notification = f'<p class="tr-host-notification" role="status">{safe(user.get("host_notification"))}</p>' if user.get('host_notification') else ''
         test_notice = '<p class="tr-muted">Private free test - no payment was taken. Test dates are separate from paid club placement.</p>' if user.get("membership_test_enabled") else ""
@@ -175,11 +179,11 @@ def install_account_routes(app, get_current_user):
         cards = []
         for user in load_users():
             club = user.get("club_application")
-            if club:
+            if club and not club.get("deleted_at"):
                 state = membership_state(user)
                 review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
-                launch = f'<form method="post" action="/admin/club-requests/start"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p>Payment confirmed. Start only when the placement is ready. This begins the reserved service days and notifies the owner in their dashboard.</p><button class="tr-button" type="submit">Start listing and service period</button></form>' if awaiting_launch(user) and club.get('status')=='approved' else ''
-                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{safe(club.get("club_name"))}</h2><p>{safe(club.get("owner_name") or "Owner name not provided")} · {safe(club.get("telegram") or "Telegram not provided")}</p><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><details class="tr-request-review"><summary>Review request</summary><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button></form>{launch}</details></section>')
+                launch = f'<form method="post" action="/admin/club-requests/delete" onsubmit="return confirm(\'Delete this request? Existing club subscriptions and monitoring will stay unchanged.\')"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><button class="tr-button" type="submit">Delete request</button></form>' 
+                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{safe(club.get("club_name"))}</h2><p>{safe(club.get("owner_name") or "Owner name not provided")} · {safe(club.get("telegram") or "Telegram not provided")}</p><p>{safe(user.get("email"))} · {safe(club.get("application"))} · Club code: {safe(club.get("club_code"))}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p><details class="tr-request-review"><summary>Review request</summary><p>{safe(club.get("notes"))}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button> <button class="tr-button" type="submit" formaction="/admin/club-requests/approve">Approve listing request</button><p class="tr-muted" style="grid-column:1/-1">Approving starts the service period, activates Club subscriptions and adds the club to Clubs to monitor. Approve only when the placement is ready.</p></form>{launch}</details></section>')
         return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {}, manager=True)
 
     @app.post("/admin/club-requests/review")
@@ -189,12 +193,28 @@ def install_account_routes(app, get_current_user):
             return HTMLResponse("Operator access required.", status_code=403)
         if status not in ("pending", "approved", "needs_changes") or len(review_note) > 1000:
             return HTMLResponse("Invalid review.", status_code=400)
-        user = get_user_by_email(email)
-        club = (user or {}).get("club_application")
-        if not club or club.get("submitted_at", "") != submitted_at:
-            return HTMLResponse("The request changed. Reload the review page.", status_code=409)
-        update_user(email, club_application=dict(club, status=status, review_note=review_note.strip(), reviewed_at=datetime.now(timezone.utc).isoformat()))
+        try:
+            from club_subscriptions_storage import init_club_subscriptions_db
+            init_club_subscriptions_db()
+            review_host_request(email, submitted_at, status, review_note)
+        except ValueError as error:
+            return HTMLResponse(escape(str(error)),status_code=409)
         return RedirectResponse("/admin/club-requests", status_code=303)
+
+    @app.post('/admin/club-requests/delete')
+    def remove_club_request(request: Request, csrf: str = Form(''), email: str = Form(''), submitted_at: str = Form('')):
+        token=request.session.get('account_csrf','')
+        if not is_manager(request) or not token or not secrets.compare_digest(token,csrf):
+            return HTMLResponse('Manager access required.',status_code=403)
+        try:
+            delete_club_request(email,submitted_at)
+        except ValueError as error:
+            return HTMLResponse(escape(str(error)),status_code=409)
+        return RedirectResponse('/admin/club-requests',status_code=303)
+
+    @app.post('/admin/club-requests/approve')
+    def approve_club(request: Request, csrf: str = Form(''), email: str = Form(''), submitted_at: str = Form(''), review_note: str = Form('')):
+        return review_club(request,csrf,email,submitted_at,'approved',review_note)
 
     @app.post('/admin/club-requests/start')
     def start_club(request: Request, csrf: str = Form(''), email: str = Form(''), submitted_at: str = Form('')):
