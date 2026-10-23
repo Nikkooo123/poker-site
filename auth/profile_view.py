@@ -1,3 +1,4 @@
+from host_lifecycle import has_host_access, awaiting_launch
 from html import escape
 from brand import render_brand_logo, render_site_theme, render_site_footer
 
@@ -21,7 +22,7 @@ def _plan_label(user: dict) -> str:
     plan = _safe(user.get("plan", "inactive")).strip().lower()
     is_active = bool(user.get("is_active", False))
 
-    if plan == "host" and is_active:
+    if has_host_access(user):
         return "Host"
     if plan == "player" and is_active:
         return "Player"
@@ -249,7 +250,7 @@ def render_payment_page(*args, **kwargs) -> str:
 
 
 def render_account_menu(user):
-    host_link = '<a href="/host">Host dashboard</a>' if user.get('is_active') is True and user.get('plan') == 'host' else ''
+    host_link = '<a href="/host">Host dashboard</a>' if has_host_access(user) else ''
     staff_links = ('<a href="/manager">Manager workspace</a>' if user.get("_is_manager") or user.get("staff_role") == "manager" else ('<a href="/admin">Table administration</a>' if user.get("staff_role") == "table_admin" else ''))
     email = escape(str(user.get("email") or user.get("username") or "Account"))
     return f'''<style>
@@ -277,9 +278,11 @@ def render_profile(user):
     registered = safe(user.get("registered_at", user.get("registered", "—")))
     active = bool(user.get("is_active", False))
     plan = str(user.get("plan", "inactive")).lower()
-    current = plan.title() if active and plan in ("player", "host") else "No membership"
+    current = plan.title() if (active or awaiting_launch(user)) and plan in ("player", "host") else "No membership"
     days = safe(user.get("days_left", 0))
     status = f"Active · {days} days remaining" if active else "No active membership — choose a plan below"
+    if awaiting_launch(user):
+        status = "Host payment confirmed - preparing your listing - service clock not started"
     initial = username[:1].upper() if username else "P"
 
     testing = bool(user.get("_can_test"))
@@ -291,7 +294,7 @@ def render_profile(user):
         test_controls = '<p class="note">Private test mode. No payment, no automatic renewal. Switching starts a fresh 30-day test period; your club request stays saved.</p>' + test_form("reset", "Reset my test membership")
     elif user.get("_can_enable_test"):
         test_controls = '<p class="note">Owner preview: reset only this account and try both memberships free. Existing membership details are backed up.</p>' + test_form("reset", "Start private membership test")
-    dashboard = '<a class="button secondary" href="/host">Open Host dashboard →</a>' if active and plan == "host" else ""
+    dashboard = '<a class="button secondary" href="/host">Open Host dashboard →</a>' if has_host_access(user) else ""
     security_error = f'<p role="alert" class="tr-security-error">{safe(user.get("_security_error"))}</p>' if user.get('_security_error') else ''
     open_on_error = "<script>document.getElementById('password-dialog').showModal();</script>" if security_error else ""
     security = f'''<dialog id="password-dialog" class="tr-password-dialog" aria-labelledby="password-title"><div class="tr-password-heading"><h2 id="password-title">Change password</h2><form method="dialog"><button class="tr-button" aria-label="Close password window" type="submit">×</button></form></div><p class="tr-muted">Your email stays the same: <strong>{email}</strong></p>{security_error}<form method="post" action="/account/security/password"><input type="hidden" name="csrf" value="{csrf}"><div class="tr-security-fields"><label>Current password<input type="password" name="current_password" autocomplete="current-password" maxlength="256" autofocus required></label><label>New password<input type="password" name="new_password" autocomplete="new-password" minlength="10" maxlength="256" required></label><label>Confirm new password<input type="password" name="confirm_password" autocomplete="new-password" minlength="10" maxlength="256" required></label></div><p class="note">Use at least 10 characters. After changing your password, sign in again on your devices.</p><button class="tr-button" type="submit">Save new password</button></form></dialog>{open_on_error}<script>document.getElementById('open-password-dialog').addEventListener('click',()=>document.getElementById('password-dialog').showModal());</script>'''
@@ -322,6 +325,6 @@ def render_profile(user):
     @media(max-width:1000px){{.identity{{grid-template-columns:minmax(0,1fr) auto}}.identity-person{{grid-column:1}}.identity #open-password-dialog{{grid-column:2}}.account dl{{grid-template-columns:repeat(2,minmax(0,1fr))}}.plan p{{min-height:0}}}}@media(max-width:680px){{.identity{{grid-template-columns:minmax(0,1fr);gap:12px}}.identity-person{{grid-column:1}}.identity #open-password-dialog{{grid-column:1;justify-self:end}}header{{padding:20px;flex-wrap:wrap}}main{{padding:30px 20px}}.layout{{grid-template-columns:1fr;gap:28px}}.nav .nav-label{{display:none}}.plans{{grid-template-columns:1fr}}.account{{padding:22px}}.account dl{{grid-template-columns:1fr}}footer{{flex-wrap:wrap}}}}
     </style>{render_site_theme()}</head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
     <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your account details and membership settings, clearly separated.</p>
-    <div class="section-head" style="margin-top:34px"><div><h2>My profile</h2><p>Your personal account and current access.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="identity-person"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>TableRadar account</small></div></div><button type="button" id="open-password-dialog" aria-haspopup="dialog">Change Password</button></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}{" · Free test" if testing and active else ""}</dd></div><div><dt>Valid until</dt><dd>{safe(user.get("plan_expires_at") or "Not recorded") if active else "No active subscription"}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
+    <div class="section-head" style="margin-top:34px"><div><h2>My profile</h2><p>Your personal account and current access.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="identity-person"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>TableRadar account</small></div></div><button type="button" id="open-password-dialog" aria-haspopup="dialog">Change Password</button></div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}{" · Free test" if testing and active else ""}</dd></div><div><dt>Valid until</dt><dd>{safe(user.get("plan_expires_at") or "Not recorded") if active else ("Starts when your listing is ready" if awaiting_launch(user) else "No active subscription")}</dd></div></dl><a class="back" href="/">← Back to tables</a></aside>
     <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{security}{render_site_footer()}</main></body></html>'''
 
