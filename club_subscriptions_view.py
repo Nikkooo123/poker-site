@@ -11,7 +11,11 @@ def _safe(value, default=""):
 def _status_badge(status: str, days_left: int) -> str:
     status = _safe(status).lower()
 
-    if status == "expired":
+    if status == "preparing":
+        bg = "rgba(100,150,140,.22)"
+        color = "#b9dfd0"
+        text = "Preparing"
+    elif status == "expired":
         bg = "rgba(160,60,60,.35)"
         color = "#ff9b9b"
         text = "Expired"
@@ -282,7 +286,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="") -> st
                     </div>
 
                     <div style="font:600 15px Arial;color:#c9d1d9;margin-bottom:20px;">
-                        Activate an existing account as Host for 30 days from now. No payment is recorded and automatic renewal is off.
+                        Confirm Host access only after verifying payment. The owner can submit their club now; the 30-day service period begins when you Start listing in Club requests. This form does not collect payment. Automatic renewal is off.
                     </div>
 
                     {error_notice}
