@@ -337,7 +337,7 @@ def render_public_card(table: dict, show_club=False) -> str:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
         table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
         table.update(club="***", table_name="***", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
-    name_help_attrs = 'title="Register or sign in, then choose a membership or Free Trial to view table and club names." tabindex="0" aria-label="Hidden name. Register or sign in, then choose a membership or Free Trial to view table and club names."' if not show_club else ''
+    name_help_attrs = 'data-name-help="Register or sign in, then choose a membership or Free Trial to view table and club names." tabindex="0" aria-describedby="tr-name-tooltip" aria-label="Hidden name. Register or sign in, then choose a membership or Free Trial to view table and club names."' if not show_club else ''
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
@@ -605,6 +605,40 @@ def render_public_script():
     <script>
     const $ = (s) => document.querySelector(s);
     const $$ = (s) => Array.from(document.querySelectorAll(s));
+
+    // Masked-name hints appear synchronously, outside cards to avoid clipping.
+    const nameHint = document.getElementById('tr-name-tooltip');
+    let nameHintTarget = null;
+    function hideNameHint() { if (nameHint) nameHint.hidden = true; nameHintTarget = null; }
+    function showNameHint(target) {
+        if (!nameHint || !target) return;
+        nameHintTarget = target;
+        nameHint.textContent = target.dataset.nameHelp;
+        nameHint.hidden = false;
+        const box = target.getBoundingClientRect();
+        const width = nameHint.offsetWidth, height = nameHint.offsetHeight;
+        const left = Math.max(12, Math.min(innerWidth - width - 12, box.left + box.width / 2 - width / 2));
+        const below = box.bottom + 8;
+        const top = below + height <= innerHeight - 12 ? below : Math.max(12, box.top - height - 8);
+        nameHint.style.left = left + 'px';
+        nameHint.style.top = top + 'px';
+    }
+    document.addEventListener('pointerover', event => {
+        const target = event.target.closest?.('[data-name-help]');
+        if (target && target !== nameHintTarget) showNameHint(target);
+    });
+    document.addEventListener('pointerout', event => {
+        const target = event.target.closest?.('[data-name-help]');
+        if (target && !target.contains(event.relatedTarget)) hideNameHint();
+    });
+    document.addEventListener('focusin', event => {
+        const target = event.target.closest?.('[data-name-help]');
+        if (target) showNameHint(target);
+    });
+    document.addEventListener('focusout', event => { if (event.target === nameHintTarget) hideNameHint(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') hideNameHint(); });
+    window.addEventListener('scroll', hideNameHint, true);
+    window.addEventListener('resize', hideNameHint);
 
     const CURRENT_USER = document.body.dataset.username || "guest";
     const memoryStorage = new Map();
@@ -1494,6 +1528,7 @@ def render_public_page(tables, request=None, user=None):
         </div>
 
         </div>
+        <div id="tr-name-tooltip" role="tooltip" hidden></div>
         <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club details</h2><p>To see full game information, register and purchase a membership or select Free Trial.</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <a class="tr-button" href="{'/verify-account' if user else '/signup'}">Free Trial</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
