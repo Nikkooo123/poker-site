@@ -7,3 +7,5 @@ opencv-python
 itsdangerous==2.2.0
 psycopg[binary]>=3.2,<4
 python-dotenv>=1.0,<2
+Authlib==1.9.1
+httpx>=0.28,<1
