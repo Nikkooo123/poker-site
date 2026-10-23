@@ -35,8 +35,6 @@ from crypto_checkout import checkout_page, install_crypto_routes
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
 
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "1234"
 
 
 @app.on_event("startup")
@@ -75,29 +73,19 @@ def faq_page():
 def terms_page():
     return render_terms_page()
 
-@app.get("/login", response_class=HTMLResponse)
+@app.get("/login")
 def login_page():
-    from brand import render_brand_logo, render_site_theme, render_site_footer
-    return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Staff sign in · TableRadar</title>{render_site_theme()}</head><body class="tr-auth-body"><header class="tr-site-header">{render_brand_logo('/')}</header><main class="tr-auth-wrap"><section class="tr-auth-panel"><h1>Staff sign in.</h1><p class="tr-muted">The owner login opens the manager workspace. Assigned table administrators and managers can sign in with their personal accounts.</p><form method="post" action="/login"><label for="staff-username">Username</label><input id="staff-username" name="username" autocomplete="username" required><label for="staff-password">Password</label><input id="staff-password" name="password" type="password" autocomplete="current-password" required><button class="tr-button" type="submit">Open manager workspace</button></form><a class="tr-auth-link" href="/signin_login">Sign in with a personal staff account</a></section></main>{render_site_footer()}</body></html>'''
+    return RedirectResponse('/signin_login', status_code=303)
 
 
 @app.post("/login")
 def login(request: Request, username: str = Form(""), password: str = Form("")):
-    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
-        request.session.clear()
-        request.session["staff_role"] = "manager"
-        response = RedirectResponse(url="/manager", status_code=303)
-        response.delete_cookie("admin_auth")
-        return response
-
-    return HTMLResponse("""
-    <html>
-    <body style="background:#111;color:white;font-family:Arial;padding:20px;">
-        <h1>❌ Wrong login or password</h1>
-        <a href="/login" style="color:#4da3ff;">Try again</a>
-    </body>
-    </html>
-    """)
+    # Reject the retired shared login, including old bookmarked forms.
+    request.session.pop('staff_role', None)
+    from auth.auth_views import auth_shell
+    response = HTMLResponse(auth_shell('<h1>Personal staff sign-in</h1><p class="tr-muted">Shared staff sign-in has been retired. Use your personal account with assigned staff access.</p><a class="tr-button" href="/signin_login">Sign in to your account</a>', 'Staff sign-in'), status_code=403, headers={'Cache-Control':'no-store'})
+    response.delete_cookie('admin_auth')
+    return response
 
 
 @app.get("/logout")

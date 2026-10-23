@@ -6,7 +6,7 @@ from club_request_changes import updated_request, field_html, changes_html
 import account_repository as account_db
 import secrets
 import re
-from staff_access import is_manager
+from staff_access import is_manager, set_staff_role
 from host_lifecycle import awaiting_launch, has_host_access, launch_host, review_host_request, delete_club_request
 
 from fastapi import Form, Request
@@ -97,10 +97,9 @@ def install_account_routes(app, get_current_user):
         csrf=escape(request.session.setdefault('account_csrf',secrets.token_urlsafe(32)),quote=True)
         user=get_current_user(request)
         if not user:
-            body=f'<p class="tr-page-intro">Sign in to your own existing customer account to test Host and Player. Your manager workspace stays available in this session.</p><section class="tr-info-card"><form method="post" action="/manager/membership-test/account"><input type="hidden" name="csrf" value="{csrf}"><p><label>Your account email<input name="email" type="email" autocomplete="username" required></label></p><p><label>Your account password<input name="password" type="password" autocomplete="current-password" required></label></p><button class="tr-button" type="submit">Use my account for testing</button></form></section>'
-        else:
-            forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {plan.title()} free</button></form>' for plan in ('host','player'))
-            body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
+            return RedirectResponse('/signin_login',status_code=303)
+        forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {plan.title()} free</button></form>' for plan in ('host','player'))
+        body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
         return page('Manager membership test',body,user or {},manager=True)
 
     @app.post('/manager/membership-test/account')
@@ -108,17 +107,7 @@ def install_account_routes(app, get_current_user):
         token=request.session.get('account_csrf','')
         if not is_manager(request) or not token or not secrets.compare_digest(token,csrf):
             return HTMLResponse('Manager access required.',status_code=403)
-        if get_current_user(request):
-            return RedirectResponse('/manager/membership-test',status_code=303)
-        # Only the already-authenticated owner manager session can lack a personal account.
-        if request.session.get('staff_role') != 'manager':
-            return HTMLResponse('Sign in with your personal manager account.',status_code=403)
-        from auth.auth_storage import authenticate_user
-        user=authenticate_user(email.strip().lower(),password)
-        if not user:
-            return HTMLResponse('Account email or password is incorrect. Return to the manager test page and try again.',status_code=400)
-        request.session.clear()
-        request.session.update(staff_role='manager',user_email=user['email'],username=user.get('username') or user['email'],credential_version=user.get('credential_version',''))
+        # Personal managers already have a bound account; never mint role claims.
         return RedirectResponse('/manager/membership-test',status_code=303)
 
     def permitted(request, csrf, allow_bootstrap=False):
@@ -291,7 +280,7 @@ def install_account_routes(app, get_current_user):
             role = user.get("staff_role", "")
             options = ''.join(f'<option value="{value}"{" selected" if role == value else ""}>{label}</option>' for value, label in (("", "Customer only — no staff access"), ("table_admin", "Table administrator — tables only"), ("manager", "Manager — tables, requests and subscriptions")))
             cards.append(f'<section class="tr-info-card tr-team-member"><div class="tr-team-identity"><h2>{safe(user.get("username") or user.get("email"))}</h2><p>{safe(user.get("email"))}</p></div><form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><button class="tr-button" type="submit">Save access</button></form></section>')
-        return page("Staff access", '<p class="tr-page-intro">Assign staff access only to trusted operators with existing accounts. Table administrators use the Tables screen; managers can also review clubs and subscriptions.</p>' + ''.join(cards), get_current_user(request) or {}, manager=True)
+        return page("Staff access", '<p class="tr-page-intro">Staff sign in with their personal accounts. Assign access only to trusted operators. Table administrators use the Tables screen; managers can also review clubs and subscriptions. Keep at least one manager account.</p>' + ''.join(cards), get_current_user(request) or {}, manager=True)
 
     @app.post("/manager/team")
     def update_staff(request: Request, csrf: str = Form(""), email: str = Form(""), role: str = Form("")):
@@ -300,5 +289,8 @@ def install_account_routes(app, get_current_user):
             return HTMLResponse("Manager access required.", status_code=403)
         if role not in ("", "table_admin", "manager") or not get_user_by_email(email):
             return HTMLResponse("Invalid account or staff role.", status_code=400)
-        update_user(email, staff_role=role)
+        try:
+            set_staff_role(email, role)
+        except ValueError as error:
+            return HTMLResponse(escape(str(error)), status_code=400)
         return RedirectResponse("/manager/team", status_code=303)
