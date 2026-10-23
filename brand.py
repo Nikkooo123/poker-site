@@ -62,12 +62,14 @@ def render_site_theme() -> str:
     .glass,.glass-bar{background:linear-gradient(145deg,#293e44f2,#1b2c34f2)!important;border-top-color:#badfd43b!important;box-shadow:0 18px 44px #00000020,inset 0 1px #d1eade09!important}
     .tr-auth-panel,.tr-info-card{background:linear-gradient(145deg,#263b42f2,#1b2c34f2)!important;border-color:var(--tr-line)!important}
     .tr-site-header{border-bottom-color:#a7d6cc38}.tr-page-title{color:#f3f8f6}.tr-info-card h2{color:#d2e9df}.tr-button{background:#2b4149;border-color:#b5dcd533}.tr-button:hover{background:#36535d}.tr-button-primary{background:var(--tr-accent);color:#172b23}.tr-button-primary:hover{background:#c6eadb}
+    #join-modal-card{overflow-x:hidden!important}.tr-join-option>div:first-child{min-width:0}#join-affiliate-name,#join-owner-name{min-width:0;flex:1}.tr-join-option .join-help-tip{left:auto!important;right:0!important;top:30px!important;width:min(280px,calc(100vw - 128px))!important;max-width:min(280px,calc(100vw - 128px))!important;box-sizing:border-box;max-height:min(240px,calc(100dvh - 180px));overflow:auto;overflow-wrap:anywhere;white-space:normal}.join-help-wrap:focus-visible{outline:2px solid var(--tr-accent);outline-offset:3px;border-radius:50%}
     </style>"""
 
 
 def render_site_footer() -> str:
     from support_chat_view import render_support_widget
-    return f'<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/privacy">Privacy Policy</a><a href="/contact">Contact</a><a href="{escape(TELEGRAM_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="TableRadar Official on Telegram">Telegram · @tableradar</a></nav></footer>' + render_support_widget()
+    from staff_access import render_activity_tracker
+    return f'<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/privacy">Privacy Policy</a><a href="/contact">Contact</a><a href="{escape(TELEGRAM_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="TableRadar Official on Telegram">Telegram · @tableradar</a></nav></footer>' + render_support_widget() + render_activity_tracker()
 
 
 def normalize_affiliate_name(value: str) -> str:
