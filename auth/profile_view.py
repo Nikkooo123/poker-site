@@ -260,7 +260,7 @@ def render_account_menu(user):
     .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
     .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
     .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
-    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/">Explore tables</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
+    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/">Explore tables</a><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
 
 
 """Responsive account page, with the existing plan and payment routes."""
