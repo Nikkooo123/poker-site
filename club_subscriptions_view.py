@@ -286,7 +286,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="") -> st
                     </div>
 
                     <div style="font:600 15px Arial;color:#c9d1d9;margin-bottom:20px;">
-                        Confirm Host access only after verifying payment. The owner can submit their club now; the 30-day service period begins when you Start listing in Club requests. This form does not collect payment. Automatic renewal is off.
+                        Confirm Host access only after verifying payment. The owner can submit their club now; the 30-day service period begins when you Approve listing request in Club requests. This form does not collect payment. Automatic renewal is off.
                     </div>
 
                     {error_notice}
