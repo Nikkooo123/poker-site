@@ -207,7 +207,7 @@ def create_user(*args, **kwargs):
     username = _safe(username).strip() or email
     password = _safe(password)
 
-    if not email or not password:
+    if not email or not 8 <= len(password) <= 256:
         return False
 
     users = load_users()
