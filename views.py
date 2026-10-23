@@ -336,7 +336,7 @@ def render_public_card(table: dict, show_club=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
         table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
-        table.update(club="***", table_name="Active table", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
+        table.update(club="***", table_name="***", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
