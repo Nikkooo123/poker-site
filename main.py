@@ -12,7 +12,7 @@ from club_subscriptions_view import render_club_subscriptions_page
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
-from static_pages import render_contact_page, render_terms_page, render_faq_page, render_about_page
+from static_pages import render_contact_page, render_terms_page, render_faq_page, render_about_page, render_privacy_page
 from operator_tables import add_operator_table
 from storage import load_tables, add_table, update_players, delete_table, init_db
 from views import render_public_page, render_admin_page, minimum_buyin
@@ -68,6 +68,10 @@ def about_page():
 @app.get("/faq", response_class=HTMLResponse)
 def faq_page():
     return render_faq_page()
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_page():
+    return render_privacy_page()
 
 @app.get("/terms", response_class=HTMLResponse)
 def terms_page():
