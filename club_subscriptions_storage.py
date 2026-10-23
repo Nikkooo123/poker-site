@@ -1,6 +1,7 @@
 import os
 from datetime import date, datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
+from host_lifecycle import prepare_paid_host
 
 import psycopg
 from psycopg.rows import dict_row
@@ -129,6 +130,8 @@ def load_club_subscriptions():
         item["started_at_display"] = _date_display(item.get("started_at"))
         item["expires_at_display"] = _date_display(item.get("expires_at"))
         item["days_left"] = int(item.get("days_left") or 0)
+        if item.get("status") == "preparing":
+            item.update(days_left=0, started_at_display="Not started", expires_at_display="After launch")
 
         if item.get("status") == "active" and item["days_left"] <= 0:
             item["display_status"] = "expired"
@@ -191,18 +194,16 @@ def add_club_subscription(
             if not account:
                 raise ValueError("No registered account matches this email. Ask the owner to create an account first.")
             user = dict(account["document"])
-            cur.execute("SELECT id FROM club_subscriptions WHERE lower(owner_email)=%s AND plan='host' AND status='active' AND COALESCE(access_expires_at, expires_at::timestamptz)>NOW()", (email,))
+            cur.execute("SELECT id FROM club_subscriptions WHERE lower(owner_email)=%s AND plan='host' AND (status='preparing' OR (status='active' AND COALESCE(access_expires_at, expires_at::timestamptz)>NOW()))", (email,))
             if cur.fetchone():
                 raise ValueError("This owner already has an active club subscription. Use Extend on the existing entry.")
             cur.execute("""INSERT INTO club_subscriptions
                 (club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,notes,access_expires_at)
-                VALUES (%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s) RETURNING id""",
-                (club_name.strip(),owner_name.strip(),owner_telegram.strip(),email,application.strip(),now.date(),expiry.date(),notes.strip(),expiry))
+                VALUES (%s,%s,%s,%s,%s,'host','preparing',%s,%s,%s,%s) RETURNING id""",
+                (club_name.strip(),owner_name.strip(),owner_telegram.strip(),email,application.strip(),now.date(),expiry.date(),notes.strip(),None))
             new_id = cur.fetchone()["id"]
-            user.update(plan="host",role="host",is_active=True,days_left=30,auto_renew=False,
-                        membership_test_enabled=False,membership_source="manager",manual_subscription_id=new_id,
-                        membership_expires_at=expiry.isoformat(),plan_started_at=now.strftime("%d/%m/%Y"),
-                        plan_expires_at=expiry.strftime("%d/%m/%Y"))
+            prepare_paid_host(user, now)
+            user.update(membership_source="manager", manual_subscription_id=new_id)
             # Staff permissions, passwords, favourites and the owner's application are preserved.
             cur.execute("UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s", (Jsonb(user),email))
     return new_id
@@ -215,10 +216,10 @@ def _sync_linked_account(cur, sub, expiry=None, inactive=False):
     if not account:
         return
     user = dict(account["document"])
-    if user.get("manual_subscription_id") != sub["id"] or user.get("membership_source") != "manager":
+    if user.get("manual_subscription_id") != sub["id"] or user.get("membership_source") not in ("manager", "crypto"):
         return
     if inactive:
-        user.update(is_active=False,days_left=0,auto_renew=False)
+        user.update(is_active=False,days_left=0,auto_renew=False,host_service_state="disabled",host_paid_days=0)
     else:
         user.update(plan="host",role="host",is_active=True,auto_renew=False,membership_test_enabled=False,
                     membership_expires_at=expiry.isoformat(),plan_expires_at=expiry.strftime("%d/%m/%Y"))
@@ -242,6 +243,8 @@ def _change_subscription(subscription_id, action, days=30):
             if not sub:
                 raise ValueError("Subscription no longer exists. Refresh this page.")
             if action == "extend":
+                if sub.get("status") == "preparing":
+                    raise ValueError("Start this listing from Club requests before extending its service period.")
                 now = datetime.now(timezone.utc)
                 old = sub.get("access_expires_at") or datetime.combine(sub["expires_at"], datetime.min.time(), timezone.utc)
                 expiry = max(old, now) + timedelta(days=int(days))
