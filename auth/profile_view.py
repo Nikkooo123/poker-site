@@ -1,3 +1,4 @@
+from player_access import render_trial_notice, enabled as trial_enabled, remaining as trial_remaining, entitled as trial_entitled
 from host_lifecycle import has_host_access, awaiting_launch
 from html import escape
 from social_auth_config import render_social_connections
@@ -284,6 +285,10 @@ def render_profile(user):
     status = f"Active · {days} days remaining" if active else "No active membership — choose a plan below"
     if awaiting_launch(user):
         status = "Host payment confirmed - preparing your listing - service clock not started"
+    if trial_enabled() and trial_remaining(user) and trial_entitled(user) and not active:
+        current = "Player trial"
+        days = str(trial_remaining(user))
+        status = "Player free trial · " + days + " days remaining — full table access"
     initial = username[:1].upper() if username else "P"
 
     testing = bool(user.get("membership_test_enabled"))
@@ -333,5 +338,5 @@ def render_profile(user):
     </style>{render_site_theme()}</head><body><header>{render_brand_logo("/")}<div class="nav">{render_account_menu(user)}</div></header>
     <main><div class="eyebrow">Your TableRadar</div><h1>A place for your game.</h1><p class="intro">Your account details and membership settings, clearly separated.</p>
     <div class="section-head" style="margin-top:34px"><div><h2>My profile</h2><p>Your personal account and current access.</p></div></div><div class="layout"><aside class="panel account" aria-label="Account details"><div class="identity"><div class="identity-person"><div class="avatar" aria-hidden="true">{initial}</div><div><strong>{username}</strong><small>TableRadar account</small></div></div>{password_control}</div><div class="status">● {status}</div><dl><div><dt>Email address</dt><dd>{email}</dd></div><div><dt>Member since</dt><dd>{registered}</dd></div><div><dt>Current membership</dt><dd>{current}{" · Free test" if testing and active else ""}</dd></div><div><dt>Valid until</dt><dd>{safe(user.get("plan_expires_at") or "Not recorded") if active else ("Starts when your listing is ready" if awaiting_launch(user) else "No active subscription")}</dd></div></dl>{social_connections}<a class="back" href="/">← Back to tables</a></aside>
-    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{security}{render_site_footer()}</main></body></html>'''
+    <section aria-labelledby="membership"><div class="section-head"><div><h2 id="membership">Manage membership</h2><p>{"Private preview: try either membership free. No payment or renewal." if testing else "Player access or a Host membership for your club."}</p></div></div><div class="plans">{player}{host}</div>{render_trial_notice(user)}{test_controls}{dashboard}</section></div><p class="note">Membership details are linked to your TableRadar account.</p>{security}{render_site_footer()}</main></body></html>'''
 
