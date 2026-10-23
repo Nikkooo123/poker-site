@@ -231,7 +231,7 @@ def signup(
     if password != confirm_password:
         return render_signup_page(error="Passwords do not match")
 
-    if player_access.enabled() and not verification_delivery.ready():
+    if player_access.enabled() and not verification_delivery.email_ready():
         return HTMLResponse(render_signup_page(error="Account verification is not configured yet. Please contact support."), status_code=503)
     ok = create_user(username, email, password)
 
