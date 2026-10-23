@@ -5,7 +5,7 @@ OFFICIAL_AFFILIATE_NAME = "TableRadar Official"
 BRAND_DOMAIN = "tableradar.net"
 
 # если нужно — потом поменяешь
-TELEGRAM_URL = "https://t.me/your_telegram_username"
+TELEGRAM_URL = "https://t.me/tableradar"
 SUPPORT_EMAIL = f"support@{BRAND_DOMAIN}"
 
 
@@ -64,7 +64,7 @@ def render_site_theme() -> str:
 
 def render_site_footer() -> str:
     from support_chat_view import render_support_widget
-    return '<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/contact">Contact</a></nav></footer>' + render_support_widget()
+    return f'<footer class="tr-site-footer"><span>TableRadar · Find your next table.</span><nav aria-label="Footer"><a href="/faq">FAQ</a><a href="/terms">Terms & Conditions</a><a href="/contact">Contact</a><a href="{escape(TELEGRAM_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="TableRadar Official on Telegram">Telegram · @tableradar</a></nav></footer>' + render_support_widget()
 
 
 def normalize_affiliate_name(value: str) -> str:
