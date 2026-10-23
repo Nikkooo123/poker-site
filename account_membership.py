@@ -167,6 +167,9 @@ def install_account_routes(app, get_current_user):
         else:
             stage = 'Placement active' if club.get('status')=='approved' else stage
             period = f"{int(user.get('days_left') or 0)} days remaining. Service started: {safe(user.get('plan_started_at') or 'Not recorded')}. Valid until {safe(user.get('plan_expires_at') or 'Not recorded')}."
+            if club.get('status') == 'approved' and user.get('is_active') and not club.get('deleted_at'):
+                days = max(0, int(user.get('days_left') or 0))
+                period = f'<span class="tr-host-remaining" role="status" aria-label="{days} days remaining" style="display:inline-flex;align-items:center;gap:10px;padding:12px 18px;margin:4px 0 12px;border:1px solid #77c5a480;border-radius:12px;background:linear-gradient(135deg,#294c40,#203c38);color:#d3f5e3"><strong style="font-size:28px;line-height:1">{days}</strong><span style="font-weight:600">days remaining</span></span><br>Service started: {safe(user.get("plan_started_at") or "Not recorded")}. Valid until {safe(user.get("plan_expires_at") or "Not recorded")}.'
             next_step = 'Your existing service dates are shown above. The operator reviews your request and maintains table information manually.'
         if club.get('deleted_at'):
             stage = 'Request removed'
