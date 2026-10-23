@@ -31,10 +31,10 @@ def _info_sections(title, intro, sections):
 
 
 def render_about_page():
-    return _info_sections('About Us', 'Information that helps poker friends find their next game.', [
-        ('What is TableRadar?', 'TableRadar is an independent information service for poker players who want to discover clubs and find games with friends. We bring table information into one clear, easy-to-use directory.'),
+    return _info_sections('About Us', 'Discover private poker clubs and games with friends.', [
+        ('What is TableRadar?', 'TableRadar is an independent information service for people who enjoy poker and want to discover private clubs and games with friends. We bring table information into one clear, easy-to-use directory.'),
         ('What we provide', 'Browse game formats, table features, blinds, player counts and club contact details. Use filters and favourites to find the tables that interest you. Registered club owners can submit their club information for review.'),
-        ('Our role', 'We publish information and help people find the appropriate club contact. TableRadar does not operate poker clubs or host games. We are not a financial organisation and do not provide financial services.'),
+        ('Our role', 'We publish information and help people find the appropriate club contact. Memberships pay for access to our information service; Host memberships pay for club listing and monitoring. TableRadar does not operate the listed clubs or host their games. Each independent club sets its own game rules.'),
         ('How listings work', 'Our team reviews club submissions and maintains table information manually. Availability and settings can change, so check the current details with the club before joining.'),
         ('Host coverage', 'Standard coverage is up to 20 active tables per club at blinds of $0.50/$1 or higher. If a club has more tables, eligible tables are prioritised from the highest blinds down. Heads-up tables are not listed. Contact Live Chat or Telegram @tableradar to discuss coverage beyond 20 tables.'),
         ('Talk to us', 'For help with your TableRadar account, the directory or a club listing, use Contact or Live Chat. Questions about a game or club access should go to that club’s contact.'),
@@ -43,7 +43,7 @@ def render_about_page():
 
 def render_terms_page() -> str:
     return _info_sections('Terms & Conditions', 'Conditions for using the TableRadar information service.', [
-        ('1. Information service', 'TableRadar provides a directory of poker clubs and table information. We do not operate the listed clubs or host their games. We are not a financial organisation.'),
+        ('1. Information service', 'TableRadar provides a directory of private poker clubs and table information. Paid Player memberships cover access to our information service; paid Host memberships cover club placement and monitoring. We do not operate the listed clubs or host their games.'),
         ('2. Independent clubs', 'Listed clubs and applications are independently operated. A listing or contact link does not mean TableRadar owns, manages or endorses a club. Club access and game participation are arranged with the relevant club.'),
         ('3. Information and availability', 'Table details are maintained manually and may change between updates. Formats, player counts and availability are provided for reference. Confirm the current details and rules with the club.'),
         ('4. Your account', 'Keep your sign-in details secure and provide accurate information. Do not share access, impersonate another person, submit misleading listings or misuse other users’ information. Access to account features depends on the service option shown in your profile.'),
@@ -51,7 +51,7 @@ def render_terms_page() -> str:
         ('Host listing coverage', 'Standard Host coverage includes up to 20 active tables per club, with blinds of $0.50/$1 or higher. When a club has more than 20 tables, eligible tables are selected from the highest blinds down. Heads-up (one-on-one) tables are excluded. Contact Live Chat or Telegram @tableradar to discuss additional coverage beyond 20 tables.'),
         ('Player trial and payment methods', 'When enabled, one 14-day Player trial is available per verified phone number after email and phone confirmation. It provides the same table access as paid Player membership and ends automatically without a charge. Registration alone does not start a trial or unlock tables. A different email does not reset eligibility. Host has no free trial and supports cryptocurrency payment only. Player payment methods are cryptocurrency and, when connected, bank card and PayPal; unavailable methods cannot process payments.'),
         ('6. Responsible use', 'Use the directory only where permitted and meet the applicable age requirements, including a minimum age of 18. You are responsible for checking the rules of any third-party club or application you choose to use.'),
-        ('7. Service support and updates', 'Contact TableRadar about your account or a directory listing. Contact the independent club about its games. The directory and these conditions may be updated as the service develops.'),
+        ('7. Service support and updates', 'TableRadar is responsible for the security of its own service and for the official support it provides. Contact us about your account or a directory listing. Independent clubs are responsible for their own actions, games and arrangements. Contact the club about those matters. The directory and these conditions may be updated as the service develops.'),
     ])
 
 
@@ -64,7 +64,7 @@ def render_faq_page() -> str:
         ('What does My Account include?', 'Your profile, account security, favourites and available service options. When verified trials are enabled, registration alone does not unlock tables: use an active paid membership or one verified 14-day Player trial. Host has no free trial. Trial activation requires email and phone verification and may be unavailable while delivery services are being configured.'),
         ('What does the Host dashboard show?', 'Club owners with Host access can submit their club information and follow its review, preparation and placement status. The service countdown begins when the listing is approved and activated.'),
         ('How many tables does Host coverage include?', 'Up to 20 active tables per club at blinds of $0.50/$1 or higher. We prioritise eligible tables from the highest blinds down and exclude heads-up tables. For more than 20 tables, contact Live Chat or Telegram @tableradar.'),
-        ('What are TableRadar Official and Club Official?', 'TableRadar Official is our information and support contact. Club Official is the independent club’s own contact for current table details and access requirements.'),
+        ('What are TableRadar Official and Club Official?', 'TableRadar Official is our official information and support contact. We are responsible for our own service and official assistance. Club Official is the independent club’s own contact; its actions and game arrangements remain the club owner’s responsibility.'),
         ('How can I get help?', 'Use Contact or Live Chat for TableRadar account and listing questions. For questions about a particular game, contact the club directly.'),
     ]
     entries = ''.join(f'<details><summary>{escape(q)}</summary><p>{escape(a)}</p></details>' for q,a in questions)
