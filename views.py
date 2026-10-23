@@ -726,7 +726,8 @@ def render_public_script():
         }
     } catch (e) {}
 
-    const savedVisibleCount = Number(filterStorage.getItem(STORAGE_KEYS.visibleCount));
+    const pageView = window.trPageView;
+    const savedVisibleCount = Number(pageView && pageView.expanded !== null ? pageView.expanded : filterStorage.getItem(STORAGE_KEYS.visibleCount));
     let visibleCount = Number.isSafeInteger(savedVisibleCount) && savedVisibleCount >= 15 && savedVisibleCount <= 100000 ? savedVisibleCount : 15;
     const LOAD_MORE_STEP = 10;
     let showOnlyFavorites = filterStorage.getItem(STORAGE_KEYS.onlyFav) === "1";
@@ -904,6 +905,7 @@ def render_public_script():
     function applyAll() {
         // Keep the expanded page size across the automatic 30-second refresh.
         filterStorage.setItem(STORAGE_KEYS.visibleCount, String(visibleCount));
+        if (pageView) pageView.setExpanded(visibleCount);
         saveInputs();
 
         const rows = getRows();
@@ -1045,7 +1047,6 @@ def render_public_script():
             }
 
             setActiveGames(activeGames);
-            visibleCount = 15;
             paintGameButtons();
             applyAll();
             return;
@@ -1063,7 +1064,6 @@ def render_public_script():
             }
 
             setActiveNetworks(activeNetworks);
-            visibleCount = 15;
             paintClubButtons();
             applyAll();
             return;
@@ -1084,7 +1084,6 @@ def render_public_script():
         setActiveGames([]);
         setActiveNetworks([]);
         showOnlyFavorites = false;
-        visibleCount = 15;
         ["#club-search", "#blinds-min", "#blinds-max"].forEach(selector => {
             const input = $(selector);
             if (input) input.value = "";
@@ -1097,42 +1096,42 @@ def render_public_script():
 
     $("#favorite-only-btn")?.addEventListener("click", function() {
         showOnlyFavorites = !showOnlyFavorites;
-        visibleCount = 15;
         paintFavoriteStars();
         applyAll();
     });
 
     $("#club-search")?.addEventListener("input", function() {
-        visibleCount = 15;
         applyAll();
     });
 
     $("#blinds-min")?.addEventListener("change", function() {
-        visibleCount = 15;
         applyAll();
     });
 
     $("#blinds-max")?.addEventListener("change", function() {
-        visibleCount = 15;
         applyAll();
     });
 
     $("#sort-players")?.addEventListener("click", function() {
         sortPlayersDir = cycleDir(sortPlayersDir);
         touchPriority("players");
-        visibleCount = 15;
         applyAll();
     });
 
     $("#sort-blinds")?.addEventListener("click", function() {
         sortBlindsDir = cycleDir(sortBlindsDir);
         touchPriority("blinds");
-        visibleCount = 15;
         applyAll();
     });
 
     $("#load-more-btn")?.addEventListener("click", function() {
         visibleCount += LOAD_MORE_STEP;
+        applyAll();
+    });
+
+    window.addEventListener("tr-page-view-restored", function() {
+        const restored = Number(pageView?.expanded);
+        visibleCount = Number.isSafeInteger(restored) && restored >= 15 && restored <= 100000 ? restored : 15;
         applyAll();
     });
 
