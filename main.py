@@ -12,7 +12,7 @@ from club_subscriptions_view import render_club_subscriptions_page
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
-from static_pages import render_contact_page, render_terms_page, render_faq_page
+from static_pages import render_contact_page, render_terms_page, render_faq_page, render_about_page
 from operator_tables import add_operator_table
 from storage import load_tables, add_table, update_players, delete_table, init_db
 from views import render_public_page, render_admin_page, minimum_buyin
@@ -60,6 +60,10 @@ def public_site(request: Request):
 @app.get("/contact", response_class=HTMLResponse)
 def contact_page():
     return render_contact_page()
+
+@app.get("/about", response_class=HTMLResponse)
+def about_page():
+    return render_about_page()
 
 @app.get("/faq", response_class=HTMLResponse)
 def faq_page():
@@ -151,7 +155,7 @@ def add_table_route(
         return HTMLResponse(render_admin_page(load_tables(), manager=manager,
             workspace="manager" if manager else "tables", active_clubs=load_active_operator_clubs(),
             pending_requests=pending_club_request_count() if manager else 0,
-            csrf=csrf, error=str(error)), status_code=400)
+            csrf=csrf, error=str(error), form_data=dict(subscription_id=subscription_id,table_name=table_name,union_name=union_name,game=game,blinds=blinds,buyin=buyin,players=players,tags=tags)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
@@ -219,6 +223,9 @@ def signup(
 
     if not username or not email or not password or not confirm_password:
         return render_signup_page(error="Fill all fields")
+
+    if not 8 <= len(password) <= 256:
+        return render_signup_page(error="Use a password with at least 8 characters (maximum 256).")
 
     if password != confirm_password:
         return render_signup_page(error="Passwords do not match")
