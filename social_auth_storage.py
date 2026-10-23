@@ -49,6 +49,15 @@ def linked_providers(email):
         return {row[0] for row in conn.execute('SELECT provider FROM tableradar_social_identities WHERE email=%s',(email,)).fetchall()}
 
 
+def _verified_email(conn, user, email, provider):
+    from player_access import enabled
+    if enabled() and user['email'] == email and not user.get('email_verified_at'):
+        from datetime import datetime, timezone
+        user.update(email_verified_at=datetime.now(timezone.utc).isoformat(), email_verification_source=provider)
+        conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s', (Jsonb(user), user['email']))
+    return user
+
+
 def resolve_identity(provider, subject, email, name, connect=None):
     email = str(email or '').strip().lower()
     subject = str(subject or '')
@@ -65,7 +74,7 @@ def resolve_identity(provider, subject, email, name, connect=None):
             user = dict(row[0])
             if connect and (user['email']!=connect['email'] or user.get('credential_version','')!=connect.get('credential_version','')):
                 raise PublicAuthError('This provider account is already connected elsewhere, or your session changed.')
-            return user
+            return _verified_email(conn, user, email, provider)
         if connect:
             if email != connect['email']:
                 raise PublicAuthError('Choose a provider account with the same verified email as your TableRadar account.')
@@ -84,4 +93,4 @@ def resolve_identity(provider, subject, email, name, connect=None):
         if conn.execute('SELECT subject FROM tableradar_social_identities WHERE provider=%s AND email=%s',(provider,email)).fetchone():
             raise PublicAuthError('A different account from this provider is already connected.')
         conn.execute('INSERT INTO tableradar_social_identities(provider,subject,email) VALUES(%s,%s,%s)',(provider,subject,email))
-        return user
+        return _verified_email(conn, user, email, provider)

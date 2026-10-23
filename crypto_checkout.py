@@ -4,6 +4,7 @@ Sandbox orders never change customer membership. Provider callback and manual
 status checks both retrieve the invoice server-side before any settlement.
 """
 import json
+from player_access import needs_email_confirmation
 import os
 import secrets
 from html import escape
@@ -51,6 +52,8 @@ def hosted_url(order):
 def checkout_page(request,user,plan,error=''):
     if plan not in orders.PRICES:
         return RedirectResponse('/profile',status_code=303)
+    if needs_email_confirmation(user):
+        return RedirectResponse('/verify-account', status_code=303)
     token=request.session.setdefault('account_csrf',secrets.token_urlsafe(32))
     client=CryptopayClient()
     available=[]
@@ -111,6 +114,8 @@ def install_crypto_routes(app,get_current_user):
             return RedirectResponse('/signin_login',status_code=303)
         if not csrf_ok(request,csrf):
             return HTMLResponse('Refresh your account page and try again.',status_code=403)
+        if needs_email_confirmation(user):
+            return RedirectResponse('/verify-account', status_code=303)
         client=CryptopayClient()
         if plan not in orders.PRICES or not configured(client) or not permitted_test(request,user,client):
             return HTMLResponse('Crypto checkout is not available.',status_code=503)

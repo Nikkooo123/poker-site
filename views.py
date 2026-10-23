@@ -1,3 +1,4 @@
+from player_access import directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
 from directory_preferences import saved_filters
 import json
 import secrets
@@ -1140,7 +1141,10 @@ def render_public_page(tables, request=None, user=None):
     filter_csrf = request.session.setdefault("account_csrf", secrets.token_urlsafe(32)) if user and request else ""
     filters_json = escape(json.dumps(saved_filters(user),ensure_ascii=True),quote=True)
 
-    cards = "".join(render_public_card(t, show_club=bool(user)) for t in tables if players_value(t.get("players", "")) > 0)
+    if trial_enabled() and not directory_access(user):
+        cards = '<section class="tr-info-card" style="padding:24px;border-radius:18px"><h2>Full table information is locked</h2><p>Sign in, then activate a verified 14-day Player trial or a paid membership to view tables and club contacts.</p><a class="tr-button" href="' + ('/profile' if user else '/signin_login') + '">' + ('Choose Player access' if user else 'Sign in or register') + '</a></section>'
+    else:
+        cards = "".join(render_public_card(t, show_club=directory_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
     if not cards:
         cards = """
@@ -1161,6 +1165,8 @@ def render_public_page(tables, request=None, user=None):
 
     if username:
         label = plan.title() if is_active and plan in ('player', 'host') else 'Membership'
+        if trial_enabled() and trial_remaining(user) and directory_access(user) and not is_active:
+            label = 'Player trial · ' + str(trial_remaining(user)) + ' days'
         menu_user = dict(user or {}, email=display_name, plan=plan, is_active=is_active)
         right_top_html = f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><a href="/profile" class="tr-status-pill" style="text-decoration:none">{escape(label)}</a>{render_account_menu(menu_user)}</div>'
     else:
@@ -1465,6 +1471,7 @@ def render_public_page(tables, request=None, user=None):
                 <div id="tables-wrap" style="
                     width:1066px;
                     min-width:1066px;">
+                    {render_trial_notice(user) if user else ""}
                     {cards}
                 </div>
 
@@ -1489,7 +1496,7 @@ def render_public_page(tables, request=None, user=None):
         </div>
 
         </div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>Register or sign in to view club details and join. Registered visitors can currently view full table information.</p><div><a class="tr-button tr-button-primary" href="/signup">Create account</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Discover the club behind the game.</h2><p>{'Sign in and activate a verified Player trial or paid membership to view tables and club contacts. Registration alone does not unlock them.' if trial_enabled() else 'Register or sign in to view club details and join. Registered visitors can currently view full table information.'}</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;

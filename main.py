@@ -1,4 +1,5 @@
 import secrets
+import re
 from html import escape
 from club_subscriptions_storage import (
     load_club_subscriptions,
@@ -29,6 +30,10 @@ from account_membership import membership_state, account_context, install_accoun
 from staff_access import session_secret, staff_role, is_manager, can_edit_tables
 from directory_preferences import install_preference_routes
 from social_auth import install_social_routes
+from account_verification import install_verification_routes
+from payment_choices import membership_payment_page, install_payment_choice_routes
+import player_access
+import verification_delivery
 from support_chat import install_support_routes
 from crypto_checkout import checkout_page, install_crypto_routes
 
@@ -218,12 +223,16 @@ def signup(
     if not username or not email or not password or not confirm_password:
         return render_signup_page(error="Fill all fields")
 
+    if len(email)>254 or not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", email):
+        return render_signup_page(error="Enter a valid email address.")
     if not 8 <= len(password) <= 256:
         return render_signup_page(error="Use a password with at least 8 characters (maximum 256).")
 
     if password != confirm_password:
         return render_signup_page(error="Passwords do not match")
 
+    if player_access.enabled() and not verification_delivery.ready():
+        return HTMLResponse(render_signup_page(error="Account verification is not configured yet. Please contact support."), status_code=503)
     ok = create_user(username, email, password)
 
     if not ok:
@@ -237,7 +246,7 @@ def signup(
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
 
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/verify-account" if player_access.enabled() else "/", status_code=303)
 
 @app.get("/signin_login", response_class=HTMLResponse)
 def signin_login_page(request: Request):
@@ -274,7 +283,7 @@ def pay_page(plan_name: str, request: Request):
     if plan_name not in ["player", "host"]:
         return RedirectResponse("/profile", status_code=303)
 
-    return checkout_page(request, user, plan_name)
+    return membership_payment_page(request, user, plan_name)
 
 @app.post("/signin_login", response_class=HTMLResponse)
 def signin_login(
@@ -418,6 +427,8 @@ def admin_delete_club_subscription(request: Request, subscription_id: int, csrf:
 install_account_routes(app, get_current_user)
 install_preference_routes(app, get_current_user)
 install_social_routes(app, get_current_user)
+install_verification_routes(app, get_current_user)
+install_payment_choice_routes(app, get_current_user)
 install_support_routes(app, get_current_user)
 install_crypto_routes(app, get_current_user)
 
