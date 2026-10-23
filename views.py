@@ -739,9 +739,7 @@ def render_public_script():
     }
 
     function cycleDir(dir) {
-        if (!dir) return "desc";
-        if (dir === "desc") return "asc";
-        return "";
+        return dir === "desc" ? "asc" : "desc";
     }
 
     function touchPriority(key) {
@@ -1387,13 +1385,13 @@ def render_public_page(tables, request=None, user=None):
                     width:1066px;
                     min-width:1066px;">
                     <div></div>
-                    <button id="sort-players" type="button" class="tr-sort-button" title="Sort by players; click again to reverse or reset" style="
+                    <button id="sort-players" type="button" class="tr-sort-button" title="Sort by players; click again to reverse" style="
                         cursor:pointer;
                         text-align:left;
                         padding-left:28px;">
                         Players <span class="tr-sort-arrows" aria-hidden="true"><svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="sort-up" d="M5 14V3M2 6l3-3 3 3"/><path class="sort-down" d="M13 4v11m-3-3l3 3 3-3"/></svg></span>
                     </button>
-                    <button id="sort-blinds" type="button" class="tr-sort-button" title="Sort by blinds; click again to reverse or reset" style="
+                    <button id="sort-blinds" type="button" class="tr-sort-button" title="Sort by blinds; click again to reverse" style="
                         cursor:pointer;
                         text-align:left;">
                         Blinds <span class="tr-sort-arrows" aria-hidden="true"><svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path class="sort-up" d="M5 14V3M2 6l3-3 3 3"/><path class="sort-down" d="M13 4v11m-3-3l3 3 3-3"/></svg></span>
