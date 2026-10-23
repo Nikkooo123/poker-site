@@ -75,7 +75,9 @@ def _default_user(email: str, username: str = "") -> dict:
     email = _normalize_email(email)
     username = _safe(username).strip() or email
 
+    from player_access import enabled as verification_enabled
     return {
+        "verification_required": verification_enabled(),
         "username": username,
         "email": email,
         "password_hash": "",
@@ -207,7 +209,8 @@ def create_user(*args, **kwargs):
     username = _safe(username).strip() or email
     password = _safe(password)
 
-    if not email or not 8 <= len(password) <= 256:
+    import re
+    if not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", email) or len(email)>254 or not 8 <= len(password) <= 256:
         return False
 
     users = load_users()
