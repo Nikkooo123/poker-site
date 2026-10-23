@@ -97,6 +97,9 @@ def _normalize_tags(tags: str) -> str:
     if "clock" in raw:
         out.append("clock")
 
+    from table_features import FEATURES
+    selected = {token.strip() for token in raw.split(',')}
+    out.extend(key for key in FEATURES if key in selected)
     return ",".join(out) if out else _safe(tags)
 
 
