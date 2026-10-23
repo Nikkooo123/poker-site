@@ -10,7 +10,7 @@ from staff_access import is_manager, set_staff_role
 from host_lifecycle import awaiting_launch, has_host_access, launch_host, review_host_request, delete_club_request
 
 from fastapi import Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from auth.auth_storage import update_user, load_users, get_user_by_email
 from brand import render_brand_logo, render_site_theme, render_site_footer, render_host_listing_notice
 
@@ -27,6 +27,31 @@ def membership_state(user):
         result["is_active"] = remaining > 0 and result.get("plan") in ("player", "host") and (result.get("membership_test_enabled") or result.get("is_active", False))
         result["auto_renew"] = False
     return result
+
+
+def customer_activity_card(user, activity):
+    safe = lambda value: escape(str(value or ""), quote=True)
+    def stamp(value):
+        if not value:
+            return 'Not recorded yet'
+        try:
+            dt = value if isinstance(value,datetime) else datetime.fromisoformat(str(value).replace('Z','+00:00'))
+            if dt.tzinfo is None:
+                return safe(value)
+            return dt.astimezone(timezone.utc).strftime('%d %b %Y, %H:%M UTC')
+        except (ValueError,TypeError):
+            return safe(value)
+    seconds=max(0,int(activity.get('active_seconds',0)))
+    duration=(str(seconds//3600)+'h '+str(seconds//60%60)+'m') if seconds>=3600 else (str(seconds//60)+'m '+str(seconds%60)+'s')
+    state=membership_state(user)
+    plan=str(state.get('plan','inactive')).lower()
+    label=plan.title() if plan in ('player','host') else 'No membership'
+    fields=[('Membership',label+' · '+('Active' if state.get('is_active') else 'Inactive')),
+        ('Registered',stamp(user.get('registered_at') or user.get('registered'))),
+        ('Last sign-in',stamp(activity.get('last_login_at'))),('Last active',stamp(activity.get('last_seen_at'))),
+        ('Sign-ins recorded',str(activity.get('login_count',0))),('Active time (approx.)',duration if activity else 'Not recorded yet'),
+        ('Last section',safe(activity.get('last_page') or 'Not recorded yet')),('Tracking since',stamp(activity.get('tracking_started_at')))]
+    return '<dl style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin:16px 0 0">'+''.join('<div><dt style="font-size:11px;color:var(--tr-muted)">'+title+'</dt><dd style="margin:3px 0 0;font-size:12px;overflow-wrap:anywhere">'+value+'</dd></div>' for title,value in fields)+'</dl>'
 
 
 def pending_club_request_count():
@@ -271,18 +296,44 @@ def install_account_routes(app, get_current_user):
             return HTMLResponse(escape(str(error)),status_code=409)
         return RedirectResponse('/admin/club-requests',status_code=303)
 
+    @app.get("/account/activity")
+    def activity_token(request: Request):
+        user = get_current_user(request)
+        if not user:
+            return JSONResponse({}, status_code=401, headers={'Cache-Control':'no-store'})
+        return JSONResponse({'csrf':request.session.setdefault('account_csrf',secrets.token_urlsafe(32))}, headers={'Cache-Control':'no-store'})
+
+    @app.post("/account/activity")
+    def activity_heartbeat(request: Request, csrf: str = Form(""), active: str = Form("0"), section: str = Form("Information")):
+        user = get_current_user(request)
+        token = request.session.get('account_csrf','')
+        if not user or not token or not secrets.compare_digest(token,csrf):
+            return JSONResponse({}, status_code=403, headers={'Cache-Control':'no-store'})
+        from staff_access import record_customer_activity
+        try:
+            record_customer_activity(user['email'],active=='1',section)
+        except Exception:
+            return JSONResponse({}, status_code=503, headers={'Cache-Control':'no-store'})
+        return JSONResponse({'ok':True},headers={'Cache-Control':'no-store'})
+
     @app.get("/manager/team", response_class=HTMLResponse)
     def team_page(request: Request):
         if not is_manager(request):
             return HTMLResponse("Manager access required.", status_code=403)
         safe = lambda value: escape(str(value or ""), quote=True)
         csrf = safe(request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
+        query = str(getattr(request, "query_params", {}).get("q", "")).strip()[:254]
+        users = load_users()
+        matches = [user for user in users if not query or query.casefold() in str(user.get("username") or "").casefold() or query.casefold() in str(user.get("email") or "").casefold()]
+        search = f'<section class="tr-info-card"><form method="get" action="/manager/team" role="search"><label for="team-search">Find a customer by nickname or email</label><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><input id="team-search" name="q" type="search" maxlength="254" autocomplete="off" placeholder="Nickname or email" value="{safe(query)}" style="flex:1;min-width:180px"><button class="tr-button" type="submit">Search</button>{"<a class=tr-button href=/manager/team>Clear</a>" if query else ""}</div></form><p class="tr-muted" role="status">{len(matches)} of {len(users)} customers</p></section>'
+        from staff_access import customer_activity_summary
+        activity = customer_activity_summary()
         cards = []
-        for user in load_users():
+        for user in matches:
             role = user.get("staff_role", "")
             options = ''.join(f'<option value="{value}"{" selected" if role == value else ""}>{label}</option>' for value, label in (("", "Customer only — no staff access"), ("table_admin", "Table administrator — tables only"), ("manager", "Manager — tables, requests and subscriptions")))
-            cards.append(f'<section class="tr-info-card tr-team-member"><div class="tr-team-identity"><h2>{safe(user.get("username") or user.get("email"))}</h2><p>{safe(user.get("email"))}</p></div><form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><button class="tr-button" type="submit">Save access</button></form></section>')
-        return page("Staff access", '<p class="tr-page-intro">Staff sign in with their personal accounts. Assign access only to trusted operators. Table administrators use the Tables screen; managers can also review clubs and subscriptions. Keep at least one manager account.</p>' + ''.join(cards), get_current_user(request) or {}, manager=True)
+            cards.append(f'<section class="tr-info-card tr-team-member"><div class="tr-team-identity"><h2>{safe(user.get("username") or user.get("email"))}</h2><p>{safe(user.get("email"))}</p>{customer_activity_card(user, activity.get(user.get("email"), {}))}</div><form method="post" action="/manager/team"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><label>Staff access<select name="role">{options}</select></label><button class="tr-button" type="submit">Save access</button></form></section>')
+        return page("Staff access", '<p class="tr-page-intro">Staff sign in with their personal accounts. Assign access only to trusted operators. Table administrators use the Tables screen; managers can also review clubs and subscriptions. Keep at least one manager account.</p>' + '<p class="tr-muted">Activity statistics start from this update. Active time is approximate, counts visible focused tabs with recent interaction, and excludes idle/background time. Dates are UTC.</p>' + search + (''.join(cards) or '<p class="tr-muted">No customers found. Try another nickname or email.</p>'), get_current_user(request) or {}, manager=True)
 
     @app.post("/manager/team")
     def update_staff(request: Request, csrf: str = Form(""), email: str = Form(""), role: str = Form("")):
