@@ -40,6 +40,20 @@ from crypto_checkout import checkout_page, install_crypto_routes
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
 
+@app.middleware('http')
+async def browser_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault('X-Content-Type-Options','nosniff')
+    response.headers.setdefault('X-Frame-Options','DENY')
+    response.headers.setdefault('Content-Security-Policy',"frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
+    response.headers.setdefault('Referrer-Policy','strict-origin-when-cross-origin')
+    response.headers.setdefault('Permissions-Policy','camera=(), microphone=(), geolocation=()')
+    # Pages contain live club information and may contain personal account data.
+    if 'text/html' in response.headers.get('content-type',''):
+        response.headers.setdefault('Cache-Control','no-store')
+    return response
+
+
 
 
 @app.on_event("startup")
