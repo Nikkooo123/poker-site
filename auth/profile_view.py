@@ -1,7 +1,7 @@
 from host_lifecycle import has_host_access, awaiting_launch
 from html import escape
 from social_auth_config import render_social_connections
-from brand import render_brand_logo, render_site_theme, render_site_footer
+from brand import render_brand_logo, render_site_theme, render_site_footer, render_host_listing_notice
 
 
 def _safe(value, default=""):
@@ -266,7 +266,7 @@ def render_account_menu(user):
 
 """Responsive account page, with the existing plan and payment routes."""
 from html import escape
-from brand import render_brand_logo, render_site_theme, render_site_footer
+from brand import render_brand_logo, render_site_theme, render_site_footer, render_host_listing_notice
 
 
 
@@ -317,7 +317,7 @@ def render_profile(user):
         return f'''<article class="plan {'selected' if selected else ''}">
           <div class="plan-top"><span class="eyebrow">{name} membership</span>{'<span class="pill">Your plan</span>' if selected else ''}</div>
           <h3>{name}</h3>{price_html}<p>{caption}</p>
-          <ul>{''.join(f'<li><span>✓</span>{item}</li>' for item in features)}</ul>{action}</article>'''
+          <ul>{''.join(f'<li><span>✓</span>{item}</li>' for item in features)}</ul>{render_host_listing_notice() if name == "Host" else ""}{action}</article>'''
 
     player = plan_card("Player", "Your place at the right table.", ["Access to all table information", "Filters and favorites", "Your personal profile"], "/pay/player")
     host = plan_card("Host", "Bring your club to the radar.", ["Everything included in Player", "Add one of your own club listings", "Showcase your club to players"], "/pay/host")
