@@ -1,4 +1,4 @@
-from currency_codes import normalize_currency, currency_options, currency_badge
+from currency_codes import normalize_currency, currency_input, currency_badge
 from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
@@ -1811,9 +1811,9 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Minimum buy-in','buyin','Minimum amount'),
         ('Players','players','Players (ex. 4/6)'),
     ]
-    options=''.join(f'<option value="{int(c["subscription_id"])}" data-currency="{normalize_currency(c.get('currency'),required=False)}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
+    options=''.join(f'<option value="{int(c["subscription_id"])}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
     entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
-    entry_fields+=''.join((f'<label class="tr-entry-field">Game currency *<select name="currency" required>{currency_options(form_values.get("currency"))}</select></label>' if name=="currency" else f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>') for label,name,placeholder in fields)
+    entry_fields+=''.join((f'<label class="tr-entry-field">Game currency *{currency_input(form_values.get("currency"))}</label>' if name=="currency" else f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>') for label,name,placeholder in fields)
     error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
@@ -2047,6 +2047,8 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     const missing = Object.entries(fieldLabels).filter(([name])=>!entryForm.elements[name].value.trim()).map(([,label])=>label);
                     if (!gameInput.value) missing.push("Game format");
                     let invalid = "";
+                    const currency = entryForm.elements.currency.value.trim();
+                    if (currency && (currency.length>24 || /[<>\\x00-\\x1f\\x7f]/.test(currency))) invalid="Game currency: enter up to 24 characters, for example USD or USDT.";
                     const buyin = entryForm.elements.buyin.value.trim();
                     const players = entryForm.elements.players.value.trim();
                     if (buyin && (!/^[0-9]{{1,10}}(?:[.,][0-9]{{1,2}})?$/.test(buyin) || Number(buyin.replace(',','.'))<=0)) invalid="Minimum buy-in: enter a positive amount.";
@@ -2058,12 +2060,6 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     feedback.textContent=missing.length ? "Please complete: "+missing.join(", ")+"." : invalid || "Ready to add this table.";
                     return !entrySubmit.disabled;
                 }}
-                entryForm.elements.subscription_id.addEventListener("change",()=>{{
-                    const option=entryForm.elements.subscription_id.selectedOptions[0];
-                    const currency=option?.dataset.currency || "";
-                    entryForm.elements.currency.value=currency;
-                    validateEntry();
-                }});
                 entryForm.addEventListener("input",validateEntry);
                 entryForm.addEventListener("change",validateEntry);
                 entryForm.addEventListener("submit",event=>{{if(!validateEntry()) event.preventDefault();}});
