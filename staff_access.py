@@ -63,3 +63,78 @@ def set_staff_role(email, role):
     user = next((user for user in users if user.get('email') == email), None)
     changed(user, sum(user.get('staff_role') == 'manager' for user in users))
     return update_user(email, staff_role=role)
+
+
+_activity_schema_ready = False
+
+
+def _activity_schema():
+    global _activity_schema_ready
+    if _activity_schema_ready or not repository.enabled():
+        return
+    with repository.connection() as conn:
+        conn.execute("SELECT pg_advisory_xact_lock(hashtextextended('tableradar_activity_schema',0))")
+        conn.execute("""CREATE TABLE IF NOT EXISTS tableradar_customer_activity (
+            email TEXT PRIMARY KEY REFERENCES tableradar_accounts(email) ON DELETE CASCADE,
+            tracking_started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            last_login_at TIMESTAMPTZ, last_seen_at TIMESTAMPTZ,
+            login_count BIGINT NOT NULL DEFAULT 0,
+            active_seconds BIGINT NOT NULL DEFAULT 0,
+            last_beat_at TIMESTAMPTZ, last_beat_active BOOLEAN NOT NULL DEFAULT FALSE, last_page TEXT NOT NULL DEFAULT '')""")
+    _activity_schema_ready = True
+
+
+def record_customer_login(email):
+    if not repository.enabled():
+        return
+    try:
+        _activity_schema()
+        with repository.connection() as conn:
+            conn.execute("""INSERT INTO tableradar_customer_activity(email,last_login_at,last_seen_at,login_count)
+                SELECT email,NOW(),NOW(),1 FROM tableradar_accounts WHERE email=%s
+                ON CONFLICT(email) DO UPDATE SET last_login_at=NOW(),last_seen_at=NOW(),
+                login_count=tableradar_customer_activity.login_count+1""",(email,))
+    except Exception:
+        # Analytics must never break authentication or membership access.
+        pass
+
+
+def record_customer_activity(email, active, section):
+    if not repository.enabled():
+        return
+    _activity_schema()
+    allowed = {'Tables','My account','Host dashboard','Membership','Support','Staff workspace','Information'}
+    section = section if section in allowed else 'Information'
+    with repository.connection() as conn:
+        conn.execute("""INSERT INTO tableradar_customer_activity(email)
+            SELECT email FROM tableradar_accounts WHERE email=%s ON CONFLICT(email) DO NOTHING""",(email,))
+        row=conn.execute('SELECT last_beat_at,last_beat_active FROM tableradar_customer_activity WHERE email=%s FOR UPDATE',(email,)).fetchone()
+        if not row:
+            return
+        current=conn.execute('SELECT clock_timestamp()').fetchone()[0]
+        elapsed=(current-row[0]).total_seconds() if row[0] else None
+        if elapsed is not None and elapsed < 10:
+            return
+        credit=min(30,max(0,int(elapsed))) if active and row[1] and elapsed is not None and elapsed <= 75 else 0
+        conn.execute("""UPDATE tableradar_customer_activity SET last_beat_at=%s,last_beat_active=%s,
+            active_seconds=active_seconds+%s,
+            last_seen_at=CASE WHEN %s THEN %s ELSE last_seen_at END,
+            last_page=CASE WHEN %s THEN %s ELSE last_page END WHERE email=%s""",
+            (current,active,credit,active,current,active,section,email))
+
+
+def customer_activity_summary():
+    if not repository.enabled():
+        return {}
+    try:
+        _activity_schema()
+        with repository.connection() as conn:
+            cursor=conn.execute('SELECT email,tracking_started_at,last_login_at,last_seen_at,login_count,active_seconds,last_page FROM tableradar_customer_activity')
+            columns=[column.name for column in cursor.description]
+            return {row[0]:dict(zip(columns,row)) for row in cursor.fetchall()}
+    except Exception:
+        return {}
+
+
+def render_activity_tracker():
+    return "<script>(function(){\nif(window.top!==window.self||window.trActivityStarted)return;\nwindow.trActivityStarted=true;\nlet csrf='',lastInput=Date.now(),busy=false;\n['pointerdown','keydown','scroll','touchstart','focus'].forEach(name=>window.addEventListener(name,()=>{lastInput=Date.now();},{passive:true}));\nfunction section(){const p=location.pathname;if(p==='/')return 'Tables';if(p==='/profile'||p==='/verify-account')return 'My account';if(p.includes('host'))return 'Host dashboard';if(p.startsWith('/pay'))return 'Membership';if(p.includes('chat')||p==='/contact')return 'Support';if(p.startsWith('/manager')||p.startsWith('/admin'))return 'Staff workspace';return 'Information';}\nasync function beat(){if(!csrf||busy)return;busy=true;try{await fetch('/account/activity',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:csrf,active:document.visibilityState==='visible'&&document.hasFocus()&&Date.now()-lastInput<60000?'1':'0',section:section()})});}catch(e){}finally{busy=false;}}\nfetch('/account/activity',{credentials:'same-origin',cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(data&&data.csrf){csrf=data.csrf;beat();setInterval(beat,30000);}}).catch(()=>{});\n})();</script>"
