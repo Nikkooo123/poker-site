@@ -285,15 +285,16 @@ def render_profile(user):
         status = "Host payment confirmed - preparing your listing - service clock not started"
     initial = username[:1].upper() if username else "P"
 
-    testing = bool(user.get("_can_test"))
+    testing = bool(user.get("membership_test_enabled"))
+    can_test = bool(user.get("_can_test") or user.get("_can_enable_test"))
     csrf = safe(user.get("_csrf", ""))
     def test_form(plan, label):
         return f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="button secondary" style="width:100%;cursor:pointer;color:inherit" type="submit">{label}</button></form>'
     test_controls = ""
-    if testing:
+    if testing and can_test:
         test_controls = '<p class="note">Private test mode. No payment, no automatic renewal. Switching starts a fresh 30-day test period; your club request stays saved.</p>' + test_form("reset", "Reset my test membership")
     elif user.get("_can_enable_test"):
-        test_controls = '<p class="note">Owner preview: reset only this account and try both memberships free. Existing membership details are backed up.</p>' + test_form("reset", "Start private membership test")
+        test_controls = '<p class="note">Manager-only preview. Test either membership free on your own account. No payment or renewal.</p>' + test_form("host", "Try Host free") + test_form("player", "Try Player free")
     dashboard = '<a class="button secondary" href="/host">Open Host dashboard →</a>' if has_host_access(user) else ""
     security_error = f'<p role="alert" class="tr-security-error">{safe(user.get("_security_error"))}</p>' if user.get('_security_error') else ''
     open_on_error = "<script>document.getElementById('password-dialog').showModal();</script>" if security_error else ""
@@ -303,7 +304,7 @@ def render_profile(user):
     def plan_card(name, caption, features, href):
         selected = current.lower() == name.lower()
         action = '<span class="button current">Current plan <span>✓</span></span>' if selected else f'<a class="button {"primary" if name == "Host" else "secondary"}" href="{href}">Choose {name} <span>↗</span></a>'
-        if testing and not selected:
+        if can_test and not selected:
             action = test_form(name.lower(), f"Try {name} free" if not active else f"Switch to {name} — free test")
         price = "$29.99" if name == "Player" else "$600"
         price_html = (f'<div style="font-size:26px;margin-bottom:8px">Free test<span style="display:block;font-size:12px;color:var(--muted)">No charge · Standard price {price} / 30 days when payments launch</span></div>' if testing else f'<div style="font-size:26px;margin-bottom:8px">{price}<span style="font-size:12px;color:var(--muted)"> / 30 days</span></div>')
