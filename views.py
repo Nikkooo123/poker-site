@@ -1,3 +1,6 @@
+from directory_preferences import saved_filters
+import json
+import secrets
 from currency_codes import normalize_currency, currency_badge
 from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
@@ -602,6 +605,11 @@ def render_public_script():
     const $$ = (s) => Array.from(document.querySelectorAll(s));
 
     const CURRENT_USER = document.body.dataset.username || "guest";
+    const memoryStorage = new Map();
+    const filterStorage = {
+        getItem(key) { try { return localStorage.getItem(key); } catch(e) { return memoryStorage.get(key) || null; } },
+        setItem(key,value) { memoryStorage.set(key,String(value)); try { localStorage.setItem(key,String(value)); } catch(e) {} }
+    };
 
     function userKey(base) {
         return base + "_" + CURRENT_USER;
@@ -617,15 +625,63 @@ def render_public_script():
         sortPlayersDir: userKey("sort_players_dir"),
         sortBlindsDir: userKey("sort_blinds_dir"),
         sortPriority: userKey("sort_priority"),
-        onlyFav: userKey("only_favorites")
+        onlyFav: userKey("only_favorites"),
+        pending: userKey("table_filters_pending")
     };
 
-    let sortPlayersDir = localStorage.getItem(STORAGE_KEYS.sortPlayersDir) || "";
-    let sortBlindsDir = localStorage.getItem(STORAGE_KEYS.sortBlindsDir) || "";
+    const FILTER_CSRF = document.body.dataset.filterCsrf || "";
+    let serverFilters = null;
+    try { serverFilters = JSON.parse(document.body.dataset.filters || "null"); } catch(e) {}
+    if (serverFilters && filterStorage.getItem(STORAGE_KEYS.pending) !== "1") {
+        for (const key of ["activeGames","activeNetworks","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key]));
+        for (const key of ["search","minBlind","maxBlind","sortPlayersDir","sortBlindsDir"]) filterStorage.setItem(STORAGE_KEYS[key],serverFilters[key]);
+        filterStorage.setItem(STORAGE_KEYS.onlyFav,serverFilters.onlyFav ? "1" : "0");
+    }
+    let filtersReady = false, filterSaveTimer = null, filterSaveBusy = false;
+    let lastFilterPayload = "", pendingFilterPayload = null;
+
+    function currentFilters() {
+        return {activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,sortPlayersDir,sortBlindsDir,sortPriority};
+    }
+
+    async function flushFilterSave() {
+        if (!FILTER_CSRF || filterSaveBusy || !pendingFilterPayload) return;
+        filterSaveBusy = true;
+        const payload = pendingFilterPayload;
+        try {
+            const response = await fetch("/account/table-filters",{method:"POST",credentials:"same-origin",keepalive:true,headers:{"Content-Type":"application/json","X-CSRF-Token":FILTER_CSRF},body:payload});
+            if (!response.ok) throw new Error("Filters could not sync");
+            if (pendingFilterPayload === payload) {
+                pendingFilterPayload = null;
+                filterStorage.setItem(STORAGE_KEYS.pending,"0");
+            }
+        } catch(e) {
+            // Keep the browser copy and retry on the next change, visit or reconnection.
+        } finally {
+            filterSaveBusy = false;
+            if (pendingFilterPayload && pendingFilterPayload !== payload) flushFilterSave();
+        }
+    }
+
+    function queueFilterSave(force=false) {
+        if (!FILTER_CSRF || !filtersReady) return;
+        const payload = JSON.stringify(currentFilters());
+        if (!force && payload === lastFilterPayload) return;
+        lastFilterPayload = payload;
+        pendingFilterPayload = payload;
+        filterStorage.setItem(STORAGE_KEYS.pending,"1");
+        clearTimeout(filterSaveTimer);
+        filterSaveTimer = setTimeout(flushFilterSave,250);
+    }
+    window.addEventListener("online",flushFilterSave);
+    window.addEventListener("pagehide",flushFilterSave);
+
+    let sortPlayersDir = filterStorage.getItem(STORAGE_KEYS.sortPlayersDir) || "";
+    let sortBlindsDir = filterStorage.getItem(STORAGE_KEYS.sortBlindsDir) || "";
     let sortPriority = ["players", "blinds"];
 
     try {
-        const savedPriority = JSON.parse(localStorage.getItem(STORAGE_KEYS.sortPriority) || "[]");
+        const savedPriority = JSON.parse(filterStorage.getItem(STORAGE_KEYS.sortPriority) || "[]");
         if (Array.isArray(savedPriority) && savedPriority.length) {
             sortPriority = savedPriority;
         }
@@ -633,7 +689,7 @@ def render_public_script():
 
     let visibleCount = 15;
     const LOAD_MORE_STEP = 10;
-    let showOnlyFavorites = localStorage.getItem(STORAGE_KEYS.onlyFav) === "1";
+    let showOnlyFavorites = filterStorage.getItem(STORAGE_KEYS.onlyFav) === "1";
 
     function getRows() {
         return $$(".table-row");
@@ -643,38 +699,38 @@ def render_public_script():
 
     function getFavorites() {
         try {
-            return JSON.parse(localStorage.getItem(STORAGE_KEYS.favorites) || "[]");
+            return JSON.parse(filterStorage.getItem(STORAGE_KEYS.favorites) || "[]");
         } catch (e) {
             return [];
         }
     }
 
     function setFavorites(arr) {
-        localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(arr));
+        filterStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(arr));
     }
 
     function getActiveGames() {
         try {
-            return JSON.parse(localStorage.getItem(STORAGE_KEYS.activeGames) || "[]");
+            return JSON.parse(filterStorage.getItem(STORAGE_KEYS.activeGames) || "[]");
         } catch (e) {
             return [];
         }
     }
 
     function setActiveGames(arr) {
-        localStorage.setItem(STORAGE_KEYS.activeGames, JSON.stringify(arr));
+        filterStorage.setItem(STORAGE_KEYS.activeGames, JSON.stringify(arr));
     }
 
     function getActiveNetworks() {
         try {
-            return JSON.parse(localStorage.getItem(STORAGE_KEYS.activeNetworks) || "[]");
+            return JSON.parse(filterStorage.getItem(STORAGE_KEYS.activeNetworks) || "[]");
         } catch (e) {
             return [];
         }
     }
 
     function setActiveNetworks(arr) {
-        localStorage.setItem(STORAGE_KEYS.activeNetworks, JSON.stringify(arr));
+        filterStorage.setItem(STORAGE_KEYS.activeNetworks, JSON.stringify(arr));
     }
 
     function parsePlayersValue(text) {
@@ -751,9 +807,9 @@ def render_public_script():
         const minEl = $("#blinds-min");
         const maxEl = $("#blinds-max");
 
-        if (searchEl) searchEl.value = localStorage.getItem(STORAGE_KEYS.search) || "";
-        if (minEl) minEl.value = localStorage.getItem(STORAGE_KEYS.minBlind) || "";
-        if (maxEl) maxEl.value = localStorage.getItem(STORAGE_KEYS.maxBlind) || "";
+        if (searchEl) searchEl.value = filterStorage.getItem(STORAGE_KEYS.search) || "";
+        if (minEl) minEl.value = filterStorage.getItem(STORAGE_KEYS.minBlind) || "";
+        if (maxEl) maxEl.value = filterStorage.getItem(STORAGE_KEYS.maxBlind) || "";
     }
 
     function saveInputs() {
@@ -761,14 +817,15 @@ def render_public_script():
         const minEl = $("#blinds-min");
         const maxEl = $("#blinds-max");
 
-        if (searchEl) localStorage.setItem(STORAGE_KEYS.search, searchEl.value || "");
-        if (minEl) localStorage.setItem(STORAGE_KEYS.minBlind, minEl.value || "");
-        if (maxEl) localStorage.setItem(STORAGE_KEYS.maxBlind, maxEl.value || "");
+        if (searchEl) filterStorage.setItem(STORAGE_KEYS.search, searchEl.value || "");
+        if (minEl) filterStorage.setItem(STORAGE_KEYS.minBlind, minEl.value || "");
+        if (maxEl) filterStorage.setItem(STORAGE_KEYS.maxBlind, maxEl.value || "");
 
-        localStorage.setItem(STORAGE_KEYS.onlyFav, showOnlyFavorites ? "1" : "0");
-        localStorage.setItem(STORAGE_KEYS.sortPlayersDir, sortPlayersDir);
-        localStorage.setItem(STORAGE_KEYS.sortBlindsDir, sortBlindsDir);
-        localStorage.setItem(STORAGE_KEYS.sortPriority, JSON.stringify(sortPriority));
+        filterStorage.setItem(STORAGE_KEYS.onlyFav, showOnlyFavorites ? "1" : "0");
+        filterStorage.setItem(STORAGE_KEYS.sortPlayersDir, sortPlayersDir);
+        filterStorage.setItem(STORAGE_KEYS.sortBlindsDir, sortBlindsDir);
+        filterStorage.setItem(STORAGE_KEYS.sortPriority, JSON.stringify(sortPriority));
+        queueFilterSave();
     }
 
     function sortRows(rows) {
@@ -1042,6 +1099,9 @@ def render_public_script():
     paintGameButtons();
     paintClubButtons();
     applyAll();
+    filtersReady = true;
+    lastFilterPayload = JSON.stringify(currentFilters());
+    if (FILTER_CSRF && (filterStorage.getItem(STORAGE_KEYS.pending) === "1" || !serverFilters)) queueFilterSave(true);
     </script>
     """
 
@@ -1076,6 +1136,9 @@ def render_public_page(tables, request=None, user=None):
         username, user_email = user.get("username"), user.get("email")
         plan, is_active = user.get("plan", "inactive"), bool(user.get("is_active"))
     display_name = user_email or username or ""
+
+    filter_csrf = request.session.setdefault("account_csrf", secrets.token_urlsafe(32)) if user and request else ""
+    filters_json = escape(json.dumps(saved_filters(user),ensure_ascii=True),quote=True)
 
     cards = "".join(render_public_card(t, show_club=bool(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
@@ -1237,7 +1300,7 @@ def render_public_page(tables, request=None, user=None):
         </style>
         {render_site_theme()}
     </head>
-    <body class="tr-directory" data-username="{escape(display_name if display_name else 'guest')}" style="
+    <body class="tr-directory" data-username="{escape(display_name if display_name else 'guest')}" data-filter-csrf="{escape(filter_csrf,quote=True)}" data-filters="{filters_json}" style="
         margin:0;
         background:
             radial-gradient(circle at 14% 18%, rgba(91,199,255,.20), transparent 26%),
@@ -1359,7 +1422,7 @@ def render_public_page(tables, request=None, user=None):
                         width:1030px;
                         min-width:1030px;
                         box-sizing:border-box;">
-                        <input id="club-search" aria-label="Search club" type="text" placeholder="Search club" style="
+                        <input id="club-search" maxlength="120" aria-label="Search club" type="text" placeholder="Search club" style="
                             width:100%;
                             padding:12px 14px;
                             border:none;
