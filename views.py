@@ -1990,13 +1990,6 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     Add new table
                 </div>
 
-                <div style="
-                    color:#c9ced6;
-                    font:600 12px Arial;
-                    margin-bottom:10px;">
-                    Quick add form
-                </div>
-
                 {error_html}<form method="post" action="/add" id="admin-add-form">
                     <input type="hidden" name="csrf" value="{escape(csrf,quote=True)}">
                     <input type="hidden" name="game" id="admin-game-input">
@@ -2028,7 +2021,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                         </div></section>
                     </div>
 
-                    <div style="
+                    <div class="tr-entry-submit" style="
                         margin-top:10px;
                         display:flex;
                         justify-content:space-between;
