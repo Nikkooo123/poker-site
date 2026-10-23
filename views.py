@@ -1846,39 +1846,6 @@ def render_admin_card(table: dict) -> str:
                 </div>
             </div>
 
-            <div style="
-                border-top:1px solid rgba(255,255,255,.06);
-                padding:4px 8px 5px 58px;
-                box-sizing:border-box;">
-
-                <div style="
-                    display:grid;
-                    grid-template-columns:1fr 1fr;
-                    gap:4px 10px;">
-
-                    <div style="
-                        min-width:0;
-                        color:#d7b258;
-                        font:600 8.5px Arial;
-                        line-height:1.2;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;">
-                        <b>Affiliate:</b> {affiliate_name} · <b>TG:</b> {affiliate_telegram if affiliate_telegram else "—"}
-                    </div>
-
-                    <div style="
-                        min-width:0;
-                        color:#d97a84;
-                        font:600 8.5px Arial;
-                        line-height:1.2;
-                        overflow:hidden;
-                        text-overflow:ellipsis;
-                        white-space:nowrap;">
-                        <b>Club official:</b> {owner_name} · <b>TG:</b> {owner_telegram if owner_telegram else "—"}
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     """
@@ -1897,20 +1864,18 @@ def render_operator_clubs(clubs):
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
 
-def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0):
+def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0, csrf="", error=""):
     fields = [
-        ('Club name','club','Club name','','admin-club-input'),
-        ('Table name','table_name','Table name','',''),
-        ('Union name','union_name','Union name','',''),
-        ('Blinds','blinds','Blinds','',''),
-        ('Minimum buy-in','buyin','Minimum amount','',''),
-        ('Players','players','Players (ex. 4/6)','',''),
-        ('Affiliate name','affiliate_name','Affiliate name',OFFICIAL_AFFILIATE_NAME,''),
-        ('Affiliate Telegram URL','affiliate_telegram',TELEGRAM_URL,TELEGRAM_URL,''),
-        ('Club official name','owner_name','Club owner name','','admin-owner-input'),
-        ('Club Telegram URL','owner_telegram','https://t.me/playaofficial','',''),
+        ('Table name','table_name','Table name'),
+        ('Union name','union_name','Union name'),
+        ('Blinds','blinds','Blinds'),
+        ('Minimum buy-in','buyin','Minimum amount'),
+        ('Players','players','Players (ex. 4/6)'),
     ]
-    entry_fields=''.join(f'<label class="tr-entry-field">{escape(label)}<input name="{name}" id="{ident}" placeholder="{escape(placeholder,quote=True)}" value="{escape(value,quote=True)}"></label>' for label,name,placeholder,value,ident in fields)
+    options=''.join(f'<option value="{int(c["subscription_id"])}">{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
+    entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
+    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
+    error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
     cards = "".join(render_admin_card(t) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
     request_count = max(0, int(pending_requests)) if manager else 0
@@ -2032,23 +1997,15 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     Quick add form
                 </div>
 
-                <form method="post" action="/add" id="admin-add-form">
+                {error_html}<form method="post" action="/add" id="admin-add-form">
+                    <input type="hidden" name="csrf" value="{escape(csrf,quote=True)}">
                     <input type="hidden" name="game" id="admin-game-input">
-                    <input type="hidden" name="network" id="admin-network-input">
                     <input type="hidden" name="tags" id="admin-tags-input">
 
                     <div class="tr-entry-fields">{entry_fields}</div>
 
                     <div class="tr-entry-options">
-                        <section><div style="font:700 12px Arial;margin-bottom:4px;">Application</div>
-                        <div style="display:grid;grid-template-columns:repeat(2,84px);gap:6px 6px;margin-bottom:8px;">
-                            <button type="button" class="admin-pick-btn admin-network-btn network-pppoker" data-value="pppoker">PP Poker</button>
-                            <button type="button" class="admin-pick-btn admin-network-btn network-pokerbros" data-value="pokerbros">Poker Bros</button>
-                            <button type="button" class="admin-pick-btn admin-network-btn network-clubgg" data-value="clubgg">Club GG</button>
-                            <button type="button" class="admin-pick-btn admin-network-btn network-xpoker" data-value="xpoker">X Poker</button>
-                        </div>
-
-                       </section><section><div style="font:700 12px Arial;margin-bottom:4px;">Tags</div>
+                        <section><div style="font:700 12px Arial;margin-bottom:4px;">Tags</div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 30%">VPIP 30%</button>
     <button type="button" class="admin-pick-btn admin-tag-btn" data-value="vpip 35%">VPIP 35%</button>
@@ -2095,8 +2052,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                             line-height:1.35;
                             text-align:right;
                             max-width:220px;">
-                            Your Telegram channel goes into <b>Affiliate Telegram URL</b>.<br>
-                            Club owner's Telegram goes into <b>Club Telegram URL</b>.
+                            Choose a club from Clubs to monitor.<br>Application and joining contacts are filled automatically.
                         </div>
                     </div>
                 </form>
@@ -2136,10 +2092,8 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         <script>
             (function() {{
                 const gameInput = document.getElementById("admin-game-input");
-                const networkInput = document.getElementById("admin-network-input");
                 const tagsInput = document.getElementById("admin-tags-input");
-                const clubInput = document.getElementById("admin-club-input");
-                const ownerInput = document.getElementById("admin-owner-input");
+
                 const clubSearch = document.getElementById("admin-club-search");
 
                 let selectedTags = [];
@@ -2156,14 +2110,6 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     }});
                 }});
 
-                document.querySelectorAll(".admin-network-btn").forEach(btn => {{
-                    btn.addEventListener("click", function() {{
-                        document.querySelectorAll(".admin-network-btn").forEach(b => b.classList.remove("active"));
-                        btn.classList.add("active");
-                        networkInput.value = btn.dataset.value;
-                    }});
-                }});
-
                 document.querySelectorAll(".admin-tag-btn").forEach(btn => {{
                     btn.addEventListener("click", function() {{
                         const value = btn.dataset.value;
@@ -2176,17 +2122,6 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                         }}
                         syncTags();
                     }});
-                }});
-
-                clubInput?.addEventListener("input", function() {{
-                    if (!ownerInput.dataset.touched) {{
-                        const v = clubInput.value.trim();
-                        ownerInput.value = v ? v + " Official" : "";
-                    }}
-                }});
-
-                ownerInput?.addEventListener("input", function() {{
-                    ownerInput.dataset.touched = "1";
                 }});
 
                 clubSearch?.addEventListener("input", function() {{
