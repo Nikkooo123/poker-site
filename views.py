@@ -1887,7 +1887,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     request_count = max(0, int(pending_requests)) if manager else 0
     request_badge = (f'<span class="tr-request-count" aria-label="{request_count} pending club requests" style="display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;margin-left:7px;border-radius:999px;background:#b44f55;color:#fff0f0;font-size:12px;font-weight:700;line-height:1">{request_count}</span>' if request_count else '')
     staff_nav = (f'<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/manager/membership-test">Test Host / Player</a><a class="tr-button" href="/admin/club-requests">Club requests{request_badge}</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
-    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/staff/chat">Live chat inbox</a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
+    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/staff/chat">Live chat inbox<span class="tr-support-count" data-support-count hidden></span></a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
 
     return f"""
     <html>
