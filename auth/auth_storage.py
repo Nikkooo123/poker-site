@@ -236,6 +236,8 @@ def authenticate_user(email: str, password: str):
         if _normalize_email(user.get("email")) != email:
             continue
 
+        if user.get("password_login_enabled", True) is False:
+            return None
         stored_hash = _safe(user.get("password_hash", ""))
 
         if _verify_password(password, stored_hash):
