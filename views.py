@@ -1493,7 +1493,7 @@ def render_public_page(tables, request=None, user=None):
         </div>
 
         </div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club details</h2><p>{'Register to choose a paid membership or start a free trial.' if trial_enabled() else 'Register or sign in to view club details and join. Registered visitors can currently view full table information.'}</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club details</h2><p>To see full game information, register and purchase a membership or select Free Trial.</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <a class="tr-button" href="{'/verify-account' if user else '/signup'}">Free Trial</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
