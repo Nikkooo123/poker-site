@@ -304,6 +304,9 @@ def signin_login(
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
 
+    from staff_access import record_customer_login
+    record_customer_login(user["email"])
+
     destination = "/manager" if is_manager(request) else ("/admin" if can_edit_tables(request) else "/")
     return RedirectResponse(url=destination, status_code=303)
 
