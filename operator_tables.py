@@ -5,8 +5,7 @@ from brand import OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL
 from storage import _connect, _insert_table, _normalize_network
 
 
-def add_operator_table(subscription_id, *, table_name, union_name, game, blinds, buyin, players, tags="", currency=""):
-    currency = normalize_currency(currency)
+def add_operator_table(subscription_id, *, table_name, union_name, game, blinds, buyin, players, tags=""):
     values = dict(table_name=table_name, union_name=union_name, blinds=blinds, buyin=buyin, players=players)
     for field, value in values.items():
         values[field] = str(value or "").strip()
@@ -27,13 +26,17 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
         with conn.cursor() as cur:
             # The shared row lock prevents disable/delete/renewal changing this placement mid-insert.
             # No account lock is acquired, preserving the account-first order used by approval.
-            cur.execute("""SELECT club_name, application, owner_name, owner_telegram
+            cur.execute("""SELECT club_name, application, owner_name, owner_telegram, currency
                 FROM club_subscriptions WHERE id=%s AND plan='host' AND status='active'
                 AND COALESCE(access_expires_at,expires_at::timestamptz)>clock_timestamp()
                 FOR SHARE""", (selected,))
             club = cur.fetchone()
             if not club:
                 raise ValueError("This club is not active in Clubs to monitor. Refresh the page and choose an active club.")
+            try:
+                currency = normalize_currency(club.get('currency'))
+            except ValueError:
+                raise ValueError("The club owner must provide the game currency and the manager must approve the updated club request before adding tables.") from None
             network = _normalize_network(club['application'])
             if network not in ('pppoker','pokerbros','clubgg','xpoker'):
                 raise ValueError("The manager must record a supported application for this club before tables can be added.")

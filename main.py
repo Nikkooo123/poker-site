@@ -140,7 +140,7 @@ def add_table_route(
     subscription_id: str = Form(""),
     table_name: str = Form(""), union_name: str = Form(""),
     game: str = Form(""), blinds: str = Form(""), buyin: str = Form(""),
-    players: str = Form(""), tags: str = Form(""), csrf: str = Form(""), currency: str = Form(""),
+    players: str = Form(""), tags: str = Form(""), csrf: str = Form(""),
 ):
     check = require_login(request)
     if check:
@@ -149,13 +149,13 @@ def add_table_route(
         return HTMLResponse("Refresh the page and try again.", status_code=403)
     try:
         add_operator_table(subscription_id, table_name=table_name, union_name=union_name,
-                           game=game, blinds=blinds, buyin=minimum_buyin(buyin), players=players, tags=tags, currency=currency)
+                           game=game, blinds=blinds, buyin=minimum_buyin(buyin), players=players, tags=tags)
     except ValueError as error:
         manager = is_manager(request)
         return HTMLResponse(render_admin_page(load_tables(), manager=manager,
             workspace="manager" if manager else "tables", active_clubs=load_active_operator_clubs(),
             pending_requests=pending_club_request_count() if manager else 0,
-            csrf=csrf, error=str(error), form_data=dict(subscription_id=subscription_id,table_name=table_name,union_name=union_name,game=game,blinds=blinds,buyin=buyin,players=players,tags=tags,currency=currency)), status_code=400)
+            csrf=csrf, error=str(error), form_data=dict(subscription_id=subscription_id,table_name=table_name,union_name=union_name,game=game,blinds=blinds,buyin=buyin,players=players,tags=tags)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
