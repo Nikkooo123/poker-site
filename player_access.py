@@ -42,47 +42,42 @@ def entitled(user):
                 and user.get('phone_verified_at') and remaining(user))
 
 
-def directory_access(user):
-    return entitled(user)
+def verified_account(user):
+    """Only server-confirmed email and a bound, SMS-confirmed phone qualify."""
+    return bool(user and user.get('email_verified_at') and user.get('phone_verified_at')
+                and user.get('trial_phone_digest'))
 
 
-def join_access(user):
-    """Trial reveals names; only a confirmed paid Player plan reveals contacts."""
-    if not user:
+def paid_host_access(user):
+    if not user or user.get('plan') != 'host' or user.get('membership_test_enabled'):
         return False
-    if user.get('staff_role') in ('manager', 'table_admin'):
+    if user.get('membership_source') not in ('manager', 'crypto'):
+        return False
+    from host_lifecycle import awaiting_launch
+    if awaiting_launch(user):
         return True
-    if user.get('plan') != 'player' or user.get('is_active') is not True:
-        return False
-    if user.get('membership_test_enabled'):
-        return False
-    if user.get('membership_source') not in ('manager', 'crypto', 'card', 'paypal'):
-        return False
-    if user.get('verification_required') and not user.get('email_verified_at'):
-        return False
-    expiry = user.get('membership_expires_at')
-    if not expiry:
+    if user.get('is_active') is not True:
         return False
     try:
-        return datetime.fromisoformat(expiry) > datetime.now(timezone.utc)
+        return datetime.fromisoformat(user.get('membership_expires_at', '')) > datetime.now(timezone.utc)
     except (TypeError, ValueError):
         return False
 
 
+def directory_access(user):
+    return bool(user and (user.get('staff_role') in ('manager', 'table_admin')
+                          or verified_account(user) or paid_host_access(user)))
+
+
+def join_access(user):
+    """Launch policy: verified accounts can see names and join without payment."""
+    return directory_access(user)
+
+
 def render_trial_notice(user):
-    if not enabled():
+    if directory_access(user):
         return ''
-    days = remaining(user)
-    if days and entitled(user):
-        title = 'Player free trial: ' + str(days) + ' days remaining'
-        text = 'Your trial reveals table and club names. Joining requires a paid Player plan. The trial expires automatically and does not renew or include Host access.'
-    elif user.get('player_trial_expires_at'):
-        title, text = 'Player free trial ended', 'Choose a paid Player membership to continue viewing full table information.'
-    elif entitled(user):
-        return ''
-    else:
-        title, text = 'Unlock full table information', 'Verify your email and phone number to view clubs and games with a 14-day Player trial, or choose a paid membership.'
-    return '<section class="tr-info-card tr-access-notice" style="padding:18px;margin:18px 0"><h2 style="font-size:19px">'+escape(title)+'</h2><p>'+escape(text)+'</p><a class="tr-button" href="/verify-account">Email, phone and trial</a> <a class="tr-button" href="/profile">Membership options</a></section>'
+    return '<section class="tr-info-card tr-access-notice" style="padding:18px;margin:18px 0"><h2 style="font-size:19px">Unlock full table information</h2><p>Verify your email and phone number to view club and table details.</p><a class="tr-button" href="/verify-account">Verify email and phone</a></section>'
 
 
 def needs_email_confirmation(user):

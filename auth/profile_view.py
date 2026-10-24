@@ -1,4 +1,4 @@
-from player_access import render_trial_notice, enabled as trial_enabled, remaining as trial_remaining, entitled as trial_entitled
+from player_access import verified_account, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining, entitled as trial_entitled
 from host_lifecycle import has_host_access, awaiting_launch
 from html import escape
 from social_auth_config import render_social_connections
@@ -285,10 +285,9 @@ def render_profile(user):
     status = f"Active · {current} · {days} days remaining" if active else "No active membership — choose a plan below"
     if awaiting_launch(user):
         status = "Host payment confirmed - preparing your listing - service clock not started"
-    if trial_enabled() and trial_remaining(user) and trial_entitled(user) and not active:
-        current = "Player trial"
-        days = str(trial_remaining(user))
-        status = "Player free trial · " + days + " days remaining — table and club names; paid Player plan required to join"
+    if verified_account(user) and not active and not awaiting_launch(user):
+        current = "Verified account"
+        status = "Email and phone verified — club and table access enabled"
     initial = username[:1].upper() if username else "P"
 
     testing = bool(user.get("membership_test_enabled"))
