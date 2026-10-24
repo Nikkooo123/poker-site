@@ -67,6 +67,15 @@ def create(email, kind, target, credential_version, ip=''):
             raise ValueError('This account has already received its Player trial.')
         if kind == 'email' and (target != user['email'] or user.get('email_verified_at')):
             raise ValueError('This email does not need verification.')
+        if kind == 'phone':
+            # Reject already bound identifiers before sending another paid SMS.
+            # The unique ledger is permanent; trial expiry does not free a number.
+            used = conn.execute(
+                'SELECT 1 FROM tableradar_trial_claims WHERE phone_digest=%s OR email_digest=%s',
+                (digest('phone', target), digest('trial-email', email)),
+            ).fetchone()
+            if used:
+                raise ValueError('This email or phone is already linked to a Player trial. Contact support.')
         # Account lock serialises resends; IP is a coarse secondary rate limit, not identity.
         allowed = _limit(conn, kind + ':account:' + email, 3, 3600)
         if ip:

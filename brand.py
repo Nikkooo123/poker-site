@@ -95,6 +95,7 @@ def render_site_theme() -> str:
     .tr-site-header .tr-status-pill{font-size:13px!important;line-height:1.4;padding:5px 12px;align-items:center;white-space:nowrap}
     .tr-site-footer{border-top-color:#c7b58826}.tr-site-footer a:hover{color:#e3ddbf}
     .tr-directory .tr-access-notice{margin-left:36px!important;width:calc(100% - 36px)!important;box-sizing:border-box}@media(max-width:1120px){.tr-directory .tr-access-notice{margin-left:0!important;width:100%!important}}
+    @media(min-width:1121px){.tr-directory #sort-players{padding-left:56px!important}.tr-directory #table-count{margin-left:56px}}
     </style>"""
 
 
