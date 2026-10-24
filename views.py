@@ -1215,6 +1215,8 @@ def render_public_page(tables, request=None, user=None):
     else:
         right_top_html = '<a class="tr-button" href="/signin_login">Sign in →</a>'
 
+    guest_signin = '<a class="tr-button" href="/signin_login">Sign in</a>' if not user else ''
+
     return f"""
     <html>
     <head>
@@ -1541,7 +1543,7 @@ def render_public_page(tables, request=None, user=None):
 
         </div>
         <div id="tr-name-tooltip" role="tooltip" hidden></div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club and table details</h2><p>Register, verify your email and phone number, and start your 14-day Free Trial to view club and table details.</p><div><a class="tr-button tr-button-primary" href="{'/verify-account' if user else '/signup'}">{'Verify and start Free Trial' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club and table details</h2><p>Register, verify your email and phone number, and start your 14-day Free Trial to view club and table details.</p><div><a class="tr-button tr-button-primary" href="{'/verify-account' if user else '/signup'}">{'Verify and start Free Trial' if user else 'Create account'}</a> {guest_signin} <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;
