@@ -40,6 +40,13 @@ from crypto_checkout import checkout_page, install_crypto_routes
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
 
+@app.get('/assets/poker-lounge-v3.webp', include_in_schema=False)
+def poker_lounge_illustration():
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    return FileResponse(Path(__file__).with_name('poker-lounge-v3.webp'), media_type='image/webp',
+        headers={'Cache-Control':'public, max-age=31536000, immutable'})
+
 @app.middleware('http')
 async def browser_security_headers(request: Request, call_next):
     response = await call_next(request)
