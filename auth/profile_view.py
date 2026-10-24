@@ -288,7 +288,7 @@ def render_profile(user):
     if trial_enabled() and trial_remaining(user) and trial_entitled(user) and not active:
         current = "Player trial"
         days = str(trial_remaining(user))
-        status = "Player free trial · " + days + " days remaining — full table access"
+        status = "Player free trial · " + days + " days remaining — table and club names; paid Player plan required to join"
     initial = username[:1].upper() if username else "P"
 
     testing = bool(user.get("membership_test_enabled"))

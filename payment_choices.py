@@ -15,7 +15,7 @@ def membership_payment_page(request, user, plan):
     other = ''
     if plan == 'player':
         other = '<section class="tr-info-card"><h2>Bank card</h2><p>Coming soon. A payment provider has not been connected. No card details are collected and no payment is made here.</p><button class="tr-button" disabled>Card payment unavailable</button></section><section class="tr-info-card"><h2>PayPal</h2><p>Coming soon. A payment provider has not been connected. No PayPal payment can be started here.</p><button class="tr-button" disabled>PayPal unavailable</button></section>'
-        trial = '<section class="tr-info-card"><h2>14-day Player free trial</h2><p>Full Player access for 14 days, once per verified phone number, after email and phone confirmation. After the trial ends, a paid membership is required. No automatic charge.</p>'
+        trial = '<section class="tr-info-card"><h2>14-day Player free trial</h2><p>View table and club names for 14 days, once per verified phone number, after email and phone confirmation. Joining clubs requires a paid Player plan. After the trial ends, a paid membership is required. No automatic charge.</p>'
         trial += '<a class="tr-button" href="/verify-account">Email, phone and trial</a>' if player_access.enabled() else '<button class="tr-button" disabled>Trial verification setup in progress</button>'
         other = trial + '</section>' + other
     intro = ('Player membership: 29.99 USD for 30 days. Planned methods: bank card, PayPal and cryptocurrency.' if plan == 'player' else 'Host membership: 600 USD for 30 days. Cryptocurrency only. Host has no free trial. The listing service period starts when the placement is ready and approved.')

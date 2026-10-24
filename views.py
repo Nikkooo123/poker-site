@@ -1,4 +1,4 @@
-from player_access import directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
+from player_access import join_access, directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
 from directory_preferences import saved_filters
 import json
 import secrets
@@ -334,11 +334,15 @@ def _network_overlay_color(network: str) -> str:
     }
     return colors.get(network, "rgba(255,255,255,.10)")
 
-def render_public_card(table: dict, show_club=False) -> str:
+def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
         table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
         table.update(club="***", table_name="***", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
+    if not can_join:
+        table = dict(table)
+        for key in ('owner_name', 'owner_telegram', 'affiliate_name', 'affiliate_telegram'):
+            table[key] = ''
     name_help_attrs = 'data-name-help="Register or sign in, then choose a membership or Free Trial to view table and club names." tabindex="0" aria-describedby="tr-name-tooltip" aria-label="Hidden name. Register or sign in, then choose a membership or Free Trial to view table and club names."' if not show_club else ''
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
@@ -359,7 +363,7 @@ def render_public_card(table: dict, show_club=False) -> str:
     overlay_color = _network_overlay_color(network)
 
     affiliate_name = escape(normalize_affiliate_name(_safe(table.get("affiliate_name", OFFICIAL_AFFILIATE_NAME))))
-    affiliate_telegram = escape(TELEGRAM_URL if affiliate_name == OFFICIAL_AFFILIATE_NAME and show_club else _safe(table.get("affiliate_telegram", "")))
+    affiliate_telegram = escape(TELEGRAM_URL if affiliate_name == OFFICIAL_AFFILIATE_NAME and can_join else _safe(table.get("affiliate_telegram", "")))
     owner_name = escape(_safe(table.get("owner_name", f"{_safe(table.get('club', 'Club'))} Official")))
     owner_telegram = escape(_safe(table.get("owner_telegram", "")))
 
@@ -569,6 +573,7 @@ def render_public_card(table: dict, show_club=False) -> str:
             <button
                 type="button"
                 class="join-open-btn join-btn-3d"
+                data-join-help="Paid Player plan required to join the club." aria-describedby="tr-name-tooltip"
                 data-club="{club_name}"
                 data-table-name="{table_name}"
                 data-affiliate-name="{affiliate_name}"
@@ -594,9 +599,9 @@ def render_public_card(table: dict, show_club=False) -> str:
     """
 
 # =========================
-    if not show_club:
+    if not can_join:
         card = card.replace("                Join\n", "                Join 🔒\n")
-        card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" title="Activate Player access to view club details and join." aria-label="Join locked — activate Player access"')
+        card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" aria-label="Join locked — paid Player plan required"')
     return card
 
 # PUBLIC PAGE SCRIPT
@@ -615,7 +620,7 @@ def render_public_script():
     function showNameHint(target) {
         if (!nameHint || !target) return;
         nameHintTarget = target;
-        nameHint.textContent = target.dataset.nameHelp;
+        nameHint.textContent = target.dataset.nameHelp || target.dataset.joinHelp;
         nameHint.hidden = false;
         const box = target.getBoundingClientRect();
         const width = nameHint.offsetWidth, height = nameHint.offsetHeight;
@@ -626,15 +631,15 @@ def render_public_script():
         nameHint.style.top = top + 'px';
     }
     document.addEventListener('pointerover', event => {
-        const target = event.target.closest?.('[data-name-help]');
+        const target = event.target.closest?.('[data-name-help], [data-join-help]');
         if (target && target !== nameHintTarget) showNameHint(target);
     });
     document.addEventListener('pointerout', event => {
-        const target = event.target.closest?.('[data-name-help]');
+        const target = event.target.closest?.('[data-name-help], [data-join-help]');
         if (target && !target.contains(event.relatedTarget)) hideNameHint();
     });
     document.addEventListener('focusin', event => {
-        const target = event.target.closest?.('[data-name-help]');
+        const target = event.target.closest?.('[data-name-help], [data-join-help]');
         if (target) showNameHint(target);
     });
     document.addEventListener('focusout', event => { if (event.target === nameHintTarget) hideNameHint(); });
@@ -1181,7 +1186,7 @@ def render_public_page(tables, request=None, user=None):
     filter_csrf = request.session.setdefault("account_csrf", secrets.token_urlsafe(32)) if user and request else ""
     filters_json = escape(json.dumps(saved_filters(user),ensure_ascii=True),quote=True)
 
-    cards = "".join(render_public_card(t, show_club=directory_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
+    cards = "".join(render_public_card(t, show_club=directory_access(user), can_join=join_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
     if not cards:
         cards = """
@@ -1534,7 +1539,7 @@ def render_public_page(tables, request=None, user=None):
 
         </div>
         <div id="tr-name-tooltip" role="tooltip" hidden></div>
-        <div popover id="guest-access" class="tr-guest-popover"><h2>Unlock club details</h2><p>To see full game information, register and purchase a membership or select Free Trial.</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <a class="tr-button" href="{'/verify-account' if user else '/signup'}">Free Trial</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
+        <div popover id="guest-access" class="tr-guest-popover"><h2>Paid Player plan required</h2><p>Free Trial reveals table and club names. Choose a paid Player plan to join a club.</p><div><a class="tr-button tr-button-primary" href="{'/profile' if user else '/signup'}">{'Player access' if user else 'Create account'}</a> <a class="tr-button" href="/signin_login">Sign in</a> <a class="tr-button" href="{'/verify-account' if user else '/signup'}">Free Trial</a> <button class="tr-button" popovertarget="guest-access" popovertargetaction="hide">Close</button></div></div>
         <div id="join-modal-overlay" style="
     display:none;
     position:fixed;

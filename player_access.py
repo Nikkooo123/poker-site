@@ -43,7 +43,30 @@ def entitled(user):
 
 
 def directory_access(user):
-    return entitled(user) if enabled() else bool(user)
+    return entitled(user)
+
+
+def join_access(user):
+    """Trial reveals names; only a confirmed paid Player plan reveals contacts."""
+    if not user:
+        return False
+    if user.get('staff_role') in ('manager', 'table_admin'):
+        return True
+    if user.get('plan') != 'player' or user.get('is_active') is not True:
+        return False
+    if user.get('membership_test_enabled'):
+        return False
+    if user.get('membership_source') not in ('manager', 'crypto', 'card', 'paypal'):
+        return False
+    if user.get('verification_required') and not user.get('email_verified_at'):
+        return False
+    expiry = user.get('membership_expires_at')
+    if not expiry:
+        return False
+    try:
+        return datetime.fromisoformat(expiry) > datetime.now(timezone.utc)
+    except (TypeError, ValueError):
+        return False
 
 
 def render_trial_notice(user):
@@ -52,7 +75,7 @@ def render_trial_notice(user):
     days = remaining(user)
     if days and entitled(user):
         title = 'Player free trial: ' + str(days) + ' days remaining'
-        text = 'Your trial expires automatically. It does not renew or include Host access.'
+        text = 'Your trial reveals table and club names. Joining requires a paid Player plan. The trial expires automatically and does not renew or include Host access.'
     elif user.get('player_trial_expires_at'):
         title, text = 'Player free trial ended', 'Choose a paid Player membership to continue viewing full table information.'
     elif entitled(user):
