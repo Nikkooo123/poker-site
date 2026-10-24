@@ -6,7 +6,9 @@ future=(datetime.now(timezone.utc)+timedelta(days=5)).isoformat()
 past=(datetime.now(timezone.utc)-timedelta(days=1)).isoformat()
 verified={'email_verified_at':'yes','phone_verified_at':'yes','trial_phone_digest':'digest'}
 host={'plan':'host','is_active':True,'membership_source':'crypto','membership_expires_at':future}
-cases=[({},False),({'email':'one@example.test'},False),({'email_verified_at':'yes'},False),({'phone_verified_at':'yes','trial_phone_digest':'digest'},False),({**verified,'trial_phone_digest':''},False),(verified,True),({**verified,'player_trial_expires_at':past},True),(host,True),({**host,'membership_expires_at':past},False),({**host,'membership_test_enabled':True},False),({'staff_role':'manager'},True),({'staff_role':'table_admin'},True)]
+trial={**verified,'player_trial_expires_at':future}
+paid={'plan':'player','is_active':True,'membership_source':'crypto','membership_expires_at':future}
+cases=[({},False),({'email':'one@example.test'},False),({'email_verified_at':'yes'},False),({'phone_verified_at':'yes','trial_phone_digest':'digest'},False),(verified,False),(trial,True),({**trial,'player_trial_expires_at':past},False),({**trial,'email_verified_at':''},False),({**trial,'phone_verified_at':''},False),(host,True),({**host,'membership_expires_at':past},False),(paid,True),({'staff_role':'manager'},True),({'staff_role':'table_admin'},True)]
 t={'id':1,'club':'PRIVATE_CLUB','table_name':'PRIVATE_TABLE','players':6,'seats':6,'owner_name':'SECRET_OWNER','owner_telegram':'secret_owner_contact','affiliate_name':'SECRET_AFFILIATE','affiliate_telegram':'secret_affiliate_contact'}
 class Buttons(HTMLParser):
     def __init__(self):super().__init__();self.buttons=[]
@@ -25,7 +27,7 @@ for user,allowed in cases:
         assert access.render_trial_notice(user)==''
     else:
         assert 'join-locked-btn' in button['class']
-        assert button['data-join-help']=='Register and verify your email and phone number to view club and table details.'
+        assert button['data-join-help']=='Verify your email and phone number, then start your 14-day Free Trial to join the club.'
     assert 'title' not in button
 assert 'target.dataset.nameHelp || target.dataset.joinHelp' in render_public_script()
-print('PASS: 12 launch verification/paid Host/staff cases; names and contacts protected; tooltip on locked Join only')
+print('PASS: 14 trial/expiry/verification/paid/staff cases; verified-only locked; active trial opens Join; hint on locked button only')
