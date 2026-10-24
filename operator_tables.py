@@ -45,6 +45,6 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
                 telegram = 'https://t.me/' + telegram[1:]
             if not re.fullmatch(r'https://t\.me/[A-Za-z0-9_]{3,64}/?', telegram):
                 raise ValueError("The manager must save the club owner's Telegram in Club subscriptions before adding tables.")
-            return _insert_table(cur, dict(values, currency=currency, game=game, tags=str(tags)[:250],
+            return _insert_table(cur, dict(values, club_subscription_id=selected, currency=currency, game=game, tags=str(tags)[:250],
                 club=club['club_name'], network=network, affiliate_name=OFFICIAL_AFFILIATE_NAME,
                 affiliate_telegram=TELEGRAM_URL, owner_name=club['owner_name'], owner_telegram=telegram))
