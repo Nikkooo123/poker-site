@@ -61,6 +61,13 @@ def poker_mascot_background_v10():
     return FileResponse(Path(__file__).with_name('poker-mascots-v10.webp'), media_type='image/webp',
         headers={'Cache-Control':'public, max-age=31536000, immutable'})
 
+@app.get('/assets/poker-mascots-v11.webp', include_in_schema=False)
+def poker_mascot_background_v11():
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    return FileResponse(Path(__file__).with_name('poker-mascots-v11.webp'), media_type='image/webp',
+        headers={'Cache-Control':'public, max-age=31536000, immutable'})
+
 @app.middleware('http')
 async def browser_security_headers(request: Request, call_next):
     response = await call_next(request)
