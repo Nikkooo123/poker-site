@@ -144,6 +144,7 @@ def init_db():
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS blinds TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS buyin TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS club_subscription_id INTEGER;")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS players TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS seats TEXT DEFAULT '6';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '';")
@@ -292,6 +293,7 @@ def _normalize_table(table: dict) -> dict:
         "blinds": blinds,
         "buyin": buyin,
         "currency": normalize_currency(table.get("currency"), required=False),
+        "club_subscription_id": table.get("club_subscription_id"),
         "players": players,
         "seats": seats,
         "tags": tags,
@@ -310,18 +312,43 @@ def _insert_table(cur, table: dict):
             club, table_name, union_name, game, network, platform,
             blinds, buyin, players, seats, tags,
             affiliate_name, affiliate_telegram,
-            owner_name, owner_telegram, currency
+            owner_name, owner_telegram, currency, club_subscription_id
         )
         VALUES (
             %(club)s, %(table_name)s, %(union_name)s, %(game)s, %(network)s, %(platform)s,
             %(blinds)s, %(buyin)s, %(players)s, %(seats)s, %(tags)s,
             %(affiliate_name)s, %(affiliate_telegram)s,
-            %(owner_name)s, %(owner_telegram)s, %(currency)s
+            %(owner_name)s, %(owner_telegram)s, %(currency)s, %(club_subscription_id)s
         )
         RETURNING id;
     """, t)
 
     return cur.fetchone()["id"]
+
+
+def _club_contact(value):
+    return str(value or '').strip().lower().removeprefix('https://t.me/').removeprefix('http://t.me/').removeprefix('@').rstrip('/')
+
+
+def inherit_club_currencies(rows, clubs):
+    """Use the approved placement currency, never another club's display name alone."""
+    by_id = {club['id']: club for club in clubs}
+    result = []
+    for source in rows:
+        table = dict(source)
+        linked_id = table.get('club_subscription_id')
+        club = by_id.get(linked_id) if linked_id else None
+        if not linked_id:
+            contact = _club_contact(table.get('owner_telegram'))
+            matches = [item for item in clubs if contact
+                and _club_contact(item.get('owner_telegram')) == contact
+                and str(item.get('club_name') or '').strip().casefold() == str(table.get('club') or '').strip().casefold()
+                and _normalize_network(item.get('application')) == _normalize_network(table.get('network') or table.get('platform'))]
+            club = matches[0] if len(matches) == 1 else None
+        if club:
+            table['currency'] = normalize_currency(club.get('currency'), required=False)
+        result.append(table)
+    return result
 
 
 def load_tables():
@@ -341,6 +368,7 @@ def load_tables():
                     blinds,
                     buyin,
                     currency,
+                    club_subscription_id,
                     players,
                     seats,
                     tags,
@@ -354,8 +382,15 @@ def load_tables():
                 ORDER BY id DESC;
             """)
             rows = cur.fetchall()
+            # Explicit identity wins; legacy matches also require the same owner contact.
+            cur.execute("SELECT to_regclass('club_subscriptions') AS name")
+            if cur.fetchone()["name"]:
+                cur.execute("SELECT id,club_name,application,owner_telegram,currency FROM club_subscriptions WHERE plan='host'")
+                clubs = cur.fetchall()
+            else:
+                clubs = []
 
-    return [dict(row) for row in rows]
+    return inherit_club_currencies(rows, clubs)
 
 
 def add_table(*args, **kwargs):
