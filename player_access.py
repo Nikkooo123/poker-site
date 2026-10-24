@@ -81,7 +81,7 @@ def render_trial_notice(user):
     elif entitled(user):
         return ''
     else:
-        title, text = 'Unlock full table information', 'Registration alone does not unlock tables. Verify your email and phone to start one 14-day Player trial per phone number, or choose a paid membership. Host has no free trial.'
+        title, text = 'Unlock full table information', 'Verify your email and phone number to view clubs and games with a 14-day Player trial, or choose a paid membership.'
     return '<section class="tr-info-card tr-access-notice" style="padding:18px;margin:18px 0"><h2 style="font-size:19px">'+escape(title)+'</h2><p>'+escape(text)+'</p><a class="tr-button" href="/verify-account">Email, phone and trial</a> <a class="tr-button" href="/profile">Membership options</a></section>'
 
 

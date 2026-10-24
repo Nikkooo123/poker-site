@@ -1483,9 +1483,9 @@ def render_public_page(tables, request=None, user=None):
                     </div>
                 </div>
 
-                {render_trial_notice(user) if user else ""}
-
                 <div class="tr-filter-summary"><span id="table-count" role="status" aria-live="polite"></span><button id="clear-filters" type="button" class="tr-button">Clear filters</button></div>
+
+                {render_trial_notice(user) if user else ""}
                 <div class="tr-sort-row" style="
                     display:grid;
                     grid-template-columns:28px 112px 850px 96px;
