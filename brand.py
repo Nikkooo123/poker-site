@@ -79,12 +79,11 @@ def render_site_theme() -> str:
     .tr-sort-button{min-height:25px}.tr-directory #load-more-btn{border-radius:11px!important;box-shadow:none!important}
     @media(min-width:1121px){.tr-directory .table-row{align-items:stretch!important}.tr-directory .tr-game-cell,.tr-directory .tr-join-cell{height:auto!important;min-height:76px!important}.tr-directory .tr-club-cell>div:nth-child(odd){font-size:10px!important;line-height:1.1!important}.tr-directory .tr-filter-panel{grid-template-columns:repeat(3,max-content)!important;gap:26px!important;justify-content:space-between!important}.tr-directory .tr-filter-panel>div:first-child{width:auto!important;grid-template-columns:repeat(2,66px)!important;gap:6px!important}.tr-directory .game-filter-btn{width:66px!important;height:32px!important}.tr-directory .tr-filter-panel>div:nth-child(2){width:auto!important;grid-template-columns:repeat(2,116px)!important;gap:6px!important}.tr-directory .tr-filter-panel>div:nth-child(3){width:auto!important;grid-template-columns:84px!important;gap:6px!important}.tr-directory .tr-filter-panel select{width:84px!important;height:32px!important;font-size:12px!important;padding:0 8px!important}.tr-directory .table-row{margin-bottom:9px!important}.tr-directory .tr-game-cell,.tr-directory .tr-club-cell{min-height:76px!important}.tr-directory .tr-join-cell{height:76px!important}}
     @media(max-width:1120px){.tr-directory .tr-filter-panel{gap:10px!important}.tr-directory .table-row{padding:10px!important;margin-bottom:10px!important;gap:7px!important;border-radius:15px!important}.tr-directory .tr-network-label{font-size:12px!important}.tr-directory .tr-game-cell{min-height:104px!important}.tr-directory .tr-club-cell,.tr-directory .tr-join-cell{min-height:66px!important}.tr-directory .tr-currency{margin-top:5px!important}}
-    /* Illustrated poker lounge. Design1 remains frozen at5c8a513. */
+    .tr-directory .tr-table-scroll::before{content:none!important;display:none!important}
+    /* Contour animal wallpaper, behind the interface. Design1 remains frozen at5c8a513. */
     :root{--tr-bg:#101f25;--tr-panel:#20363c;--tr-accent:#b7d8c8;--tr-line:rgba(170,194,181,.2);--tr-text:#f0f3ed;--tr-muted:#b2c4bf}
-    body{background:radial-gradient(ellipse at 50% -8%,#71613b24,transparent 60%),linear-gradient(180deg,#102125,#101f25 680px)!important}
+    body{background-color:#102326!important;background-image:linear-gradient(#10232620,#10232620),url('/assets/poker-contours-v4.webp')!important;background-position:center center!important;background-size:contain!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
     .tr-site-header{position:relative;border-bottom:1px solid #c7b58826;background:transparent}.tr-site-header::after{content:none!important;display:none!important}
-    .tr-directory .tr-site-header{margin-bottom:4px!important}
-    .tr-directory .tr-table-scroll::before{content:"";display:block;max-width:1030px;width:100%;height:clamp(185px,21vw,280px);margin:0 auto 12px;background:url('/assets/poker-lounge-v3.webp') center / contain no-repeat;pointer-events:none;mask-image:linear-gradient(180deg,transparent,#000 6%,#000 89%,transparent);-webkit-mask-image:linear-gradient(180deg,transparent,#000 6%,#000 89%,transparent)}
     .glass,.glass-bar{background:linear-gradient(115deg,#243b40fa,#1c3038fc)!important;border-color:#b7c6b52d!important;box-shadow:inset 0 1px #edebc908,0 5px 16px #00000010!important}
     .tr-auth-panel,.tr-info-card{background:linear-gradient(130deg,#273e3cfa,#1b3038fc)!important;border-color:#b7c6b52d!important}
     .tr-directory .tr-filter-panel{background:linear-gradient(115deg,#2c413dfa,#22383bfc)!important;border-color:#c4c29f3b!important}
@@ -95,8 +94,6 @@ def render_site_theme() -> str:
     .tr-directory #load-more-btn{background:#2a403e!important;border-color:#c4c29f44!important;color:#e6ebdc!important}
     .tr-site-header .tr-status-pill{font-size:13px!important;line-height:1.4;padding:5px 12px;align-items:center;white-space:nowrap}
     .tr-site-footer{border-top-color:#c7b58826}.tr-site-footer a:hover{color:#e3ddbf}
-    @media(max-width:1120px){.tr-directory .tr-table-scroll::before{max-width:100%;margin-bottom:12px;height:clamp(150px,28vw,250px)}}
-    @media(max-width:680px){.tr-directory .tr-table-scroll::before{height:auto;aspect-ratio:3/1;min-height:100px;margin:0 auto 14px;mask-image:linear-gradient(180deg,#000 90%,transparent);-webkit-mask-image:linear-gradient(180deg,#000 90%,transparent)}.tr-directory .tr-site-header{margin-bottom:8px!important}}
     </style>"""
 
 
