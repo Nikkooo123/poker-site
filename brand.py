@@ -72,7 +72,7 @@ def render_site_theme() -> str:
     .tr-button,.join-open-btn,.join-locked-btn{transition:background-color .14s,border-color .14s}.tr-button{border-radius:9px}
     .tr-directory .tr-filter-panel{padding:10px 12px!important;border-radius:14px!important}.tr-directory #club-search{height:38px;padding:9px 13px!important;font-size:13px!important}
     .tr-directory .tr-search-row{margin-bottom:9px!important}.tr-filter-summary{margin-bottom:9px}.tr-filter-summary .tr-button{padding:5px 10px}
-    .tr-directory .tr-game-cell,.tr-directory .tr-club-cell,.tr-directory .tr-join-cell{border-radius:13px!important}.tr-directory .tr-network-label{color:#c4d9de!important;font-size:14px!important;letter-spacing:.35px!important;font-weight:600!important;text-transform:none!important}
+    .tr-directory .tr-game-cell,.tr-directory .tr-club-cell,.tr-directory .tr-join-cell{border-radius:13px!important}
     .tr-directory .table-row:hover .tr-game-cell,.tr-directory .table-row:hover .tr-club-cell{border-color:#a8d8c45c!important;background:linear-gradient(110deg,#2a4650f5,#203941f5)!important}
     .tr-directory .tr-join-cell{background:#1c3039!important;box-shadow:none!important;border-color:var(--tr-line)!important}.tr-directory .join-locked-btn{background:#263e49!important;border-radius:9px!important}.tr-directory .join-locked-btn:hover{background:#34535e!important;border-color:#a8d8c47a!important}
     .tr-directory .tr-currency{min-height:15px;display:flex!important;align-items:center}.tr-directory .tr-currency img{flex:none;filter:none}
@@ -89,7 +89,7 @@ def render_site_theme() -> str:
     .tr-directory .tr-filter-panel{background:linear-gradient(115deg,#2c413dfa,#22383bfc)!important;border-color:#c4c29f3b!important}
     .tr-directory .game-filter-btn{box-shadow:none!important}.tr-directory .game-filter-btn:hover{outline:1px solid #c4d2a955;outline-offset:1px}
     .tr-directory .table-row:hover .tr-game-cell,.tr-directory .table-row:hover .tr-club-cell{background:linear-gradient(115deg,#304843fc,#263d42fc)!important;border-color:#c7d5bb5c!important}
-    .tr-directory .tr-network-label{color:#d0dbc8!important;letter-spacing:.4px!important}.tr-directory .tr-club-cell{background:linear-gradient(115deg,#2a3e3dfa,#22363dfc)!important}
+    .tr-directory .tr-club-cell{background:linear-gradient(115deg,#2a3e3dfa,#22363dfc)!important}
     .tr-directory .tr-join-cell{background:#22363c!important;border-color:#b6c3a92d!important}.tr-directory .join-open-btn{background:#b7d8c8!important;color:#18352c!important}.tr-directory .join-open-btn:hover{background:#d2e6d4!important}
     .tr-directory #load-more-btn{background:#2a403e!important;border-color:#c4c29f44!important;color:#e6ebdc!important}
     .tr-site-header .tr-status-pill{font-size:13px!important;line-height:1.4;padding:5px 12px;align-items:center;white-space:nowrap}
