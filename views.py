@@ -1483,6 +1483,8 @@ def render_public_page(tables, request=None, user=None):
                     </div>
                 </div>
 
+                {render_trial_notice(user) if user else ""}
+
                 <div class="tr-filter-summary"><span id="table-count" role="status" aria-live="polite"></span><button id="clear-filters" type="button" class="tr-button">Clear filters</button></div>
                 <div class="tr-sort-row" style="
                     display:grid;
@@ -1513,7 +1515,6 @@ def render_public_page(tables, request=None, user=None):
                 <div id="tables-wrap" style="
                     width:1066px;
                     min-width:1066px;">
-                    {render_trial_notice(user) if user else ""}
                     {cards}
                 </div>
 
