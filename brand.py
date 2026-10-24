@@ -82,7 +82,7 @@ def render_site_theme() -> str:
     .tr-directory .tr-table-scroll::before{content:none!important;display:none!important}
     /* Contour animal wallpaper, behind the interface. Design1 remains frozen at5c8a513. */
     :root{--tr-bg:#101f25;--tr-panel:#20363c;--tr-accent:#b7d8c8;--tr-line:rgba(170,194,181,.2);--tr-text:#f0f3ed;--tr-muted:#b2c4bf}
-    body{background-color:#102326!important;background-image:linear-gradient(#10232620,#10232620),url('/assets/poker-contours-v4.webp')!important;background-position:center center!important;background-size:contain!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+    body{background-color:#102326!important;background-image:linear-gradient(#10232620,#10232620),url('/assets/poker-mascots-v7.webp')!important;background-position:center center!important;background-size:contain!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
     .tr-site-header{position:relative;border-bottom:1px solid #c7b58826;background:transparent}.tr-site-header::after{content:none!important;display:none!important}
     .glass,.glass-bar{background:linear-gradient(115deg,#243b40fa,#1c3038fc)!important;border-color:#b7c6b52d!important;box-shadow:inset 0 1px #edebc908,0 5px 16px #00000010!important}
     .tr-auth-panel,.tr-info-card{background:linear-gradient(130deg,#273e3cfa,#1b3038fc)!important;border-color:#b7c6b52d!important}
