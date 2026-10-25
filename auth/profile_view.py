@@ -255,14 +255,15 @@ def render_payment_page(*args, **kwargs) -> str:
 
 def render_account_menu(user):
     host_link = '<a href="/host">Host dashboard</a>' if has_host_access(user) else ''
-    staff_links = ('<a href="/manager">Manager workspace</a>' if user.get("_is_manager") or user.get("staff_role") == "manager" else ('<a href="/admin">Table administration</a>' if user.get("staff_role") == "table_admin" else ''))
+    manager = user.get("_is_manager") or user.get("staff_role") == "manager"
+    staff_links = ('<a href="/manager">Manager workspace</a><a href="/admin">Table administration</a><a href="/admin/club-requests">Club requests</a><a href="/admin/club-subscriptions">Club subscriptions</a><a href="/manager/team">Staff access</a><a href="/manager/membership-test">Test Host / Player</a><a href="/staff/chat">Live chat inbox</a>' if manager else ('<a href="/admin">Table administration</a><a href="/staff/chat">Live chat inbox</a>' if user.get("staff_role") == "table_admin" else ''))
     email = escape(str(user.get("email") or user.get("username") or "Account"))
     return f'''<style>
-    .tr-account{{position:relative;font:13px/1.5 'Segoe UI',Arial,sans-serif;z-index:10;max-width:100%}}
+    .tr-account{{position:relative;font:13px/1.5 'Segoe UI',Arial,sans-serif;z-index:100;max-width:100%}}
     .tr-account summary{{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid #ffffff20;border-radius:12px;background:#203035;color:#edf3f2}}
     .tr-account summary::-webkit-details-marker{{display:none}}.tr-account summary:focus-visible{{outline:2px solid #a8d8c4;outline-offset:4px}}
     .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-    .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
+    .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;max-width:calc(100vw - 40px);max-height:calc(100dvh - 110px);overflow-y:auto;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
     .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
     </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/">Explore tables</a><a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
 

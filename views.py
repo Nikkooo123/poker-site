@@ -1920,7 +1920,7 @@ def render_operator_clubs(clubs):
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
 
-def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0, csrf="", error="", form_data=None):
+def render_admin_page(tables, manager=False, workspace="tables", active_clubs=None, pending_requests=0, csrf="", error="", form_data=None, user=None):
     form_values = dict(form_data or {})
     fields = [
         ('Table name','table_name','Table name'),
@@ -2033,8 +2033,9 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     justify-content:flex-start;
     align-items:center;">
     {render_brand_logo("/")}
-    <nav aria-label="Administration" style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto">{staff_nav}</nav>
+    <div style="margin-left:auto">{render_account_menu(user) if user else ""}</div>
 </div>
+<nav aria-label="Administration" style="display:flex;gap:10px;flex-wrap:wrap;max-width:1300px;margin:0 auto 14px">{staff_nav}</nav>
 
         <h1 style="max-width:1300px;margin:20px auto;font-size:28px">{title}</h1><div class="tr-staff-grid" style="
             max-width:1300px;

@@ -84,7 +84,7 @@ ACCOUNT_CSS = """<style>
 
 def page(title, body, user, manager=False):
     from auth.profile_view import render_account_menu
-    header_account = '<a class="tr-button" href="/logout">Staff sign out</a>' if manager else render_account_menu(user)
+    header_account = render_account_menu(user)
     workspace_nav = '<nav style="display:flex;gap:10px;flex-wrap:wrap;margin:0 0 24px"><a class="tr-button" href="/manager">← Back to manager</a><a class="tr-button" href="/admin">Table administration</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a></nav>' if manager else ""
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)} · TableRadar</title>{render_site_theme()}{ACCOUNT_CSS}</head><body style="margin:0"><header class="tr-site-header">{render_brand_logo('/')}{header_account}</header><main class="tr-site-main">{workspace_nav}<h1 class="tr-page-title">{escape(title)}</h1>{body}<p><a class="tr-button" href="/profile">← My account</a></p></main>{render_site_footer()}</body></html>'''
 
@@ -128,7 +128,22 @@ def install_account_routes(app, get_current_user):
             return RedirectResponse('/signin_login',status_code=303)
         forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {PLANS[plan]["name"]} free</button></form>' for plan in ('player','host_starter','host_pro'))
         body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
+        if request.query_params.get('host_reset') == 'done':
+            body = '<p role="status" class="tr-host-notification">Your Host status, club request and placement have been reset. Your account, connected sign-in methods and manager access are preserved. Choose a Host plan below to start again.</p>' + body
+        body += f'<section class="tr-info-card"><h2>Start your Host test again</h2><p>Reset only your own Host status, club request, club subscriptions and tables linked to those subscriptions. A backup is saved. Your account, sign-in methods, chat history and manager access stay intact.</p><form method="post" action="/manager/membership-test/reset-host"><input type="hidden" name="csrf" value="{csrf}"><button class="tr-button" type="submit">Reset my Host and club</button></form></section>'
         return page('Manager membership test',body,user or {},manager=True)
+
+    @app.post('/manager/membership-test/reset-host')
+    def reset_manager_host(request: Request, csrf: str = Form('')):
+        user = get_current_user(request)
+        token = request.session.get('account_csrf','')
+        if not user or not is_manager(request) or not token or not secrets.compare_digest(token,csrf):
+            return HTMLResponse('Manager access required.',status_code=403)
+        from host_test_reset import reset_own_host
+        reset_own_host(user['email'])
+        request.session['plan'] = 'inactive'
+        request.session['is_active'] = '0'
+        return RedirectResponse('/manager/membership-test?host_reset=done',status_code=303)
 
     @app.post('/manager/membership-test/account')
     def bind_manager_test_account(request: Request, csrf: str = Form(''), email: str = Form(''), password: str = Form('')):

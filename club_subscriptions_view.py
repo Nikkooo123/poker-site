@@ -1,4 +1,5 @@
 from html import escape
+from auth.profile_view import render_account_menu
 from brand import render_brand_logo, render_site_theme
 
 
@@ -48,7 +49,7 @@ def _status_badge(status: str, days_left: int) -> str:
     """
 
 
-def render_club_subscriptions_page(subscriptions: list, csrf="", error="") -> str:
+def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=None) -> str:
     token = f'<input type="hidden" name="csrf" value="{escape(csrf, quote=True)}">'
     error_notice = f'<p role="alert" style="color:#edaaa5">{escape(error)}</p>' if error else ""
     rows = ""
@@ -242,35 +243,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="") -> st
                 margin-bottom:18px;">
                 {render_brand_logo("/")}
 
-                <div style="display:flex;gap:10px;">
-                    <a href="/manager" style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        height:38px;
-                        padding:0 16px;
-                        border-radius:999px;
-                        background:rgba(255,255,255,.08);
-                        color:#fff;
-                        text-decoration:none;
-                        font:700 13px Arial;">
-                        Manager
-                    </a>
-
-                    <a href="/" style="
-                        display:inline-flex;
-                        align-items:center;
-                        justify-content:center;
-                        height:38px;
-                        padding:0 16px;
-                        border-radius:999px;
-                        background:rgba(35,107,52,.85);
-                        color:#eef8f0;
-                        text-decoration:none;
-                        font:700 13px Arial;">
-                        Home
-                    </a>
-                </div>
+                {render_account_menu(user) if user else ""}
             </div>
 
             <div style="max-width:1280px;margin:0 auto;">

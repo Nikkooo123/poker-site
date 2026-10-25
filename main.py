@@ -119,24 +119,24 @@ def public_site(request: Request):
     return render_public_page(tables, request, user=get_current_user(request))
 
 @app.get("/contact", response_class=HTMLResponse)
-def contact_page():
-    return render_contact_page()
+def contact_page(request: Request):
+    return render_contact_page(get_current_user(request))
 
 @app.get("/about", response_class=HTMLResponse)
-def about_page():
-    return render_about_page()
+def about_page(request: Request):
+    return render_about_page(get_current_user(request))
 
 @app.get("/faq", response_class=HTMLResponse)
-def faq_page():
-    return render_faq_page()
+def faq_page(request: Request):
+    return render_faq_page(get_current_user(request))
 
 @app.get("/privacy", response_class=HTMLResponse)
-def privacy_page():
-    return render_privacy_page()
+def privacy_page(request: Request):
+    return render_privacy_page(get_current_user(request))
 
 @app.get("/terms", response_class=HTMLResponse)
-def terms_page():
-    return render_terms_page()
+def terms_page(request: Request):
+    return render_terms_page(get_current_user(request))
 
 @app.get("/login")
 def login_page():
@@ -168,7 +168,7 @@ def admin_page(request: Request):
         return check
 
     tables = load_tables()
-    admin_html = render_admin_page(tables, manager=False, active_clubs=load_active_operator_clubs(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
+    admin_html = render_admin_page(tables, manager=False, active_clubs=load_active_operator_clubs(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)), user=get_current_user(request))
 
     logout_link = """
     <div style="margin-bottom:20px;">
@@ -210,7 +210,7 @@ def add_table_route(
         return HTMLResponse(render_admin_page(load_tables(), manager=manager,
             workspace="manager" if manager else "tables", active_clubs=load_active_operator_clubs(),
             pending_requests=pending_club_request_count() if manager else 0,
-            csrf=csrf, error=str(error), form_data=dict(subscription_id=subscription_id,table_name=table_name,union_name=union_name,game=game,blinds=blinds,buyin=buyin,players=players,tags=tags)), status_code=400)
+            csrf=csrf, error=str(error), form_data=dict(subscription_id=subscription_id,table_name=table_name,union_name=union_name,game=game,blinds=blinds,buyin=buyin,players=players,tags=tags), user=get_current_user(request)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
@@ -264,8 +264,8 @@ def require_user(request: Request):
     return None
 
 @app.get("/signup", response_class=HTMLResponse)
-def signup_page():
-    return render_signup_page()
+def signup_page(request: Request):
+    return render_signup_page(user=get_current_user(request))
 
 
 @app.post("/signup", response_class=HTMLResponse)
@@ -280,22 +280,22 @@ def signup(
     email = email.strip().lower()
 
     if not username or not email or not password or not confirm_password:
-        return render_signup_page(error="Fill all fields")
+        return render_signup_page(error="Fill all fields", user=get_current_user(request))
 
     if len(email)>254 or not re.fullmatch(r"[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+", email):
-        return render_signup_page(error="Enter a valid email address.")
+        return render_signup_page(error="Enter a valid email address.", user=get_current_user(request))
     if not 8 <= len(password) <= 256:
-        return render_signup_page(error="Use a password with at least 8 characters (maximum 256).")
+        return render_signup_page(error="Use a password with at least 8 characters (maximum 256).", user=get_current_user(request))
 
     if password != confirm_password:
-        return render_signup_page(error="Passwords do not match")
+        return render_signup_page(error="Passwords do not match", user=get_current_user(request))
 
     if player_access.enabled() and not verification_delivery.email_ready():
-        return HTMLResponse(render_signup_page(error="Account verification is not configured yet. Please contact support."), status_code=503)
+        return HTMLResponse(render_signup_page(error="Account verification is not configured yet. Please contact support.", user=get_current_user(request)), status_code=503)
     ok = create_user(username, email, password)
 
     if not ok:
-        return render_signup_page(error="User already exists")
+        return render_signup_page(error="User already exists", user=get_current_user(request))
 
     user = get_user_by_email(email)
     request.session.clear()
@@ -309,7 +309,7 @@ def signup(
 
 @app.get("/signin_login", response_class=HTMLResponse)
 def signin_login_page(request: Request):
-    html=render_signin_login_page()
+    html=render_signin_login_page(user=get_current_user(request))
     if request.query_params.get('password_changed') == '1':
         html=html.replace('<form method="post" action="/signin_login">','<p role="status" style="color:#b7dfc9">Password changed. Sign in with your new password.</p><form method="post" action="/signin_login">')
     return html
@@ -354,7 +354,7 @@ def signin_login(
     user = authenticate_user(email, password)
 
     if not user:
-        return render_signin_login_page(error="Wrong email or password.")
+        return render_signin_login_page(error="Wrong email or password.", user=get_current_user(request))
 
     request.session.clear()
     request.session["user_email"] = user.get("email", "")
@@ -397,7 +397,7 @@ def admin_club_subscriptions_page(request: Request):
         return check
 
     subscriptions = load_club_subscriptions()
-    return render_club_subscriptions_page(subscriptions, request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
+    return render_club_subscriptions_page(subscriptions, request.session.setdefault("account_csrf", secrets.token_urlsafe(32)), user=get_current_user(request))
 
 
 @app.post("/admin/club-subscriptions/add")
@@ -431,7 +431,7 @@ def admin_add_club_subscription(
             notes=notes,
         )
     except ValueError as error:
-        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
 
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
@@ -452,7 +452,7 @@ def admin_extend_club_subscription(
     try:
         extend_club_subscription(subscription_id, days)
     except ValueError as error:
-        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
@@ -467,7 +467,7 @@ def admin_disable_club_subscription(request: Request, subscription_id: int, csrf
     try:
         disable_club_subscription(subscription_id)
     except ValueError as error:
-        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
@@ -482,7 +482,7 @@ def admin_delete_club_subscription(request: Request, subscription_id: int, csrf:
     try:
         delete_club_subscription(subscription_id)
     except ValueError as error:
-        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error)), status_code=400)
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
 
 
@@ -506,4 +506,4 @@ def manager_page(request: Request):
     check = require_manager(request)
     if check:
         return check
-    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs(), pending_requests=pending_club_request_count(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)))
+    return render_admin_page(load_tables(), manager=True, workspace="manager", active_clubs=load_active_operator_clubs(), pending_requests=pending_club_request_count(), csrf=request.session.setdefault("account_csrf", secrets.token_urlsafe(32)), user=get_current_user(request))

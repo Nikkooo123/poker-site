@@ -7,31 +7,33 @@ CONTACT_EMAIL = SUPPORT_EMAIL
 CONTACT_TELEGRAM = TELEGRAM_URL
 
 
-def _shell(title: str, content: str) -> str:
+def _shell(title: str, content: str, user=None) -> str:
+    from auth.profile_view import render_account_menu
+    account = render_account_menu(user) if user else '<a class="tr-button" href="/signin_login">Sign in →</a>'
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{escape(title)} · {escape(BUSINESS_NAME)}</title>{render_site_theme()}</head>
     <body style="margin:0"><header class="tr-site-header">{render_brand_logo('/')}
-    <a class="tr-button" href="/">← Back to tables</a></header>
+    {account}</header>
     <main class="tr-site-main">{content}</main>{render_site_footer()}</body></html>"""
 
 
-def render_contact_page() -> str:
+def render_contact_page(user=None) -> str:
     telegram = CONTACT_TELEGRAM if CONTACT_TELEGRAM.startswith('https://t.me/') and 'your_telegram_username' not in CONTACT_TELEGRAM else ''
     telegram_html = f'<p class="tr-muted">Telegram</p><a class="tr-button" href="{escape(telegram)}" target="_blank" rel="noopener noreferrer">Telegram @{escape(telegram.rsplit("/",1)[-1])} ↗</a>' if telegram else '<p class="tr-muted">Telegram contact will be available here once configured.</p>'
     return _shell('Contact', f"""<h1 class="tr-page-title">Let's get in touch.</h1>
     <p class="tr-page-intro">Questions about your membership or listing your club? Contact TableRadar.</p>
     <div class="glass" style="padding:28px;border-radius:22px"><h2 style="font-size:21px;font-weight:600;margin-top:0">Contact the team</h2>
     <p class="tr-muted">Email</p><a href="mailto:{escape(CONTACT_EMAIL)}" style="color:#a8d8c4;overflow-wrap:anywhere">{escape(CONTACT_EMAIL)}</a>
-    {telegram_html}<h2 style="font-size:21px;font-weight:600;margin-top:26px">Live chat</h2><p class="tr-muted">Message our administrators and managers. Sign in to save your conversation and receive replies here.</p><button class="tr-button" type="button" data-open-live-chat>Open Live Chat</button></div>""")
+    {telegram_html}<h2 style="font-size:21px;font-weight:600;margin-top:26px">Live chat</h2><p class="tr-muted">Message our administrators and managers. Sign in to save your conversation and receive replies here.</p><button class="tr-button" type="button" data-open-live-chat>Open Live Chat</button></div>""", user=user)
 
 
-def _info_sections(title, intro, sections):
+def _info_sections(title, intro, sections, user=None):
     cards=''.join(f'<section class="tr-info-card" style="padding:20px;margin:14px 0"><h2 style="font-size:19px">{escape(heading)}</h2><p class="tr-muted" style="line-height:1.7">{escape(text)}</p></section>' for heading,text in sections)
-    return _shell(title, f'<h1 class="tr-page-title">{escape(title)}</h1><p class="tr-page-intro">{escape(intro)}</p>{cards}')
+    return _shell(title, f'<h1 class="tr-page-title">{escape(title)}</h1><p class="tr-page-intro">{escape(intro)}</p>{cards}', user=user)
 
 
-def render_about_page():
+def render_about_page(user=None):
     return _info_sections('About Us', 'Discover private poker clubs and games with friends.', [
         ('What is TableRadar?', 'TableRadar is an independent information service for people who enjoy poker and want to discover private clubs and games with friends. We bring table information into one clear, easy-to-use directory.'),
         ('What we provide', 'Browse game formats, table features, blinds, player counts and club contact details. Use filters and favourites to find the tables that interest you. Registered club owners can submit their club information for review.'),
@@ -39,10 +41,10 @@ def render_about_page():
         ('How listings work', 'Our team reviews club submissions and maintains table information manually. Availability and settings can change, so check the current details with the club before joining.'),
         ('Host coverage', 'Add your own club to the directory: Host Starter covers up to 6 active tables; Host Pro covers up to 20. Both cover blinds of $0.50/$1 or higher and exclude heads-up tables. Eligible tables are prioritised from the highest blinds down. Choose Host Pro for more than 6 tables; contact Live Chat or Telegram @tableradar for coverage beyond 20.'),
         ('Talk to us', 'For help with your TableRadar account, the directory or a club listing, use Contact or Live Chat. Questions about a game or club access should go to that club’s contact.'),
-    ])
+    ], user=user)
 
 
-def render_terms_page() -> str:
+def render_terms_page(user=None) -> str:
     return _info_sections('Terms & Conditions', 'Conditions for using the TableRadar information service.', [
         ('1. Information service', 'TableRadar provides a directory of private poker clubs and table information. Paid Player memberships cover access to our information service; paid Host memberships cover club placement and monitoring. We do not operate the listed clubs or host their games.'),
         ('2. Independent clubs', 'Listed clubs and applications are independently operated. A listing or contact link does not mean TableRadar owns, manages or endorses a club. Club access and game participation are arranged with the relevant club.'),
@@ -53,10 +55,10 @@ def render_terms_page() -> str:
         ('Player trial and payment methods', 'An active 14-day Player Free Trial after email and phone verification includes club and table details and Join. A paid membership is required after the trial ends. Registration or verification alone does not start a trial. Each phone number can receive one trial. Host has no free trial and supports cryptocurrency payment only. Player payment methods are cryptocurrency and, when connected, bank card and PayPal; unavailable methods cannot process payments.'),
         ('6. Responsible use', 'Use the directory only where permitted and meet the applicable age requirements, including a minimum age of 18. You are responsible for checking the rules of any third-party club or application you choose to use.'),
         ('7. Service support and updates', 'TableRadar is responsible for the security of its own service and for the official support it provides. Contact us about your account or a directory listing. Independent clubs are responsible for their own actions, games and arrangements. Contact the club about those matters. The directory and these conditions may be updated as the service develops.'),
-    ])
+    ], user=user)
 
 
-def render_faq_page() -> str:
+def render_faq_page(user=None) -> str:
     questions = [
         ('What is TableRadar?', 'TableRadar is an independent information directory for poker players looking for clubs and games with friends. See About Us to learn how the service works.'),
         ('How do I join a club?', 'Choose Join on a table to see TableRadar and direct club contact options. TableRadar helps you find information; the independent club handles access to its games.'),
@@ -74,10 +76,10 @@ def render_faq_page() -> str:
     <label for="faq-search" class="tr-muted">Find an answer</label><input id="faq-search" type="search" placeholder="Search questions" style="width:100%;padding:13px 15px;margin:8px 0 24px" autocomplete="off" aria-controls="faq-list">
     <div id="faq-list" class="tr-faq">{entries}</div><p id="faq-empty" hidden class="tr-muted" role="status">No matching questions. Try another search or contact us.</p>
     <script>document.getElementById('faq-search').addEventListener('input',function(){{const query=this.value.trim().toLowerCase();let count=0;document.querySelectorAll('#faq-list details').forEach(function(item){{const match=item.textContent.toLowerCase().includes(query);item.hidden=!match;if(match)count++;}});document.getElementById('faq-empty').hidden=count>0;}});</script>"""
-    return _shell('FAQ', content)
+    return _shell('FAQ', content, user=user)
 
 
-def render_privacy_page() -> str:
+def render_privacy_page(user=None) -> str:
     content = _info_sections('Privacy Policy', 'How TableRadar handles account and directory information. Updated 23 October 2026.', [
         ('Who we are and how to contact us', 'TableRadar operates the information directory at tableradar.net. For privacy questions or requests about your data, contact '+CONTACT_EMAIL+' or our official Telegram @tableradar. Please do not send passwords or sign-in secrets.'),
         ('Information you provide', 'We store your email address, username, account settings and service status. Password accounts use a password hash rather than a readable password. Club submissions contain the owner name, club name and ID, application, currency, Telegram contact and any notes you submit. We also store support conversations and staff review information.'),
@@ -91,5 +93,5 @@ def render_privacy_page() -> str:
         ('Retention and your choices', 'Account information, club review records and support history are retained while needed to provide the service, address support or security issues and meet applicable obligations. There is currently no automatic account-deletion control or fixed automatic deletion schedule for these records. Contact us to request access, correction or deletion, or to ask about connected sign-in methods. We may need to verify your identity first. Any rights and exceptions depend on applicable law, and backup copies may remain until their normal replacement. You can also revoke TableRadar access in Google or Discord; revocation does not itself delete your TableRadar account.'),
         ('Security and eligibility', 'We use HTTPS, password hashing and role-based staff access. No online service can guarantee complete security. The directory is intended for adults aged eighteen or older. Contact us if you believe a child has provided personal information.'),
         ('Policy updates', 'We will update this page when our data practices change. Check the date above for the current version. For questions about a listed club’s own handling of data, contact that independent club.'),
-    ])
+    ], user=user)
     return content

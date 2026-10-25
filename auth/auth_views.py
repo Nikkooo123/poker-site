@@ -3,10 +3,12 @@ from social_auth_config import render_social_signin
 from brand import render_brand_logo, render_site_theme, render_site_footer
 
 
-def auth_shell(content: str, title: str = "Auth") -> str:
+def auth_shell(content: str, title: str = "Auth", user=None) -> str:
+    from auth.profile_view import render_account_menu
+    account = render_account_menu(user) if user else '<a class="tr-button" href="/">← Back to tables</a>'
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>{escape(title)} · TableRadar</title>{render_site_theme()}</head><body style="margin:0">
-    <header class="tr-site-header">{render_brand_logo('/')}<a class="tr-button" href="/">← Back to tables</a></header>
+    <header class="tr-site-header">{render_brand_logo('/')}{account}</header>
     <main class="tr-auth-body"><div class="tr-auth-wrap"><div class="tr-auth-panel">{content}</div></div></main>{render_site_footer()}</body></html>"""
 
 
@@ -29,7 +31,7 @@ def message_block(error: str = "", success: str = "") -> str:
     return ''
 
 
-def render_signin_page(error: str = "") -> str:
+def render_signin_page(error: str = "", user=None) -> str:
     import player_access
     import verification_delivery
     email_pending = player_access.enabled() and not verification_delivery.email_ready()
@@ -38,18 +40,18 @@ def render_signin_page(error: str = "") -> str:
     content = f"""<h1>Your next table starts here.</h1>{availability}{message_block(error=error)}{render_social_signin()}
     <form method="post" action="/signup"><fieldset{disabled} style="border:0;padding:0;margin:0">{input_block('Username','username',autocomplete='username')}{input_block('Email','email','email',autocomplete='email')}{input_block('Password (at least 8 characters)','password','password',autocomplete='new-password')}{input_block('Confirm password','confirm_password','password',autocomplete='new-password')}
     <button class="tr-button tr-button-primary" type="submit">Create account →</button></fieldset></form><p class="tr-muted">Registration alone does not unlock tables. Email confirmation is required; SMS verification will be added later.</p><a class="tr-auth-link" href="/signin_login">Already a member? Sign in</a>"""
-    return auth_shell(content, 'Create account')
+    return auth_shell(content, 'Create account', user=user)
 
 
-def render_signup_page(error: str = "", success: str = "") -> str:
-    return render_signin_page(error) if not success else auth_shell(message_block(success=success) + '<a class="tr-button" href="/signin_login">Sign in</a>', 'Account created')
+def render_signup_page(error: str = "", success: str = "", user=None) -> str:
+    return render_signin_page(error, user=user) if not success else auth_shell(message_block(success=success) + '<a class="tr-button" href="/signin_login">Sign in</a>', 'Account created', user=user)
 
 
-def render_signin_login_page(error: str = "") -> str:
+def render_signin_login_page(error: str = "", user=None) -> str:
     content = f"""<h1>Welcome back.</h1><p class="tr-muted">Sign in to your TableRadar account.</p>{message_block(error=error)}{render_social_signin()}
     <form method="post" action="/signin_login">{input_block('Email address','email','email',autocomplete='email')}{input_block('Password','password','password',autocomplete='current-password')}<button class="tr-button tr-button-primary" type="submit">Sign in →</button></form><a class="tr-auth-link" href="/signup">New to TableRadar? Create an account</a>"""
-    return auth_shell(content, 'Sign in')
+    return auth_shell(content, 'Sign in', user=user)
 
 
-def render_dashboard_page(username: str, email: str) -> str:
-    return auth_shell(f'<h1>Welcome, {escape(username)}</h1><p class="tr-muted">{escape(email)}</p><a class="tr-button" href="/profile">Open your profile</a>', 'Dashboard')
+def render_dashboard_page(username: str, email: str, user=None) -> str:
+    return auth_shell(f'<h1>Welcome, {escape(username)}</h1><p class="tr-muted">{escape(email)}</p><a class="tr-button" href="/profile">Open your profile</a>', 'Dashboard', user=user)
