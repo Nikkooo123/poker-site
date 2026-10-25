@@ -913,7 +913,7 @@ def render_public_script():
     }
 
     function applyAll() {
-        // Keep the expanded page size across the automatic 30-second refresh.
+        // Keep the expanded page size across the automatic 60-second refresh.
         filterStorage.setItem(STORAGE_KEYS.visibleCount, String(visibleCount));
         if (pageView) pageView.setExpanded(visibleCount);
         saveInputs();
@@ -1227,7 +1227,7 @@ def render_public_page(tables, request=None, user=None):
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>TableRadar</title>
-        <meta http-equiv="refresh" content="30">
+        <meta http-equiv="refresh" content="60">
         <style>
             body {{
                 overflow-x: hidden;
