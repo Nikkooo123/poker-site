@@ -256,7 +256,7 @@ def render_payment_page(*args, **kwargs) -> str:
 def render_account_menu(user):
     host_link = '<a href="/host">Host dashboard</a>' if has_host_access(user) else ''
     manager = user.get("_is_manager") or user.get("staff_role") == "manager"
-    staff_links = ('<a href="/manager">Manager workspace</a><a href="/admin">Table administration</a><a href="/admin/club-requests">Club requests</a><a href="/staff/chat">Live chat inbox</a>' if manager else ('<a href="/admin">Table administration</a><a href="/staff/chat">Live chat inbox</a>' if user.get("staff_role") == "table_admin" else ''))
+    staff_links = '<a href="/manager">Manager workspace</a><a href="/admin/club-requests">Club requests</a>' if manager else ''
     email = escape(str(user.get("email") or user.get("username") or "Account"))
     return f'''<style>
     .tr-account{{position:relative;font:13px/1.5 'Segoe UI',Arial,sans-serif;z-index:100;max-width:100%}}

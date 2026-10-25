@@ -18,7 +18,8 @@ assert PLANS['host_pro']['price']=='599.00' and PLANS['host_pro']['table_limit']
 assert host_product({})=='host_pro' and table_limit({})==20
 for tier,limit in (('starter',6),('pro',20)):
  text=render_host_listing_notice(tier)
- assert f'{limit} active tables per club' in text and f'more than {limit} tables' in text
+ assert f'{limit} active tables per club' in text and f'more than {limit} active tables' in text
+ assert 'at least one seated player' in text and 'higher blinds and more seated players' in text
  assert 'Heads-up' in text and '$0.50/$1' in text
  if tier=='starter':
   assert '/pay/host_pro' in text and 'more than 6 active tables' in text

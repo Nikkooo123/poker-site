@@ -9,13 +9,16 @@ from auth.profile_view import render_account_menu
 old=dict(status='archived',deleted_at='fixture',club_name='OLD-CLUB',owner_name='OLD-OWNER',
          telegram='@oldcontact',club_code='OLD-CODE',currency='GBP',application='ClubGG',notes='OLD-NOTE')
 user=dict(email='fixture@example.test',plan='host',is_active=True,host_tier='starter',
-          days_left=30,club_application=old)
+          days_left=30,club_application=old,membership_test_enabled=True,
+          test_expires_at='2099-01-01T00:00:00+00:00',host_notification='STALE APPROVAL MESSAGE',host_approved_submission='old')
 app=FastAPI(); accounts.install_account_routes(app,lambda r:user)
 endpoint=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host')
 with patch.object(accounts,'account_context',side_effect=lambda r,u:dict(u,_csrf='fixture')):
  html=endpoint(SimpleNamespace(session={}))
  assert 'Submit club for review' in html and 'No club submitted' in html
  assert 'Update club request' not in html
+ assert 'STALE APPROVAL MESSAGE' not in html and 'Service started:' not in html
+ assert 'placement period has not started' in html
  for value in ('OLD-CLUB','OLD-OWNER','@oldcontact','OLD-CODE','OLD-NOTE'):
   assert value not in html
  class Fields(HTMLParser):
@@ -28,11 +31,15 @@ with patch.object(accounts,'account_context',side_effect=lambda r,u:dict(u,_csrf
  user['club_application']=dict(old,status='pending',deleted_at='')
  html=endpoint(SimpleNamespace(session={}))
  assert 'OLD-CLUB' in html and 'Update club request' in html
+ assert 'STALE APPROVAL MESSAGE' not in html
+ user['club_application']=dict(old,status='approved',deleted_at='',submitted_at='current')
+ user['host_approved_submission']='current'
+ assert 'STALE APPROVAL MESSAGE' in endpoint(SimpleNamespace(session={}))
 new=updated_request({'club_name':'NEW'},old)
 assert '_comparison_base' not in new and '_is_update' not in new
 assert updated_request({'club_name':'NEW'},{'club_name':'OLD','status':'pending'})['_is_update']
 menu=render_account_menu(dict(user,staff_role='manager'))
-for label in ('Club subscriptions','Staff access','Test Host / Player','Explore tables'):
+for label in ('Club subscriptions','Staff access','Test Host / Player','Explore tables','Table administration','Live chat inbox'):
  assert label not in menu
 assert 'Manager workspace' in menu and 'Host dashboard' in menu
 print('PASS: archived requests render blank fields, fresh submission baseline, active drafts retained, simplified menu')

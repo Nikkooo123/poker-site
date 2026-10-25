@@ -86,8 +86,14 @@ def poker_mascot_background_v19():
 async def browser_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers.setdefault('X-Content-Type-Options','nosniff')
-    response.headers.setdefault('X-Frame-Options','DENY')
-    response.headers.setdefault('Content-Security-Policy',"frame-ancestors 'none'; object-src 'none'; base-uri 'self'")
+    # The authenticated compact inbox is embedded by our own Live Chat widget.
+    embedded_chat = (request.url.path == '/staff/chat'
+                     and request.query_params.get('compact','').lower() in ('1','true','on','yes')
+                     and response.status_code == 200
+                     and 'text/html' in response.headers.get('content-type',''))
+    response.headers.setdefault('X-Frame-Options','SAMEORIGIN' if embedded_chat else 'DENY')
+    ancestors = "'self'" if embedded_chat else "'none'"
+    response.headers.setdefault('Content-Security-Policy',f"frame-ancestors {ancestors}; object-src 'none'; base-uri 'self'")
     response.headers.setdefault('Referrer-Policy','strict-origin-when-cross-origin')
     response.headers.setdefault('Permissions-Policy','camera=(), microphone=(), geolocation=()')
     # Pages contain live club information and may contain personal account data.
