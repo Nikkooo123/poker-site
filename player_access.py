@@ -42,17 +42,24 @@ def entitled(user):
                 and user.get('phone_verified_at') and remaining(user))
 
 
+def friends_preview_enabled():
+    """Temporary owner-approved public review. Set false to restore saved rules."""
+    return os.getenv('FRIENDS_PREVIEW_ENABLED', 'true').strip().lower() == 'true'
+
+
 def directory_access(user):
-    return entitled(user)
+    return True if friends_preview_enabled() else entitled(user)
 
 
 def join_access(user):
     """Active verified 14-day trial includes Join; paid and staff access remains."""
+    if friends_preview_enabled():
+        return bool(user and user.get('staff_role') == 'manager')
     return directory_access(user)
 
 
 def render_trial_notice(user):
-    if directory_access(user):
+    if friends_preview_enabled() or directory_access(user):
         return ''
     return '<section class="tr-info-card tr-access-notice" style="padding:18px;margin:18px 0"><h2 style="font-size:19px">Unlock full table information</h2><p>Verify your email and phone number, then start your 14-day Free Trial to view club and table details.</p><a class="tr-button" href="/verify-account">Verify and start Free Trial</a></section>'
 

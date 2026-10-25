@@ -1,4 +1,4 @@
-from player_access import join_access, directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
+from player_access import friends_preview_enabled, join_access, directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
 from directory_preferences import saved_filters
 import json
 import secrets
@@ -345,6 +345,8 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
             table[key] = ''
     name_help_attrs = 'data-name-help="Register, verify your email and phone number, and start your 14-day Free Trial to view club and table details." tabindex="0" aria-describedby="tr-name-tooltip" aria-label="Hidden name. Register, verify your email and phone number, and start your 14-day Free Trial to view club and table details."' if not show_club else ''
     join_help_attrs = '' if can_join else 'data-join-help="Verify your email and phone number, then start your 14-day Free Trial to join the club." aria-describedby="tr-name-tooltip"'
+    if not can_join and friends_preview_enabled():
+        join_help_attrs = 'data-join-help="Joining is temporarily unavailable." aria-describedby="tr-name-tooltip"'
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
@@ -603,6 +605,8 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     if not can_join:
         card = card.replace("                Join\n", "                Join 🔒\n")
         card = card.replace('class="join-open-btn join-btn-3d"', 'class="join-locked-btn" popovertarget="guest-access" aria-label="Join locked — verify email and phone and start Free Trial"')
+    if not can_join and friends_preview_enabled():
+        card = card.replace('popovertarget="guest-access" aria-label="Join locked — verify email and phone and start Free Trial"', 'disabled aria-label="Joining is temporarily unavailable"')
     return card
 
 # PUBLIC PAGE SCRIPT
@@ -1208,7 +1212,7 @@ def render_public_page(tables, request=None, user=None):
 
     if username:
         label = plan.title() if is_active and plan in ('player', 'host') else 'Membership'
-        if trial_enabled() and trial_remaining(user) and directory_access(user) and not is_active:
+        if not friends_preview_enabled() and trial_enabled() and trial_remaining(user) and directory_access(user) and not is_active:
             label = 'Player trial · ' + str(trial_remaining(user)) + ' days'
         menu_user = dict(user or {}, email=display_name, plan=plan, is_active=is_active)
         right_top_html = f'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><a href="/profile" class="tr-status-pill" style="text-decoration:none">{escape(label)}</a>{render_account_menu(menu_user)}</div>'
