@@ -331,9 +331,9 @@ def render_profile(user):
           <h3>{name}</h3>{price_html}<p>{caption}</p>
           <ul>{''.join(f'<li><span>✓</span>{item}</li>' for item in features)}</ul>{conditions}{action}</article>'''
 
-    player = plan_card('player', 'Your place at the right table.', ['Access to all table information', 'Filters and favorites', 'Your personal profile'])
-    host_starter = plan_card('host_starter', 'A focused start for your private club.', ['Everything included in Player', 'One club listing', 'Coverage for up to 6 active tables'])
-    host_pro = plan_card('host_pro', 'More tables. More room to grow.', ['Everything included in Player', 'One club listing', 'Coverage for up to 20 active tables'])
+    player = plan_card('player', 'Discover new clubs, explore more games and find your next table.', ['Full table and club information', 'Discover new clubs and game formats', 'Club contact and joining options', 'Filter games and save favorites', 'Your personal player profile'])
+    host_starter = plan_card('host_starter', 'Add your own club to TableRadar and help players discover your games.', ['Everything included in Player', 'Add one club of your own to the directory', 'Showcase your club and games to players', 'Manual monitoring of up to 6 active tables', 'Host dashboard to manage your club details'])
+    host_pro = plan_card('host_pro', 'Put your own club on the radar with broader coverage for a busier schedule.', ['Everything included in Player', 'Add one club of your own to the directory', 'Help more players discover your club and games', 'Manual monitoring of up to 20 active tables', 'Host dashboard to manage your club details'])
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"><title>Profile · TableRadar</title>
     <style>

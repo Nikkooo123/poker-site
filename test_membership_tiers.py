@@ -20,6 +20,11 @@ for tier,limit in (('starter',6),('pro',20)):
  text=render_host_listing_notice(tier)
  assert f'{limit} active tables per club' in text and f'more than {limit} tables' in text
  assert 'Heads-up' in text and '$0.50/$1' in text
+ if tier=='starter':
+  assert '/pay/host_pro' in text and 'more than 6 active tables' in text
+  assert 'Live Chat' not in text and 'Telegram' not in text
+ else:
+  assert 'Live Chat' in text and 'Telegram' in text
 for user in ({'email':'fixture@example.test'}, {'email':'fixture@example.test','plan':'host','host_tier':'starter','is_active':True}, {'email':'fixture@example.test','plan':'host','is_active':True,'membership_test_enabled':True,'_can_test':True}):
  html=render_profile(user)
  assert all(f'data-plan="{key}"' in html for key in PLANS)
