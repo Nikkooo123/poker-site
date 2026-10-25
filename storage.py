@@ -1,3 +1,4 @@
+from host_capacity import require_capacity, occupied
 import os
 from currency_codes import normalize_currency
 import json
@@ -414,6 +415,11 @@ def update_players(table_id: int, players: str):
 
     with _connect() as conn:
         with conn.cursor() as cur:
+            if occupied(players):
+                cur.execute('SELECT club_subscription_id FROM poker_tables WHERE id=%s', (int(table_id),))
+                linked = cur.fetchone()
+                if linked and linked.get('club_subscription_id'):
+                    require_capacity(cur, linked['club_subscription_id'], int(table_id))
             cur.execute("""
                 UPDATE poker_tables
                 SET players = %s,

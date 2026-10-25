@@ -224,7 +224,10 @@ def update_players_route(
     if check:
         return check
 
-    update_players(table_id, players)
+    try:
+        update_players(table_id, players)
+    except ValueError as error:
+        return HTMLResponse(escape(str(error)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
 
 
@@ -336,7 +339,7 @@ def pay_page(plan_name: str, request: Request):
 
     user = get_current_user(request)
 
-    if plan_name not in ["player", "host"]:
+    if plan_name not in ["player", "host", "host_starter", "host_pro"]:
         return RedirectResponse("/profile", status_code=303)
 
     return membership_payment_page(request, user, plan_name)

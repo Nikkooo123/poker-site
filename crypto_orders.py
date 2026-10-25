@@ -1,3 +1,4 @@
+from membership_plans import PLANS, product, product_key, host_tier
 """Persistent one-time payment orders. No grant until verified provider settlement."""
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -7,7 +8,8 @@ import account_repository as repository
 from crypto_provider import completed_invoice_matches
 from host_lifecycle import prepare_paid_host
 
-PRICES = {'player': '29.99', 'host': '600.00'}
+PRICES = {key: spec['price'] for key, spec in PLANS.items()}
+PRICES['host'] = PLANS['host_pro']['price']  # Legacy checkout URL aliases Host Pro.
 
 
 def initialize():
@@ -23,7 +25,8 @@ def create(email, plan, coin, network, environment='sandbox'):
         raise ValueError('Unknown membership')
     if environment not in ('sandbox','production'):
         raise ValueError('Invalid payment environment')
-    order = dict(id=str(uuid.uuid4()),email=email.strip().lower(),plan=plan,environment=environment,
+    spec = product(plan)
+    order = dict(id=str(uuid.uuid4()),email=email.strip().lower(),plan=spec['role'],product=product_key(plan),host_tier=spec.get('tier'),table_limit=spec['table_limit'],environment=environment,
                  price_amount=PRICES[plan],price_currency='USD',pay_currency=coin,network=network,
                  status='creating',fulfilled=False)
     with repository.connection() as conn:
@@ -92,6 +95,20 @@ def settle(order_id, invoice):
             raise ValueError('Paid order needs operator review: account missing')
         user=dict(account[0])
         now=datetime.now(timezone.utc)
+        if order['plan'] == 'host':
+            purchased_tier = order.get('host_tier') or 'pro'
+            current_expiry = user.get('membership_expires_at') or user.get('test_expires_at')
+            still_live = False
+            try:
+                still_live = bool(user.get('is_active') and datetime.fromisoformat(current_expiry) > now)
+            except (TypeError, ValueError):
+                pass
+            # Never silently downgrade/upgrade an already paid service period.
+            if user.get('plan') == 'host' and not user.get('membership_test_enabled') and (still_live or int(user.get('host_paid_days') or 0)>0) and host_tier(user) != purchased_tier:
+                order.update(status='review_required',status_context='host_tier_change')
+                conn.execute('UPDATE tableradar_crypto_orders SET document=%s,updated_at=NOW() WHERE id=%s',(Jsonb(order),order_id))
+                return order
+            user['host_tier'] = purchased_tier
         start=now
         if user.get('is_active') and user.get('plan')==order['plan'] and not user.get('membership_test_enabled'):
             try:

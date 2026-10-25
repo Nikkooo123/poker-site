@@ -1,3 +1,4 @@
+from membership_plans import host_name, table_limit
 from currency_codes import normalize_currency
 import os
 from datetime import date, datetime, timedelta, timezone
@@ -151,6 +152,7 @@ def load_active_operator_clubs():
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""SELECT c.id,c.club_name,c.application,c.currency,c.expires_at,c.access_expires_at,
+                a.document->>'host_tier' AS host_tier,
                 a.document->'club_application'->>'club_name' AS submitted_club,
                 a.document->'club_application'->>'application' AS submitted_application,
                 a.document->'club_application'->>'club_code' AS submitted_code
@@ -163,7 +165,7 @@ def load_active_operator_clubs():
     normalize=lambda value: ''.join(ch for ch in str(value or '').casefold() if ch.isalnum())
     for row in rows:
         same_club=normalize(row['club_name'])==normalize(row['submitted_club']) and normalize(row['application'])==normalize(row['submitted_application'])
-        result.append(dict(subscription_id=row['id'],club_name=row['club_name'],application=row['application'],currency=normalize_currency(row.get('currency'),required=False),
+        result.append(dict(host_plan=host_name(row),table_limit=table_limit(row),subscription_id=row['id'],club_name=row['club_name'],application=row['application'],currency=normalize_currency(row.get('currency'),required=False),
                            expires_at_display=_date_display(row['expires_at']),
                            club_code=row['submitted_code'] if same_club else ''))
     return result

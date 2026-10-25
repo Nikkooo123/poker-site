@@ -1,3 +1,4 @@
+from membership_plans import PLANS, product_key, host_tier, table_limit, host_name
 """Owner-only membership preview and private club application workflow."""
 from datetime import datetime, timedelta, timezone
 from html import escape
@@ -125,7 +126,7 @@ def install_account_routes(app, get_current_user):
         user=get_current_user(request)
         if not user:
             return RedirectResponse('/signin_login',status_code=303)
-        forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {plan.title()} free</button></form>' for plan in ('host','player'))
+        forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {PLANS[plan]["name"]} free</button></form>' for plan in ('player','host_starter','host_pro'))
         body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
         return page('Manager membership test',body,user or {},manager=True)
 
@@ -147,23 +148,27 @@ def install_account_routes(app, get_current_user):
     @app.post("/account/test-membership")
     def test_membership(request: Request, plan: str = Form(""), csrf: str = Form("")):
         user = permitted(request, csrf, allow_bootstrap=plan == "reset")
-        if not user or plan not in ("reset", "player", "host"):
+        if not user or plan not in ("reset", "player", "host", "host_starter", "host_pro"):
             return HTMLResponse("Membership preview is not available for this account.", status_code=403)
+        selected_product = product_key(plan)
+        base_plan = PLANS[selected_product]["role"] if plan != "reset" else "inactive"
         # The manager explicitly chooses a free preview for their signed-in account only.
         now = datetime.now(timezone.utc)
-        previous = {key: user.get(key) for key in ("plan", "role", "is_active", "days_left", "auto_renew", "plan_started_at", "plan_expires_at", "membership_source", "membership_expires_at", "manual_subscription_id", "host_service_state", "host_paid_days", "host_approved_submission")}
-        fields = dict(membership_test_enabled=True, plan="inactive" if plan == "reset" else plan,
-                      role="member" if plan == "reset" else plan, is_active=plan != "reset",
+        previous = {key: user.get(key) for key in ("plan", "role", "is_active", "days_left", "auto_renew", "plan_started_at", "plan_expires_at", "membership_source", "membership_expires_at", "manual_subscription_id", "host_service_state", "host_paid_days", "host_approved_submission", "host_tier")}
+        fields = dict(membership_test_enabled=True, plan="inactive" if plan == "reset" else base_plan,
+                      role="member" if plan == "reset" else base_plan, is_active=plan != "reset",
                       days_left=0 if plan == "reset" else 30, auto_renew=False,
                       test_expires_at="" if plan == "reset" else (now + timedelta(days=30)).isoformat(),
                       plan_started_at="" if plan == "reset" else now.strftime("%d/%m/%Y"),
                       plan_expires_at="" if plan == "reset" else (now + timedelta(days=30)).strftime("%d/%m/%Y"))
+        if base_plan == "host":
+            fields["host_tier"] = PLANS[selected_product]["tier"]
         if not user.get("membership_test_enabled"):
             fields["membership_before_test"] = previous
         update_user(user["email"], **fields)
         request.session["plan"] = fields["plan"]
         request.session["is_active"] = "1" if fields["is_active"] else "0"
-        return RedirectResponse("/host" if plan == "host" else "/profile", status_code=303)
+        return RedirectResponse("/host" if base_plan == "host" else "/profile", status_code=303)
 
     @app.get("/host", response_class=HTMLResponse)
     def host_account(request: Request):
@@ -203,7 +208,7 @@ def install_account_routes(app, get_current_user):
         progress = f'<section class="tr-info-card tr-host-progress"><h2>{stage}</h2><p>{period}</p><p>{next_step}</p><ol class="tr-host-steps">{timeline}</ol></section>'
         notification = f'<p class="tr-host-notification" role="status">{safe(user.get("host_notification"))}</p>' if user.get('host_notification') else ''
         test_notice = '<p class="tr-muted">Private free test - no payment was taken. Test dates are separate from paid club placement.</p>' if user.get("membership_test_enabled") else ""
-        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p>{test_notice}{notification}{progress}<section class="tr-info-card tr-host-club"><h2>Your club</h2>{"<p><strong>"+safe(club.get("club_name"))+"</strong> · "+safe(club.get("application"))+(" · "+safe(club.get("currency")) if club.get("currency") else "")+" · Code: "+safe(club.get("club_code"))+"</p>" if club else ""}<p>Status: <strong class="{status_class}">{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p>{render_host_listing_notice()}<details class="tr-host-edit" {"" if club else "open"}><summary>{"Edit club details" if club else "Submit club details"}</summary><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Your name or screen name *<br><input name="owner_name" required maxlength="100" autocomplete="nickname" value="{safe(club.get('owner_name'))}"></label></p><p><label>Telegram *<br><input name="telegram" required maxlength="80" placeholder="@yourname" value="{safe(club.get('telegram'))}"></label></p><p><label>Club name *<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Game currency *<br>{currency_input(club.get("currency"))}</label></p><p><label>Club ID *<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><label style="display:flex;align-items:flex-start;gap:10px;margin:18px 0"><input type="checkbox" name="listing_conditions" value="accepted" required {"checked" if club.get("listing_policy_version")=="2026-10-23" else ""} style="width:18px;min-height:18px;margin:3px 0 0;flex-shrink:0"><span>* I agree to the Host listing conditions above: up to 20 eligible tables, $0.50/$1 minimum blinds and no heads-up tables.</span></label><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button><p class="tr-muted">* Required fields</p></form></details></section>'''
+        body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p>{test_notice}{notification}{progress}<section class="tr-info-card tr-host-club"><h2>Your club</h2><p>{host_name(user)} · up to {table_limit(user)} active tables</p>{"<p><strong>"+safe(club.get("club_name"))+"</strong> · "+safe(club.get("application"))+(" · "+safe(club.get("currency")) if club.get("currency") else "")+" · Code: "+safe(club.get("club_code"))+"</p>" if club else ""}<p>Status: <strong class="{status_class}">{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p>{render_host_listing_notice(host_tier(user))}<details class="tr-host-edit" {"" if club else "open"}><summary>{"Edit club details" if club else "Submit club details"}</summary><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Your name or screen name *<br><input name="owner_name" required maxlength="100" autocomplete="nickname" value="{safe(club.get('owner_name'))}"></label></p><p><label>Telegram *<br><input name="telegram" required maxlength="80" placeholder="@yourname" value="{safe(club.get('telegram'))}"></label></p><p><label>Club name *<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Game currency *<br>{currency_input(club.get("currency"))}</label></p><p><label>Club ID *<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator<br><textarea name="notes" maxlength="1000">{safe(club.get('notes'))}</textarea></label></p><label style="display:flex;align-items:flex-start;gap:10px;margin:18px 0"><input type="checkbox" name="listing_conditions" value="accepted" required {"checked" if club.get("listing_policy_version")=="2026-10-23" and club.get("listing_policy_tier", "pro")==host_tier(user) else ""} style="width:18px;min-height:18px;margin:3px 0 0;flex-shrink:0"><span>* I agree to the Host listing conditions above: up to {table_limit(user)} eligible tables, $0.50/$1 minimum blinds and no heads-up tables.</span></label><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button><p class="tr-muted">* Required fields</p></form></details></section>'''
         return page("Host dashboard", body, user)
 
     @app.post("/host/club")
@@ -225,8 +230,8 @@ def install_account_routes(app, get_current_user):
         except ValueError as error:
             return HTMLResponse(escape(str(error)), status_code=400)
         if listing_conditions != "accepted":
-            return HTMLResponse('Please agree to the Host listing conditions: up to 20 eligible tables per club, blinds of $0.50/$1 or higher, and no heads-up tables. Return to the form to confirm.', status_code=400)
-        details = dict(listing_policy_version="2026-10-23", listing_policy_accepted_at=datetime.now(timezone.utc).isoformat(), currency=currency, owner_name=owner_name.strip(), telegram=telegram, club_name=club_name.strip(), application=application, club_code=club_code.strip(), notes=notes.strip(), status="pending", submitted_at=datetime.now(timezone.utc).isoformat())
+            return HTMLResponse(f'Please agree to the Host listing conditions: up to {table_limit(user)} eligible tables per club, blinds of $0.50/$1 or higher, and no heads-up tables. Return to the form to confirm.', status_code=400)
+        details = dict(listing_policy_tier=host_tier(user), host_tier=host_tier(user), table_limit=table_limit(user), listing_policy_version="2026-10-23", listing_policy_accepted_at=datetime.now(timezone.utc).isoformat(), currency=currency, owner_name=owner_name.strip(), telegram=telegram, club_name=club_name.strip(), application=application, club_code=club_code.strip(), notes=notes.strip(), status="pending", submitted_at=datetime.now(timezone.utc).isoformat())
         if account_db.enabled():
             def apply_request(current):
                 current['club_application'] = updated_request(details, current.get('club_application'))

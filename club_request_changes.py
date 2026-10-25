@@ -2,6 +2,7 @@
 from html import escape
 
 FIELDS = {
+    'host_tier': 'Host plan', 'table_limit': 'Active table limit',
     'owner_name': 'Owner name', 'telegram': 'Telegram', 'club_name': 'Club name',
     'application': 'Application', 'currency': 'Game currency',
     'club_code': 'Club ID', 'notes': 'Notes for the operator',

@@ -1,3 +1,4 @@
+from host_capacity import require_capacity, occupied
 """Table creation restricted to active operator placements; contacts never come from staff input."""
 import re
 from currency_codes import normalize_currency
@@ -24,15 +25,17 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
         raise ValueError("Select an active club from Clubs to monitor.") from None
     with _connect() as conn:
         with conn.cursor() as cur:
-            # The shared row lock prevents disable/delete/renewal changing this placement mid-insert.
+            # The placement lock serialises capacity checks and prevents changes mid-insert.
             # No account lock is acquired, preserving the account-first order used by approval.
             cur.execute("""SELECT club_name, application, owner_name, owner_telegram, currency
                 FROM club_subscriptions WHERE id=%s AND plan='host' AND status='active'
                 AND COALESCE(access_expires_at,expires_at::timestamptz)>clock_timestamp()
-                FOR SHARE""", (selected,))
+                FOR UPDATE""", (selected,))
             club = cur.fetchone()
             if not club:
                 raise ValueError("This club is not active in Clubs to monitor. Refresh the page and choose an active club.")
+            if occupied(values['players']):
+                require_capacity(cur, selected)
             try:
                 currency = normalize_currency(club.get('currency'))
             except ValueError:
