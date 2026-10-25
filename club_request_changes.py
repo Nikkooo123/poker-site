@@ -15,11 +15,19 @@ def snapshot(club):
 
 def updated_request(details, previous):
     result = dict(details)
+    # An archived request is history, not a draft or comparison baseline.
+    previous = current_request(previous)
     if previous:
         baseline = previous.get('_comparison_base') if previous.get('_is_update') else None
         result['_comparison_base'] = snapshot(baseline if isinstance(baseline, dict) else previous)
         result['_is_update'] = True
     return result
+
+
+def current_request(club):
+    if not club or club.get('deleted_at') or club.get('status') == 'archived':
+        return {}
+    return club
 
 
 def reviewed_request(club, **review):

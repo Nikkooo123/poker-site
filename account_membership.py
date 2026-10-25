@@ -3,7 +3,7 @@ from membership_plans import PLANS, product_key, host_tier, table_limit, host_na
 from datetime import datetime, timedelta, timezone
 from html import escape
 from currency_codes import normalize_currency, currency_input
-from club_request_changes import updated_request, field_html, changes_html
+from club_request_changes import updated_request, field_html, changes_html, current_request
 import account_repository as account_db
 import secrets
 import re
@@ -193,7 +193,7 @@ def install_account_routes(app, get_current_user):
         user = account_context(request, user)
         if not has_host_access(user):
             return RedirectResponse("/profile", status_code=303)
-        club = user.get("club_application") or {}
+        club = current_request(user.get("club_application"))
         safe = lambda value: escape(str(value or ""), quote=True)
         csrf = safe(user["_csrf"])
         status_labels = {"pending": "Awaiting operator review", "approved": "Approved — operator manages table updates", "needs_changes": "Changes requested by the operator", "archived": "Request removed - submit updated details to request a new review"}
