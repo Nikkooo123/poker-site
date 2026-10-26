@@ -1,6 +1,6 @@
 """Shared membership products. Internal customer role remains player/host."""
 PLANS = {
-    'player': dict(name='Player', price='29.99', role='player', table_limit=0),
+    'player': dict(name='Player', price='29.00', role='player', table_limit=0),
     'host_starter': dict(name='Host Starter', price='299.00', role='host', table_limit=6, tier='starter'),
     'host_pro': dict(name='Host Pro', price='599.00', role='host', table_limit=20, tier='pro'),
 }

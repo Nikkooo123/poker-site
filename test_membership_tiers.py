@@ -12,7 +12,7 @@ import account_membership as accounts
 import crypto_orders as orders
 from host_capacity import require_capacity
 
-assert PLANS['player']['price']=='29.99'
+assert PLANS['player']['price']=='29.00'
 assert PLANS['host_starter']['price']=='299.00' and PLANS['host_starter']['table_limit']==6
 assert PLANS['host_pro']['price']=='599.00' and PLANS['host_pro']['table_limit']==20
 assert host_product({})=='host_pro' and table_limit({})==20
@@ -29,7 +29,7 @@ for tier,limit in (('starter',6),('pro',20)):
 for user in ({'email':'fixture@example.test'}, {'email':'fixture@example.test','plan':'host','host_tier':'starter','is_active':True}, {'email':'fixture@example.test','plan':'host','is_active':True,'membership_test_enabled':True,'_can_test':True}):
  html=render_profile(user)
  assert all(f'data-plan="{key}"' in html for key in PLANS)
- assert all(price in html for price in ('$29.99','$299','$599'))
+ assert all(price in html for price in ('$29','$299','$599')) and '$29.99' not in html
  assert '$600' not in html and 'host_starter' in html and 'host_pro' in html
 for key in PLANS:
  request=SimpleNamespace(session={})
