@@ -256,7 +256,20 @@ def render_payment_page(*args, **kwargs) -> str:
 def render_account_menu(user):
     host_link = '<a href="/host">Host dashboard</a>' if has_host_access(user) else ''
     manager = user.get("_is_manager") or user.get("staff_role") == "manager"
-    staff_links = '<a href="/manager">Manager workspace</a><a href="/admin/club-requests">Club requests</a>' if manager else ''
+    request_badge = '<span class="tr-club-request-count" data-club-request-count aria-live="polite" hidden></span>'
+    staff_links = f'<a href="/manager">Manager workspace</a><a href="/admin/club-requests">Club requests{request_badge}</a>' if manager else ''
+    request_count_script = r'''<script>(function(){
+const badges=document.querySelectorAll('[data-club-request-count]');if(!badges.length)return;
+let busy=false,disabled=false;
+async function refresh(){if(busy||disabled||document.visibilityState==='hidden')return;busy=true;try{
+const response=await fetch('/manager/club-requests/count',{credentials:'same-origin',cache:'no-store'});
+if(response.status===401||response.status===403){disabled=true;badges.forEach(b=>b.hidden=true);return}
+if(!response.ok)return;const data=await response.json(),n=Math.max(0,Math.floor(Number(data.pending_count)||0));
+badges.forEach(b=>{b.textContent=String(n);b.hidden=n===0;b.setAttribute('aria-label',n+' pending club requests')});
+}catch(e){}finally{busy=false}}
+refresh();setInterval(refresh,15000);document.querySelector('.tr-account')?.addEventListener('toggle',refresh);
+window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
+})();</script>''' if manager else ''
     email = escape(str(user.get("email") or user.get("username") or "Account"))
     return f'''<style>
     .tr-account{{position:relative;font:13px/1.5 'Segoe UI',Arial,sans-serif;z-index:100;max-width:100%}}
@@ -265,7 +278,8 @@ def render_account_menu(user):
     .tr-account summary span{{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
     .tr-account-menu{{position:absolute;right:0;top:calc(100% + 9px);min-width:210px;max-width:calc(100vw - 40px);max-height:calc(100dvh - 110px);overflow-y:auto;padding:7px;background:#1e2a30;border:1px solid #ffffff20;border-radius:14px;box-shadow:0 15px 35px #0005}}
     .tr-account-menu a{{display:block;padding:10px 12px;color:#e3efeb;text-decoration:none;border-radius:8px}}.tr-account-menu a:hover,.tr-account-menu a:focus-visible{{background:#ffffff0d}}
-    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>'''
+    .tr-club-request-count{{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;margin-left:8px;border-radius:999px;background:#d84858;color:white;font-size:11px;font-weight:700;line-height:1;vertical-align:middle}}.tr-club-request-count[hidden]{{display:none!important}}
+    </style><details class="tr-account"><summary aria-label="Account menu"><span>{email}</span>⌄</summary><nav class="tr-account-menu" aria-label="Account"><a href="/profile">My account</a>{staff_links}{host_link}<a href="/about">About Us</a><a href="/faq">FAQ</a><a href="/terms">Terms &amp; Conditions</a><a href="/contact">Contact</a><a href="/logout">Sign out</a></nav></details>{request_count_script}'''
 
 
 """Responsive account page, with the existing plan and payment routes."""
@@ -325,7 +339,7 @@ def render_profile(user):
         if can_test and not selected:
             action = test_form(key, f"Try {name} free" if not active else f"Switch to {name} — free test")
         price = '$' + spec['price'].removesuffix('.00')
-        price_html = f'<div class="tr-plan-price" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:10px 0 12px"><strong data-plan-price style="font-size:clamp(28px,2.6vw,32px);font-weight:500;line-height:1.05;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--accent)">{price}</strong><span style="font-size:13px;color:var(--muted);white-space:nowrap">/ 30 days</span></div>'
+        price_html = f'<div class="tr-plan-price" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:10px 0 12px"><strong data-plan-price style="font-size:clamp(26px,2.2vw,28px);font-weight:500;line-height:1.05;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--accent)">{price}</strong><span style="font-size:13px;color:var(--muted);white-space:nowrap">/ 30 days</span></div>'
         if testing:
             price_html += '<div style="font-size:12px;line-height:1.6;color:var(--muted)"><span class="pill" style="margin-bottom:5px;font-weight:600">Free test now · No charge</span><br>Standard price shown. Applies when payments launch.</div>'
         conditions = render_host_listing_notice(spec['tier']) if spec['role'] == 'host' else ''

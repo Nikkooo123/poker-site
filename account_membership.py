@@ -90,6 +90,12 @@ def page(title, body, user, manager=False):
 
 
 def install_account_routes(app, get_current_user):
+    @app.get('/manager/club-requests/count')
+    def club_request_count(request: Request):
+        if not is_manager(request):
+            return JSONResponse({'error':'Manager access required.'},status_code=403,headers={'Cache-Control':'no-store'})
+        return JSONResponse({'pending_count':pending_club_request_count()},headers={'Cache-Control':'no-store'})
+
     @app.post('/account/security/password')
     def update_password(request: Request, csrf: str = Form(''), current_password: str = Form(''), new_password: str = Form(''), confirm_password: str = Form('')):
         from auth.auth_storage import change_password
