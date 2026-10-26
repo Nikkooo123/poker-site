@@ -325,7 +325,7 @@ def render_profile(user):
         if can_test and not selected:
             action = test_form(key, f"Try {name} free" if not active else f"Switch to {name} — free test")
         price = '$' + spec['price'].removesuffix('.00')
-        price_html = f'<div class="tr-plan-price" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:10px 0 12px"><strong data-plan-price style="font-size:clamp(36px,3.4vw,44px);font-weight:700;line-height:1.05;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--accent)">{price}</strong><span style="font-size:13px;color:var(--muted);white-space:nowrap">/ 30 days</span></div>'
+        price_html = f'<div class="tr-plan-price" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:8px;margin:10px 0 12px"><strong data-plan-price style="font-size:clamp(36px,3.4vw,44px);font-weight:500;line-height:1.05;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:var(--accent)">{price}</strong><span style="font-size:13px;color:var(--muted);white-space:nowrap">/ 30 days</span></div>'
         if testing:
             price_html += '<div style="font-size:12px;line-height:1.6;color:var(--muted)"><span class="pill" style="margin-bottom:5px;font-weight:600">Free test now · No charge</span><br>Standard price shown. Applies when payments launch.</div>'
         conditions = render_host_listing_notice(spec['tier']) if spec['role'] == 'host' else ''
