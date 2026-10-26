@@ -115,9 +115,11 @@ request=SimpleNamespace(session={'account_csrf':'token'})
 with patch.object(accounts,'account_context',side_effect=lambda r,u:dict(u,_csrf='token')):
  body=host_page(request)
  assert 'Host Starter' in body and 'up to 6 eligible tables' in body and '6 active tables per club' in body
+ assert 'Notes for the operator *' in body and '<textarea name="notes" required' in body
+ assert 'club terms, rules and rakeback' in body
 submit=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host/club')
 with patch.object(accounts,'update_user') as save:
- response=submit(request,csrf='token',club_name='Fixture club',application='ClubGG',club_code='123',notes='',owner_name='Fixture',telegram='@fixturehost',currency='USD',listing_conditions='accepted')
+ response=submit(request,csrf='token',club_name='Fixture club',application='ClubGG',club_code='123',notes='Club rules: private games. Rakeback: none.',owner_name='Fixture',telegram='@fixturehost',currency='USD',listing_conditions='accepted')
  assert response.status_code==303
  application=save.call_args.kwargs['club_application']
  assert application['host_tier']=='starter' and application['table_limit']==6

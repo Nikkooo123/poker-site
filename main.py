@@ -1,5 +1,8 @@
 import secrets
 import re
+import asyncio
+import logging
+from contextlib import suppress
 from html import escape
 from club_subscriptions_storage import (
     load_club_subscriptions,
@@ -107,6 +110,32 @@ async def browser_security_headers(request: Request, call_next):
 @app.on_event("startup")
 def startup():
     init_db()
+
+
+async def club_table_cleanup_loop():
+    from storage import cleanup_expired_club_tables
+    while True:
+        try:
+            await asyncio.to_thread(cleanup_expired_club_tables)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            logging.getLogger(__name__).warning('Club table cleanup failed (%s); will retry.',type(error).__name__)
+        await asyncio.sleep(60)
+
+
+@app.on_event('startup')
+async def start_club_table_cleanup():
+    app.state.club_table_cleanup_task=asyncio.create_task(club_table_cleanup_loop())
+
+
+@app.on_event('shutdown')
+async def stop_club_table_cleanup():
+    task=getattr(app.state,'club_table_cleanup_task',None)
+    if task:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
 
 
 def is_logged_in(request: Request) -> bool:

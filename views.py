@@ -988,6 +988,16 @@ def render_public_script():
         }
     }
 
+    function prepareTelegramJoinLink(url, club, tableName) {
+        try {
+            const link = new URL(url);
+            if (link.protocol !== 'https:' || link.hostname !== 't.me' || !new RegExp('^/[A-Za-z0-9_]{3,64}/?$').test(link.pathname)) return url;
+            link.searchParams.delete('profile');
+            link.searchParams.set('text', ['Request from TableRadar.net', 'I would like to join this club.', 'Club: ' + club, 'Table: ' + tableName].join(String.fromCharCode(10)));
+            return link.href;
+        } catch (e) { return url; }
+    }
+
     function openJoinModal(btn) {
         const overlay = $("#join-modal-overlay");
         if (!overlay) return;
@@ -1010,8 +1020,8 @@ def render_public_script():
         $("#join-owner-tip").textContent =
             "When you contact a club directly, you deal with the independent club owner. TableRadar is not responsible for the owner's actions, game arrangements or further interactions.";
 
-        setJoinLink($("#join-affiliate-link"), affiliateUrl);
-        setJoinLink($("#join-owner-link"), ownerUrl);
+        setJoinLink($("#join-affiliate-link"), prepareTelegramJoinLink(affiliateUrl, club, tableName));
+        setJoinLink($("#join-owner-link"), prepareTelegramJoinLink(ownerUrl, club, tableName));
 
         overlay.style.display = "flex";
     }

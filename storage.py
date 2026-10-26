@@ -1,4 +1,5 @@
 from host_capacity import require_capacity, occupied
+from club_table_lifecycle import init_archive, cleanup_unavailable_tables
 import os
 from currency_codes import normalize_currency
 import json
@@ -146,6 +147,7 @@ def init_db():
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS buyin TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS club_subscription_id INTEGER;")
+            cur.execute('CREATE INDEX IF NOT EXISTS poker_tables_club_subscription_idx ON poker_tables(club_subscription_id)')
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS players TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS seats TEXT DEFAULT '6';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '';")
@@ -155,6 +157,7 @@ def init_db():
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS owner_telegram TEXT DEFAULT '';")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();")
             cur.execute("ALTER TABLE poker_tables ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();")
+            init_archive(cur)
 
         conn.commit()
 
@@ -172,6 +175,12 @@ def migrate_json_to_db_once():
             count = cur.fetchone()["count"]
 
             if count > 0:
+                return
+
+            # An empty directory after club removal is intentional; do not
+            # resurrect deleted tables from the legacy JSON seed on restart.
+            cur.execute('SELECT EXISTS(SELECT 1 FROM tableradar_removed_club_tables) AS removed')
+            if cur.fetchone()['removed']:
                 return
 
             try:
@@ -357,6 +366,10 @@ def load_tables():
 
     with _connect() as conn:
         with conn.cursor() as cur:
+            cur.execute("SELECT to_regclass('club_subscriptions') AS name")
+            has_clubs=bool(cur.fetchone()['name'])
+            if has_clubs:
+                cleanup_unavailable_tables(cur)
             cur.execute("""
                 SELECT
                     id,
@@ -384,14 +397,23 @@ def load_tables():
             """)
             rows = cur.fetchall()
             # Explicit identity wins; legacy matches also require the same owner contact.
-            cur.execute("SELECT to_regclass('club_subscriptions') AS name")
-            if cur.fetchone()["name"]:
+            if has_clubs:
                 cur.execute("SELECT id,club_name,application,owner_telegram,currency FROM club_subscriptions WHERE plan='host'")
                 clubs = cur.fetchall()
             else:
                 clubs = []
 
     return inherit_club_currencies(rows, clubs)
+
+
+def cleanup_expired_club_tables():
+    init_db()
+    from club_subscriptions_storage import init_club_subscriptions_db
+    init_club_subscriptions_db()
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SET LOCAL lock_timeout = '3s'")
+            return cleanup_unavailable_tables(cur)
 
 
 def add_table(*args, **kwargs):

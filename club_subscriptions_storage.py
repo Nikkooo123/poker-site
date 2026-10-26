@@ -4,6 +4,7 @@ import os
 from datetime import date, datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
 from host_lifecycle import prepare_paid_host, awaiting_launch
+from club_table_lifecycle import init_archive, remove_linked_tables
 
 import psycopg
 from psycopg.rows import dict_row
@@ -260,9 +261,13 @@ def _change_subscription(subscription_id, action, days=30):
                 _sync_linked_account(cur,sub,expiry=expiry)
             elif action == "delete":
                 _sync_linked_account(cur,sub,inactive=True)
+                init_archive(cur)
+                remove_linked_tables(cur,[int(subscription_id)],'Club placement deleted')
                 cur.execute("DELETE FROM club_subscriptions WHERE id=%s", (int(subscription_id),))
             elif action == "disable":
                 _sync_linked_account(cur,sub,inactive=True)
+                init_archive(cur)
+                remove_linked_tables(cur,[int(subscription_id)],'Club placement disabled')
                 cur.execute("UPDATE club_subscriptions SET status='inactive',updated_at=NOW() WHERE id=%s", (int(subscription_id),))
 
 
