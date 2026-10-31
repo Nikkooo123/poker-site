@@ -5,6 +5,20 @@ PLANS = {
     'host_pro': dict(name='Host Pro', price='599.00', role='host', table_limit=20, tier='pro'),
 }
 
+# Retain historical products and entitlements; remove from new sales and previews.
+# Remove the key here to make the product available again.
+HIDDEN_PLANS = frozenset({'host_starter'})
+
+
+def selectable(value):
+    key = product_key(value)
+    return key in PLANS and key not in HIDDEN_PLANS
+
+
+def display_name(value):
+    key = product_key(value)
+    return 'Host' if PLANS[key]['role'] == 'host' else PLANS[key]['name']
+
 def product_key(value):
     value = str(value or '').lower()
     return 'host_pro' if value == 'host' else value
@@ -22,4 +36,4 @@ def table_limit(user):
     return PLANS[host_product(user)]['table_limit']
 
 def host_name(user):
-    return PLANS[host_product(user)]['name']
+    return display_name(host_product(user))

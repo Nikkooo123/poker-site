@@ -1,4 +1,4 @@
-from membership_plans import PLANS, product_key, host_tier, table_limit, host_name
+from membership_plans import selectable, display_name, PLANS, product_key, host_tier, table_limit, host_name
 """Owner-only membership preview and private club application workflow."""
 from datetime import datetime, timedelta, timezone
 from html import escape
@@ -27,6 +27,14 @@ def membership_state(user):
         result["days_left"] = remaining
         result["is_active"] = remaining > 0 and result.get("plan") in ("player", "host") and (result.get("membership_test_enabled") or result.get("is_active", False))
         result["auto_renew"] = False
+    from player_access import friends_preview_enabled
+    if friends_preview_enabled() and result.get('friends_preview_role') in ('player', 'host'):
+        role = result['friends_preview_role']
+        if role == 'host':
+            result.update(result.get('friends_preview_host') or {})
+        result.update(plan=role, role=role, is_active=True, auto_renew=False,
+                      host_tier='pro' if role == 'host' else result.get('host_tier', 'pro'),
+                      host_service_state=result.get('host_service_state') if result.get('friends_preview_host') else 'preview', _friends_preview=True)
     return result
 
 
@@ -90,6 +98,19 @@ def page(title, body, user, manager=False):
 
 
 def install_account_routes(app, get_current_user):
+    @app.post('/account/preview-role')
+    def preview_role(request: Request, role: str = Form(''), csrf: str = Form('')):
+        from player_access import friends_preview_enabled
+        user = get_current_user(request)
+        saved = request.session.get('account_csrf', '')
+        if not friends_preview_enabled() or not user or not saved or not secrets.compare_digest(saved, csrf):
+            return HTMLResponse('Reopen My Account to choose a preview role.', status_code=403)
+        if role not in ('player', 'host'):
+            return HTMLResponse('Choose Player or Host.', status_code=400)
+        # The target always comes from the signed-in account, never form input.
+        update_user(user['email'], friends_preview_role=role)
+        return RedirectResponse('/host' if role == 'host' else '/profile', status_code=303)
+
     @app.get('/manager/club-requests/count')
     def club_request_count(request: Request):
         if not is_manager(request):
@@ -132,7 +153,7 @@ def install_account_routes(app, get_current_user):
         user=get_current_user(request)
         if not user:
             return RedirectResponse('/signin_login',status_code=303)
-        forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {PLANS[plan]["name"]} free</button></form>' for plan in ('player','host_starter','host_pro'))
+        forms=''.join(f'<form method="post" action="/account/test-membership"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="plan" value="{plan}"><button class="tr-button" type="submit">Try {display_name(plan)} free</button></form>' for plan in PLANS if selectable(plan))
         body=f'<p class="tr-page-intro">Manager-only test tools for {escape(user["email"])}. No payment or automatic renewal.</p><section class="tr-info-card"><h2>Test the customer experience</h2><p>Host opens your dashboard so you can submit your own club request, approve it in Club requests and check the resulting subscription and monitoring lists. Player lets you check the player account.</p>{forms}<p>Only your current account changes. Staff permissions stay the same. Existing membership details are backed up when you first enter test mode.</p><a class="tr-button" href="/profile">My account</a></section>'
         if request.query_params.get('host_reset') == 'done':
             body = '<p role="status" class="tr-host-notification">Your Host status, club request and placement have been reset. Your account, connected sign-in methods and manager access are preserved. Choose a Host plan below to start again.</p>' + body
@@ -169,7 +190,7 @@ def install_account_routes(app, get_current_user):
     @app.post("/account/test-membership")
     def test_membership(request: Request, plan: str = Form(""), csrf: str = Form("")):
         user = permitted(request, csrf, allow_bootstrap=plan == "reset")
-        if not user or plan not in ("reset", "player", "host", "host_starter", "host_pro"):
+        if not user or (plan != "reset" and not selectable(plan)):
             return HTMLResponse("Membership preview is not available for this account.", status_code=403)
         selected_product = product_key(plan)
         base_plan = PLANS[selected_product]["role"] if plan != "reset" else "inactive"
@@ -218,7 +239,7 @@ def install_account_routes(app, get_current_user):
                 days = max(0, int(user.get('days_left') or 0))
                 period = f'<span class="tr-host-remaining" role="status" aria-label="{days} days remaining" style="display:inline-flex;align-items:center;gap:10px;padding:12px 18px;margin:4px 0 12px;border:1px solid #77c5a480;border-radius:12px;background:linear-gradient(135deg,#294c40,#203c38);color:#d3f5e3"><strong style="font-size:28px;line-height:1">{days}</strong><span style="font-weight:600">days remaining</span></span><br>Service started: {safe(user.get("plan_started_at") or "Not recorded")}. Valid until {safe(user.get("plan_expires_at") or "Not recorded")}.'
             next_step = 'Your existing service dates are shown above. The operator reviews your request and maintains table information manually.'
-        if user.get('membership_test_enabled') and club.get('status') != 'approved':
+        if (user.get('membership_test_enabled') or user.get('_friends_preview')) and club.get('status') != 'approved':
             period = 'Host test access is available. Your club placement period has not started.'
             next_step = 'Submit your club details below to start a new review.' if not club else 'Your request is being reviewed. Approval will start the club placement period.'
         if club.get('deleted_at'):
@@ -234,7 +255,7 @@ def install_account_routes(app, get_current_user):
                             and club.get('submitted_at')
                             and user.get('host_approved_submission') == club.get('submitted_at'))
         notification = f'<p class="tr-host-notification" role="status">{safe(user.get("host_notification"))}</p>' if current_approval and user.get('host_notification') else ''
-        test_notice = '<p class="tr-muted">Private free test - no payment was taken. Test dates are separate from paid club placement.</p>' if user.get("membership_test_enabled") else ""
+        test_notice = '<p class="tr-muted">Friends preview: Host access is free. Your own club request still needs manager review before publication. Paid membership data stays saved.</p>' if user.get('_friends_preview') else '<p class="tr-muted">Private free test - no payment was taken. Test dates are separate from paid club placement.</p>' if user.get("membership_test_enabled") else ""
         body = f'''<p class="tr-page-intro">Your club, listing request and membership in one place.</p>{test_notice}{notification}{progress}<section class="tr-info-card tr-host-club"><h2>Your club</h2><p>{host_name(user)} · up to {table_limit(user)} active tables</p>{"<p><strong>"+safe(club.get("club_name"))+"</strong> · "+safe(club.get("application"))+(" · "+safe(club.get("currency")) if club.get("currency") else "")+" · Code: "+safe(club.get("club_code"))+"</p>" if club else ""}<p>Status: <strong class="{status_class}">{club_status}</strong></p>{review_note}<p>One club per Host account. Submitting details does not publish tables or join a poker club. The operator reviews the request and updates table information manually.</p>{render_host_listing_notice(host_tier(user))}<details class="tr-host-edit" {"" if club else "open"}><summary>{"Edit club details" if club else "Submit club details"}</summary><form method="post" action="/host/club"><input type="hidden" name="csrf" value="{csrf}"><p><label>Your name or screen name *<br><input name="owner_name" required maxlength="100" autocomplete="nickname" value="{safe(club.get('owner_name'))}"></label></p><p><label>Telegram *<br><input name="telegram" required maxlength="80" placeholder="@yourname" value="{safe(club.get('telegram'))}"></label></p><p><label>Club name *<br><input name="club_name" required maxlength="120" value="{safe(club.get('club_name'))}"></label></p><p><label>Application<br><select name="application">{''.join(f'<option{chr(32)+"selected" if club.get("application")==name else ""}>{name}</option>' for name in ('ClubGG','X Poker','PPPoker','Other'))}</select></label></p><p><label>Game currency *<br>{currency_input(club.get("currency"))}</label></p><p><label>Club ID *<br><input name="club_code" required maxlength="80" value="{safe(club.get('club_code'))}"></label></p><p><label>Notes for the operator *<br><textarea name="notes" required maxlength="1000" aria-describedby="club-notes-help" placeholder="Describe club terms, rules and rakeback. If no rakeback is offered, please say so.">{safe(club.get('notes'))}</textarea></label><small id="club-notes-help" class="tr-muted">Include your club terms, rules and rakeback. If no rakeback is offered, please say so.</small></p><label style="display:flex;align-items:flex-start;gap:10px;margin:18px 0"><input type="checkbox" name="listing_conditions" value="accepted" required {"checked" if club.get("listing_policy_version")=="2026-10-23" and club.get("listing_policy_tier", "pro")==host_tier(user) else ""} style="width:18px;min-height:18px;margin:3px 0 0;flex-shrink:0"><span>* I agree to the Host listing conditions above: up to {table_limit(user)} eligible tables, $0.50/$1 minimum blinds and no heads-up tables.</span></label><button class="tr-button" type="submit">{'Update club request' if club else 'Submit club for review'}</button><p class="tr-muted">* Required fields</p></form></details></section>'''
         return page("Host dashboard", body, user)
 

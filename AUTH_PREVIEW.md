@@ -8,6 +8,24 @@ Unverified email addresses are **not** marked verified. Existing passwords,
 duplicate-account checks, paid access and trial entitlement rules are preserved.
 Setting `FRIENDS_PREVIEW_ENABLED=false` restores the existing confirmation gate.
 
+During this preview, all signed-in accounts can choose Player or Host in My
+Account without payment. `friends_preview_role` is stored separately; effective
+membership is overlaid only while preview is enabled. Paid plan, dates, staff
+roles and subscriptions are not overwritten by switching. Host club publication
+still needs manager review; choosing Host never grants staff permissions. New
+crypto checkout is paused while the preview is active; existing orders can still
+be checked and settled. Preview club approvals store their placement metadata
+separately from paid membership.
+
+Host Starter is retained in `PLANS` and historical orders/entitlements but hidden
+from all offers and blocked for new checkout, orders and manager test selection.
+`HIDDEN_PLANS` controls availability. Host Pro keeps its internal `host_pro` key,
+price and 20-table coverage, but its public display name is Host. Existing Starter
+owners retain their 6-table paid entitlement (public label Host).
+
+Additional checks: `python -m unittest test_public_membership_preview -v` and
+`FRIENDS_PREVIEW_ENABLED=false python test_membership_tiers.py`.
+
 ## Validation
 
 Install `requirements.txt`, then run:
