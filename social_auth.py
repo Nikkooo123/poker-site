@@ -3,6 +3,7 @@ import logging
 import os
 import secrets
 import time
+from authlib.integrations.base_client.errors import OAuthError
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
@@ -129,12 +130,25 @@ def install_social_routes(app, get_current_user):
                 from staff_access import record_customer_login
                 await run_in_threadpool(record_customer_login,user['email'])
             from player_access import enabled, entitled
-            destination = '/profile' if connect else '/verify-account' if enabled() and not entitled(user) else '/'
+            from player_access import friends_preview_enabled
+            destination = '/profile' if connect else '/verify-account' if enabled() and not friends_preview_enabled() and not entitled(user) else '/'
             response=RedirectResponse(destination,status_code=303)
             response.headers.update({'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
             return response
         except store.PublicAuthError as error:
             return failure(str(error))
+        except OAuthError as error:
+            # Never log descriptions, codes, tokens, query strings or user claims.
+            reason = error.error if error.error in {
+                'invalid_client', 'invalid_grant', 'access_denied',
+                'mismatching_state', 'invalid_request', 'unauthorized_client',
+            } else 'oauth_error'
+            logging.getLogger(__name__).warning('Social sign-in callback failed: provider=%s reason=%s', provider, reason)
+            if reason == 'access_denied':
+                return failure('Sign-in was cancelled or Google access was denied. Try again or use email and password.')
+            if reason in ('invalid_client', 'unauthorized_client'):
+                return failure('The sign-in provider configuration needs attention. Use email and password or contact support.',503)
+            return failure('Sign-in expired or could not be verified. Start again or use email and password.')
         except Exception as error:
             logging.getLogger(__name__).warning('Social sign-in callback failed: %s',type(error).__name__)
             return failure('Sign-in could not be verified. Start again or use email and password.')
