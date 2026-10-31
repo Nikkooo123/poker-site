@@ -53,6 +53,14 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
     with repository.connection() as conn:
         row=conn.execute('SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE',(email,)).fetchone()
         user=dict(row[0]) if row else {}
+        from player_access import friends_preview_enabled
+        preview = friends_preview_enabled() and user.get('friends_preview_role') == 'host'
+        saved_membership = {key: user[key] for key in (
+            'plan', 'role', 'is_active', 'days_left', 'auto_renew', 'membership_expires_at',
+            'plan_started_at', 'plan_expires_at', 'test_expires_at', 'membership_source',
+            'host_service_state', 'host_paid_days', 'host_launched_at', 'host_approved_submission',
+            'manual_subscription_id', 'host_notification') if key in user}
+        preview_host = (user.get('friends_preview_host') or {}) if preview else {}
         club=user.get('club_application') or {}
         if not club or club.get('deleted_at') or club.get('submitted_at','') != submitted_at or (not approve and club.get('status') != 'approved'):
             raise ValueError('The request changed. Reload the review page.')
@@ -60,7 +68,7 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
         if approve:
             club=reviewed_request(club,status='approved',review_note=review_note.strip(),reviewed_at=now.isoformat())
             user['club_application']=club
-        if user.get('host_approved_submission') == submitted_at or (not approve and user.get('host_service_state') == 'live'):
+        if preview_host.get('host_approved_submission', user.get('host_approved_submission')) == submitted_at or (not approve and preview_host.get('host_service_state', user.get('host_service_state')) == 'live'):
             if approve:
                 conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s',(Jsonb(user),email))
             return False
@@ -71,14 +79,14 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
             active=(user.get('plan')=='host' and user.get('is_active') is True and expiry>now)
         except (ValueError,TypeError):
             pass
-        if not preparing and not (approve and active):
+        if not preparing and not (approve and (active or preview)):
             raise ValueError('Confirmed Host access is required before approving a listing.')
         if not all(str(club.get(key) or '').strip() for key in ('owner_name','telegram','club_name','club_code','application')):
             raise ValueError('The owner must provide their name or screen name, Telegram, club name and Club ID before approval.')
         currency = normalize_currency(club.get('currency'))
         days=int(user['host_paid_days']) if preparing else 30
         expiry=now+timedelta(days=days)
-        sub_id=user.get('manual_subscription_id')
+        sub_id=preview_host.get('manual_subscription_id', user.get('manual_subscription_id'))
         sub=conn.execute("SELECT id FROM club_subscriptions WHERE id=%s AND lower(trim(owner_email))=%s AND plan='host' FOR UPDATE",(sub_id,email)).fetchone() if sub_id else None
         if not sub:
             matches=conn.execute("SELECT id FROM club_subscriptions WHERE lower(trim(owner_email))=%s AND plan='host' AND status IN ('active','preparing') ORDER BY id DESC FOR UPDATE",(email,)).fetchall()
@@ -97,6 +105,18 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
                     host_notification=f"Your club request was approved and your placement is active. Your service period started on {now.strftime('%d/%m/%Y')}.")
         if user.get('membership_test_enabled'):
             user.update(test_expires_at=expiry.isoformat(),membership_source='manager')
+        if preview:
+            preview_keys = ('host_service_state', 'host_launched_at', 'host_approved_submission',
+                            'manual_subscription_id', 'host_notification', 'plan_started_at', 'plan_expires_at', 'days_left')
+            user['friends_preview_host'] = {key: user[key] for key in preview_keys if key in user}
+            for key in ('plan', 'role', 'is_active', 'days_left', 'auto_renew', 'membership_expires_at',
+                        'plan_started_at', 'plan_expires_at', 'test_expires_at', 'membership_source',
+                        'host_service_state', 'host_paid_days', 'host_launched_at', 'host_approved_submission',
+                        'manual_subscription_id', 'host_notification'):
+                if key in saved_membership:
+                    user[key] = saved_membership[key]
+                else:
+                    user.pop(key, None)
         conn.execute('UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s',(Jsonb(user),email))
         return True
 

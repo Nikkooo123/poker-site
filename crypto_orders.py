@@ -1,4 +1,4 @@
-from membership_plans import PLANS, product, product_key, host_tier
+from membership_plans import selectable, display_name, PLANS, product, product_key, host_tier
 """Persistent one-time payment orders. No grant until verified provider settlement."""
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -21,7 +21,7 @@ def initialize():
 
 
 def create(email, plan, coin, network, environment='sandbox'):
-    if plan not in PRICES:
+    if plan not in PRICES or not selectable(plan):
         raise ValueError('Unknown membership')
     if environment not in ('sandbox','production'):
         raise ValueError('Invalid payment environment')

@@ -1,4 +1,5 @@
 from membership_plans import PLANS
+from player_access import friends_preview_enabled
 from html import escape
 from brand import BRAND_NAME, SUPPORT_EMAIL, TELEGRAM_URL, render_brand_logo, render_site_theme, render_site_footer
 
@@ -9,6 +10,8 @@ CONTACT_TELEGRAM = TELEGRAM_URL
 
 def _shell(title: str, content: str, user=None) -> str:
     from auth.profile_view import render_account_menu
+    if friends_preview_enabled():
+        content = '<p class="tr-page-intro">Friends preview: choose Player or Host free in <a href="/profile">My Account</a>. No payment is required. Listed paid-service prices and conditions apply when paid plans return.</p>' + content
     account = render_account_menu(user) if user else '<a class="tr-button" href="/signin_login">Sign in →</a>'
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -39,7 +42,7 @@ def render_about_page(user=None):
         ('What we provide', 'Browse game formats, table features, blinds, player counts and club contact details. Use filters and favourites to find the tables that interest you. Registered club owners can submit their club information for review.'),
         ('Our role', 'We publish information and help people find the appropriate club contact. Memberships pay for access to our information service; Host memberships pay for club listing and monitoring. TableRadar does not operate the listed clubs or host their games. Each independent club sets its own game rules.'),
         ('How listings work', 'Our team reviews club submissions and maintains table information manually. Availability and settings can change, so check the current details with the club before joining.'),
-        ('Host coverage', 'Add your own club to the directory: Host Starter covers up to 6 active tables; Host Pro covers up to 20. Both cover blinds of $0.50/$1 or higher and exclude heads-up tables. An active table has at least one seated player; an open but empty table does not count. We prioritise eligible tables with higher blinds and more seated players. Choose Host Pro for more than 6 tables; contact Live Chat or Telegram @tableradar for coverage beyond 20.'),
+        ('Host coverage', 'Add your own club to the directory: Host covers up to 20 active tables. It covers blinds of $0.50/$1 or higher and exclude heads-up tables. An active table has at least one seated player; an open but empty table does not count. We prioritise eligible tables with higher blinds and more seated players. Contact Live Chat or Telegram @tableradar for coverage beyond 20.'),
         ('Talk to us', 'For help with your TableRadar account, the directory or a club listing, use Contact or Live Chat. Questions about a game or club access should go to that club’s contact.'),
     ], user=user)
 
@@ -51,7 +54,7 @@ def render_terms_page(user=None) -> str:
         ('3. Information and availability', 'Table details are maintained manually and may change between updates. Formats, player counts and availability are provided for reference. Confirm the current details and rules with the club.'),
         ('4. Your account', 'Keep your sign-in details secure and provide accurate information. Do not share access, impersonate another person, submit misleading listings or misuse other users’ information. Access to account features depends on the service option shown in your profile.'),
         ('5. Club listings', 'Club submissions are reviewed before placement. Service status and the listing period appear in the Host dashboard. Owners should keep their contact and club details current. TableRadar may correct, decline or remove inaccurate or inappropriate listings.'),
-        ('Host listing coverage', 'Host Starter covers up to 6 active tables per club; Host Pro covers up to 20. Both cover blinds of $0.50/$1 or higher. An active table has at least one seated player; an open but empty table does not count. When a club exceeds its plan limit, we prioritise eligible tables with higher blinds and more seated players. Heads-up (one-on-one) tables are excluded. Choose Host Pro for coverage beyond 6 tables. For more than 20 tables, contact Live Chat or Telegram @tableradar.'),
+        ('Host listing coverage', 'Host covers up to 20 active tables per club. It covers blinds of $0.50/$1 or higher. An active table has at least one seated player; an open but empty table does not count. When a club exceeds its plan limit, we prioritise eligible tables with higher blinds and more seated players. Heads-up (one-on-one) tables are excluded. For more than 20 tables, contact Live Chat or Telegram @tableradar.'),
         ('Player trial and payment methods', 'An active 14-day Player Free Trial after email and phone verification includes club and table details and Join. A paid membership is required after the trial ends. Registration or verification alone does not start a trial. Each phone number can receive one trial. Host has no free trial and supports cryptocurrency payment only. Player payment methods are cryptocurrency and, when connected, bank card and PayPal; unavailable methods cannot process payments.'),
         ('6. Responsible use', 'Use the directory only where permitted and meet the applicable age requirements, including a minimum age of 18. You are responsible for checking the rules of any third-party club or application you choose to use.'),
         ('7. Service support and updates', 'TableRadar is responsible for the security of its own service and for the official support it provides. Contact us about your account or a directory listing. Independent clubs are responsible for their own actions, games and arrangements. Contact the club about those matters. The directory and these conditions may be updated as the service develops.'),
@@ -66,8 +69,8 @@ def render_faq_page(user=None) -> str:
         ('What do the table icons mean?', 'Icons describe features selected for a table, such as VPIP, Bomb Pot, Double Board or Squid Game. Hover over a feature to see its label. Availability and rules depend on the club and application.'),
         ('What does My Account include?', 'Your profile, account security, favourites and available service options. Verify your email and phone, then start your 14-day Player Free Trial to view club and table details and join clubs. Verification may be unavailable while delivery services are being configured. Host listing requires a separate paid Host plan.'),
         ('What does the Host dashboard show?', 'Club owners with Host access can submit their club information and follow its review, preparation and placement status. The service countdown begins when the listing is approved and activated.'),
-        ('What membership plans are available?', f"Player: ${PLANS['player']['price']} for 30 days. Host Starter: $299 for up to 6 active tables in one club. Host Pro: $599 for up to 20 active tables in one club. Host plans also cover 30 days. Payment methods remain unavailable until their service is configured."),
-        ('How many tables does Host coverage include?', 'Host Starter covers up to 6 active tables per club; Host Pro covers up to 20. Both cover blinds of $0.50/$1 or higher. An active table has at least one seated player; an open but empty table does not count. We prioritise eligible tables with higher blinds and more seated players, and exclude heads-up tables. Choose Host Pro for coverage beyond 6 tables; for more than 20, contact Live Chat or Telegram @tableradar.'),
+        ('What membership plans are available?', f"Player: ${PLANS['player']['price']} for 30 days. Host: $599 for up to 20 active tables in one club. Host plans also cover 30 days. Payment methods remain unavailable until their service is configured."),
+        ('How many tables does Host coverage include?', 'Host covers up to 20 active tables per club. It covers blinds of $0.50/$1 or higher. An active table has at least one seated player; an open but empty table does not count. We prioritise eligible tables with higher blinds and more seated players, and exclude heads-up tables. For more than 20 tables, contact Live Chat or Telegram @tableradar.'),
         ('What are TableRadar Official and Club Official?', 'TableRadar Official is our official information and support contact. We are responsible for our own service and official assistance. Club Official is the independent club’s own contact; its actions and game arrangements remain the club owner’s responsibility.'),
         ('How can I get help?', 'Use Contact or Live Chat for TableRadar account and listing questions. For questions about a particular game, contact the club directly.'),
     ]

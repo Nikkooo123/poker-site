@@ -23,6 +23,8 @@ def remaining(user):
 def entitled(user):
     if not user:
         return False
+    if friends_preview_enabled() and user.get('friends_preview_role') in ('player', 'host'):
+        return True
     if user.get('staff_role') in ('manager', 'table_admin'):
         return True
     if user.get('verification_required') and not user.get('email_verified_at'):
@@ -54,7 +56,7 @@ def directory_access(user):
 def join_access(user):
     """Active verified 14-day trial includes Join; paid and staff access remains."""
     if friends_preview_enabled():
-        return bool(user and user.get('staff_role') == 'manager')
+        return bool(user and (user.get('staff_role') == 'manager' or user.get('friends_preview_role') in ('player', 'host')))
     return directory_access(user)
 
 

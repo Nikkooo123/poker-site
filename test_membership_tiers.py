@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 from contextlib import contextmanager
 from fastapi import FastAPI
-from membership_plans import PLANS,host_product,table_limit
+from membership_plans import PLANS,host_product,table_limit,selectable,display_name
 from brand import render_host_listing_notice
 from auth.profile_view import render_profile,render_payment_page
 from payment_choices import membership_payment_page
@@ -28,19 +28,21 @@ for tier,limit in (('starter',6),('pro',20)):
   assert 'Live Chat' in text and 'Telegram' in text
 for user in ({'email':'fixture@example.test'}, {'email':'fixture@example.test','plan':'host','host_tier':'starter','is_active':True}, {'email':'fixture@example.test','plan':'host','is_active':True,'membership_test_enabled':True,'_can_test':True}):
  html=render_profile(user)
- assert all(f'data-plan="{key}"' in html for key in PLANS)
- assert all(price in html for price in ('$29','$299','$599')) and '$29.99' not in html
- assert '$600' not in html and 'host_starter' in html and 'host_pro' in html
-for key in PLANS:
+ assert all(f'data-plan="{key}"' in html for key in PLANS if selectable(key))
+ assert 'data-plan="host_starter"' not in html and 'Host Starter' not in html
+ assert '$299' not in html
+ assert all(price in html for price in ('$29','$599')) and '$29.99' not in html
+ assert '$600' not in html and 'host_pro' in html
+for key in (key for key in PLANS if selectable(key)):
  request=SimpleNamespace(session={})
  user={'email':'fixture@example.test','email_verified_at':'yes'}
  text=membership_payment_page(request,user,key).body.decode()
- assert PLANS[key]['name'] in text and PLANS[key]['price'] in text
+ assert display_name(key) in text and PLANS[key]['price'] in text
  if key!='player':assert f"{PLANS[key]['table_limit']} active tables" in text
  with patch('crypto_checkout.CryptopayClient') as client:
   client.return_value.ready.return_value=False
   text=checkout_page(request,user,key).body.decode()
-  assert PLANS[key]['name'] in text and PLANS[key]['price'] in text
+  assert display_name(key) in text and PLANS[key]['price'] in text
   assert 'Crypto checkout unavailable' in text
 class Cursor:
  def __init__(self,tier,count):self.tier=tier;self.count=count;self.stage=0
@@ -60,7 +62,7 @@ class Conn:
 @contextmanager
 def connection():yield Conn()
 with patch.object(orders.repository,'connection',connection):
- for key in ('player','host_starter','host_pro','host'):
+ for key in ('player','host_pro','host'):
   order=orders.create('fixture@example.test',key,'BTC','bitcoin')
   assert order['price_amount']==orders.PRICES[key]
   assert order['plan']==('player' if key=='player' else 'host')
@@ -68,13 +70,13 @@ with patch.object(orders.repository,'connection',connection):
 app=FastAPI();fixture={'email':'fixture@example.test'}
 accounts.install_account_routes(app,lambda request:fixture)
 endpoint=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/account/test-membership')
-for key,tier in (('host_starter','starter'),('host_pro','pro')):
+for key,tier in (('host_pro','pro'),):
  request=SimpleNamespace(session={'account_csrf':'token'})
  with patch.object(accounts,'is_manager',return_value=True),patch.object(accounts,'update_user') as save:
   result=endpoint(request,plan=key,csrf='token')
   assert result.status_code==303
   assert save.call_args.kwargs['plan']=='host' and save.call_args.kwargs['host_tier']==tier
-print('PASS: 3 profile cards, prices/terms, legacy Host->Pro, all payment/crypto pages offline, capacity boundaries, order product snapshots, manager preview tier mapping')
+print('PASS: 2 visible profile cards, prices/terms, legacy Host->Pro, all payment/crypto pages offline, capacity boundaries, order product snapshots, manager preview tier mapping')
 
 # Real grant path with in-memory transaction doubles; never calls a provider/DB.
 class Row:
@@ -114,7 +116,7 @@ host_page=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host')
 request=SimpleNamespace(session={'account_csrf':'token'})
 with patch.object(accounts,'account_context',side_effect=lambda r,u:dict(u,_csrf='token')):
  body=host_page(request)
- assert 'Host Starter' in body and 'up to 6 eligible tables' in body and '6 active tables per club' in body
+ assert 'Host Starter' not in body and 'Host ·' in body and 'up to 6 eligible tables' in body and '6 active tables per club' in body
  assert 'Notes for the operator *' in body and '<textarea name="notes" required' in body
  assert 'club terms, rules and rakeback' in body
 submit=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host/club')
