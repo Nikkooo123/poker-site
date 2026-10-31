@@ -38,6 +38,7 @@ from payment_choices import membership_payment_page, install_payment_choice_rout
 import player_access
 import verification_delivery
 from support_chat import install_support_routes
+from telegram_support import install_routes as install_telegram_routes
 from crypto_checkout import checkout_page, install_crypto_routes
 
 app = FastAPI()
@@ -527,6 +528,7 @@ install_social_routes(app, get_current_user)
 install_verification_routes(app, get_current_user)
 install_payment_choice_routes(app, get_current_user)
 install_support_routes(app, get_current_user)
+install_telegram_routes(app, get_current_user)
 install_crypto_routes(app, get_current_user)
 
 

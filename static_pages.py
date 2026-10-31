@@ -22,8 +22,11 @@ def _shell(title: str, content: str, user=None) -> str:
 
 
 def render_contact_page(user=None) -> str:
-    telegram = CONTACT_TELEGRAM if CONTACT_TELEGRAM.startswith('https://t.me/') and 'your_telegram_username' not in CONTACT_TELEGRAM else ''
-    telegram_html = f'<p class="tr-muted">Telegram</p><a class="tr-button" href="{escape(telegram)}" target="_blank" rel="noopener noreferrer">Telegram @{escape(telegram.rsplit("/",1)[-1])} ↗</a>' if telegram else '<p class="tr-muted">Telegram contact will be available here once configured.</p>'
+    from telegram_support import contact_url
+    telegram = contact_url()
+    bot_ready = telegram == '/telegram/contact'
+    label = 'Message TableRadar Support' if bot_ready else 'Telegram @' + telegram.rsplit('/', 1)[-1]
+    telegram_html = f'<p class="tr-muted">Telegram</p><a class="tr-button" href="{escape(telegram)}" target="_blank" rel="noopener noreferrer">{escape(label)} ↗</a>'
     return _shell('Contact', f"""<h1 class="tr-page-title">Let's get in touch.</h1>
     <p class="tr-page-intro">Questions about your membership or listing your club? Contact TableRadar.</p>
     <div class="glass" style="padding:28px;border-radius:22px"><h2 style="font-size:21px;font-weight:600;margin-top:0">Contact the team</h2>

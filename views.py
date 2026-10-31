@@ -366,7 +366,8 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     overlay_color = _network_overlay_color(network)
 
     affiliate_name = escape(normalize_affiliate_name(_safe(table.get("affiliate_name", OFFICIAL_AFFILIATE_NAME))))
-    affiliate_telegram = escape(TELEGRAM_URL if affiliate_name == OFFICIAL_AFFILIATE_NAME and can_join else _safe(table.get("affiliate_telegram", "")))
+    from telegram_support import contact_url
+    affiliate_telegram = escape(contact_url(table_id) if affiliate_name == OFFICIAL_AFFILIATE_NAME and can_join else _safe(table.get("affiliate_telegram", "")))
     owner_name = escape(_safe(table.get("owner_name", f"{_safe(table.get('club', 'Club'))} Official")))
     owner_telegram = escape(_safe(table.get("owner_telegram", "")))
 
