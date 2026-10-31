@@ -1,7 +1,7 @@
 from membership_plans import PLANS
 from player_access import friends_preview_enabled
 from html import escape
-from brand import BRAND_NAME, SUPPORT_EMAIL, TELEGRAM_URL, render_brand_logo, render_site_theme, render_site_footer
+from brand import BRAND_NAME, SUPPORT_EMAIL, INFO_EMAIL, TELEGRAM_URL, render_brand_logo, render_site_theme, render_site_footer
 
 BUSINESS_NAME = BRAND_NAME
 CONTACT_EMAIL = SUPPORT_EMAIL
@@ -27,7 +27,8 @@ def render_contact_page(user=None) -> str:
     return _shell('Contact', f"""<h1 class="tr-page-title">Let's get in touch.</h1>
     <p class="tr-page-intro">Questions about your membership or listing your club? Contact TableRadar.</p>
     <div class="glass" style="padding:28px;border-radius:22px"><h2 style="font-size:21px;font-weight:600;margin-top:0">Contact the team</h2>
-    <p class="tr-muted">Email</p><a href="mailto:{escape(CONTACT_EMAIL)}" style="color:#a8d8c4;overflow-wrap:anywhere">{escape(CONTACT_EMAIL)}</a>
+    <p class="tr-muted">Support</p><a href="mailto:{escape(CONTACT_EMAIL)}" style="color:#a8d8c4;overflow-wrap:anywhere">{escape(CONTACT_EMAIL)}</a>
+    <p class="tr-muted">General enquiries</p><a href="mailto:{escape(INFO_EMAIL)}" style="color:#a8d8c4;overflow-wrap:anywhere">{escape(INFO_EMAIL)}</a>
     {telegram_html}<h2 style="font-size:21px;font-weight:600;margin-top:26px">Live chat</h2><p class="tr-muted">Message our administrators and managers. Sign in to save your conversation and receive replies here.</p><button class="tr-button" type="button" data-open-live-chat>Open Live Chat</button></div>""", user=user)
 
 
