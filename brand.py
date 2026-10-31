@@ -7,6 +7,7 @@ BRAND_DOMAIN = "tableradar.net"
 # если нужно — потом поменяешь
 TELEGRAM_URL = "https://t.me/tableradar"
 SUPPORT_EMAIL = f"support@{BRAND_DOMAIN}"
+INFO_EMAIL = f"info@{BRAND_DOMAIN}"
 
 
 def render_site_theme() -> str:
