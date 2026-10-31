@@ -65,5 +65,5 @@ def render_trial_notice(user):
 
 
 def needs_email_confirmation(user):
-    return bool(enabled() and user.get('verification_required') and not user.get('email_verified_at')
+    return bool(not friends_preview_enabled() and enabled() and user.get('verification_required') and not user.get('email_verified_at')
                 and user.get('staff_role') not in ('manager', 'table_admin'))

@@ -325,7 +325,7 @@ def signup(
     if password != confirm_password:
         return render_signup_page(error="Passwords do not match", user=get_current_user(request))
 
-    if player_access.enabled() and not verification_delivery.email_ready():
+    if player_access.enabled() and not player_access.friends_preview_enabled() and not verification_delivery.email_ready():
         return HTMLResponse(render_signup_page(error="Account verification is not configured yet. Please contact support.", user=get_current_user(request)), status_code=503)
     ok = create_user(username, email, password)
 
@@ -340,7 +340,7 @@ def signup(
     request.session["plan"] = user.get("plan", "inactive")
     request.session["is_active"] = "1" if user.get("is_active", False) else "0"
 
-    return RedirectResponse("/verify-account" if player_access.enabled() else "/", status_code=303)
+    return RedirectResponse("/verify-account" if player_access.enabled() and not player_access.friends_preview_enabled() else "/", status_code=303)
 
 @app.get("/signin_login", response_class=HTMLResponse)
 def signin_login_page(request: Request):
