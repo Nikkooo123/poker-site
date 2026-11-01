@@ -80,7 +80,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
             ('currency','Currency',sub.get('currency')),
             ('club_code','Club ID',sub.get('club_code') if sub.get('club_code') is not None else sub.get('request_club_code')),
         ):
-            edit_fields += f'<label>{label}<input name="{key}" value="{escape(_safe(value),quote=True)}" maxlength="320" placeholder="Optional" style="width:100%;box-sizing:border-box"></label>'
+            edit_fields += f'<label style="font-size:12px">{label}<input name="{key}" value="{escape(_safe(value),quote=True)}" maxlength="320" placeholder="Optional" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px"></label>'
         app_value = ''.join(ch for ch in _safe(sub.get('application')).lower() if ch.isalnum())
         app_options = ''.join(f'<option value="{value}"'+(' selected' if app_value==key else '')+f'>{label}</option>' for key,value,label in
             (('','','Not set'),('pppoker','PP Poker','PP Poker'),('pokerbros','Poker Bros','Poker Bros'),('clubgg','Club GG','Club GG'),('xpoker','X Poker','X Poker')))
@@ -175,10 +175,10 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                 <summary style="cursor:pointer">Edit club details</summary>
                 <form method="post" action="/admin/club-subscriptions/{sub_id}/edit" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px">{token}
                     {edit_fields}
-                    <label>Application<select name="application" style="width:100%">{app_options}</select></label>
+                    <label style="font-size:12px">Application<select name="application" style="display:block;width:100%;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px">{app_options}</select></label>
                     <label style="grid-column:1/-1">Notes<textarea name="notes" maxlength="4000" style="width:100%;box-sizing:border-box">{escape(_safe(sub.get('notes')))}</textarea></label>
                     <p style="grid-column:1/-1;margin:0;font-size:12px">All fields are optional. Set currency and application before adding tables. Contact changes update this club's tables; changing the contact email does not change account sign-in or membership. Use Extend above to add service days.</p>
-                    <button type="submit">Save club details</button>
+                    <button type="submit" style="min-height:40px;border:1px solid #76998c;border-radius:8px;background:#285d47;color:#eef8f0;font-weight:700;padding:8px 16px;cursor:pointer">Save club details</button>
                 </form>
             </details>
         </div>
