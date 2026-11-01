@@ -8,6 +8,7 @@ from club_subscriptions_storage import (
     load_club_subscriptions,
     load_active_operator_clubs,
     add_club_subscription,
+    edit_club_subscription,
     extend_club_subscription,
     disable_club_subscription,
     delete_club_subscription,
@@ -463,6 +464,8 @@ def admin_add_club_subscription(
     plan: str = Form("host"),
     duration_days: str = Form(""),
     notes: str = Form(""),
+    currency: str = Form(""),
+    club_code: str = Form(""),
     csrf: str = Form(""),
 ):
     check = require_manager(request)
@@ -481,11 +484,33 @@ def admin_add_club_subscription(
             plan=plan,
             duration_days=duration_days,
             notes=notes,
+            currency=currency,
+            club_code=club_code,
         )
     except ValueError as error:
         return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
 
     return RedirectResponse(url="/admin/club-subscriptions", status_code=303)
+
+
+@app.post("/admin/club-subscriptions/{subscription_id}/edit")
+def admin_edit_club_subscription(request: Request, subscription_id: int,
+    club_name: str = Form(''), owner_name: str = Form(''), owner_telegram: str = Form(''),
+    owner_email: str = Form(''), application: str = Form(''), currency: str = Form(''),
+    club_code: str = Form(''), notes: str = Form(''), csrf: str = Form('')):
+    check = require_manager(request)
+    if check:
+        return check
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse('Refresh the page and try again.', status_code=403)
+    try:
+        edit_club_subscription(subscription_id, club_name=club_name,owner_name=owner_name,
+            owner_telegram=owner_telegram,owner_email=owner_email,application=application,
+            currency=currency,club_code=club_code,notes=notes)
+    except ValueError as error:
+        return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(),csrf,str(error),
+            user=get_current_user(request)),status_code=400)
+    return RedirectResponse('/admin/club-subscriptions',status_code=303)
 
 
 @app.post("/admin/club-subscriptions/{subscription_id}/extend")

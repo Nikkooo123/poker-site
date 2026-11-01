@@ -102,6 +102,8 @@ def init_club_subscriptions_db():
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS access_expires_at TIMESTAMPTZ;")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS manager_created BOOLEAN NOT NULL DEFAULT FALSE;")
+            cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS owner_contact_email TEXT;")
+            cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS club_code TEXT;")
         conn.commit()
 
     _DB_READY = True
@@ -114,9 +116,12 @@ def load_club_subscriptions():
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT
-                    *,
+                    c.*,
+                    (SELECT a.document->'club_application'->>'club_code' FROM tableradar_accounts a
+                     WHERE a.email=lower(trim(c.owner_email))
+                     AND a.document->>'manual_subscription_id'=c.id::text) AS request_club_code,
                     CASE WHEN access_expires_at IS NOT NULL THEN GREATEST(0, CEIL(EXTRACT(EPOCH FROM (access_expires_at - clock_timestamp())) / 86400))::int ELSE GREATEST(0, expires_at - CURRENT_DATE) END AS days_left
-                FROM club_subscriptions
+                FROM club_subscriptions c
                 ORDER BY
                     CASE
                         WHEN status = 'active' THEN 0
@@ -152,7 +157,7 @@ def load_active_operator_clubs():
     init_club_subscriptions_db()
     with _connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("""SELECT c.id,c.club_name,c.application,c.currency,c.expires_at,c.access_expires_at,
+            cur.execute("""SELECT c.id,c.club_name,c.application,c.currency,c.club_code,c.expires_at,c.access_expires_at,
                 a.document->>'host_tier' AS host_tier,
                 a.document->'club_application'->>'club_name' AS submitted_club,
                 a.document->'club_application'->>'application' AS submitted_application,
@@ -168,7 +173,7 @@ def load_active_operator_clubs():
         same_club=normalize(row['club_name'])==normalize(row['submitted_club']) and normalize(row['application'])==normalize(row['submitted_application'])
         result.append(dict(host_plan=host_name(row),table_limit=table_limit(row),subscription_id=row['id'],club_name=row['club_name'],application=row['application'],currency=normalize_currency(row.get('currency'),required=False),
                            expires_at_display=_date_display(row['expires_at']),
-                           club_code=row['submitted_code'] if same_club else ''))
+                           club_code=row.get('club_code') if row.get('club_code') is not None else (row['submitted_code'] if same_club else '')))
     return result
 
 
@@ -181,12 +186,15 @@ def add_club_subscription(
     plan: str = "host",
     duration_days: int = 30,
     notes: str = "",
+    currency: str = "",
+    club_code: str = "",
 ):
     init_club_subscriptions_db()
 
     # A manager-created placement is independent of customer registration/payment.
     # Missing contacts must never cause an account to be created or granted access.
     email = _safe(owner_email).strip().lower()
+    currency = normalize_currency(currency) if _safe(currency).strip() else ""
     plan = _safe(plan).strip().lower() or "host"
     if plan != "host":
         raise ValueError("Choose the Host plan or leave it blank.")
@@ -201,11 +209,46 @@ def add_club_subscription(
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""INSERT INTO club_subscriptions
-                (club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,notes,access_expires_at,manager_created)
-                VALUES (%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s,TRUE) RETURNING id""",
-                (_safe(club_name).strip(),_safe(owner_name).strip(),_safe(owner_telegram).strip(),email,_safe(application).strip(),now.date(),expiry.date(),_safe(notes).strip(),expiry))
+                (club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,notes,access_expires_at,manager_created,currency,club_code)
+                VALUES (%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s,TRUE,%s,%s) RETURNING id""",
+                (_safe(club_name).strip(),_safe(owner_name).strip(),_safe(owner_telegram).strip(),email,_safe(application).strip(),now.date(),expiry.date(),_safe(notes).strip(),expiry,currency,_safe(club_code).strip()))
             new_id = cur.fetchone()["id"]
     return new_id
+
+
+def edit_club_subscription(subscription_id, *, club_name="", owner_name="", owner_telegram="",
+                           owner_email="", application="", currency="", club_code="", notes=""):
+    """Edit listing metadata only; contact email never transfers an owner's account/access."""
+    init_club_subscriptions_db()
+    values = {key: _safe(value).strip() for key, value in dict(club_name=club_name,
+        owner_name=owner_name,owner_telegram=owner_telegram,owner_email=owner_email,
+        application=application,currency=currency,club_code=club_code,notes=notes).items()}
+    for key, value in values.items():
+        if len(value) > (4000 if key == 'notes' else 320):
+            raise ValueError("Club details are too long.")
+    values['currency'] = normalize_currency(currency) if values['currency'] else ''
+    from storage import _normalize_network
+    network = _normalize_network(application) if values['application'] else ''
+    if network and network not in ('clubgg', 'xpoker', 'pppoker', 'pokerbros'):
+        raise ValueError("Choose a supported application or leave it blank.")
+    import re
+    telegram = values['owner_telegram']
+    if re.fullmatch(r'@[A-Za-z0-9_]{3,64}', telegram):
+        telegram = 'https://t.me/' + telegram[1:]
+    if telegram and not re.fullmatch(r'https://t\.me/[A-Za-z0-9_]{3,64}/?', telegram):
+        raise ValueError("Use a Telegram @username or https://t.me/ link, or leave it blank.")
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM club_subscriptions WHERE id=%s FOR UPDATE", (int(subscription_id),))
+            if not cur.fetchone():
+                raise ValueError("This club no longer exists. Refresh the page.")
+            cur.execute("""UPDATE club_subscriptions SET club_name=%s,owner_name=%s,owner_telegram=%s,
+                owner_contact_email=%s,application=%s,currency=%s,club_code=%s,notes=%s,updated_at=NOW()
+                WHERE id=%s""", tuple(values[key] for key in ('club_name','owner_name','owner_telegram',
+                    'owner_email','application','currency','club_code','notes')) + (int(subscription_id),))
+            cur.execute("""UPDATE poker_tables SET club=%s,owner_name=%s,owner_telegram=%s,
+                network=%s,platform=%s,currency=%s,updated_at=NOW() WHERE club_subscription_id=%s""",
+                (values['club_name'],values['owner_name'],telegram,network,network,values['currency'],int(subscription_id)))
 
 
 def _request_matches_placement(user, club, sub):

@@ -61,13 +61,29 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
         delete_form = render_club_delete_form(f"/admin/club-subscriptions/{sub_id}/delete", csrf, _safe(sub.get("club_name")) or f"Untitled club #{sub_id}")
         owner_name = escape(_safe(sub.get("owner_name", "")))
         owner_telegram = escape(_safe(sub.get("owner_telegram", "")))
-        owner_email = escape(_safe(sub.get("owner_email", "")))
+        contact_email = sub.get('owner_contact_email')
+        if contact_email is None:
+            contact_email = sub.get('owner_email', '')
+        owner_email = escape(_safe(contact_email))
         application = escape(_safe(sub.get("application", "")))
         plan = escape(_safe(sub.get("plan", "")))
         started = escape(_safe(sub.get("started_at_display", "-")))
         expires = escape(_safe(sub.get("expires_at_display", "-")))
         days_left = int(sub.get("days_left", 0) or 0)
         display_status = _safe(sub.get("display_status", sub.get("status", "active")))
+        edit_fields = ''
+        for key, label, value in (
+            ('club_name','Club name',sub.get('club_name')),
+            ('owner_name','Owner name',sub.get('owner_name')),
+            ('owner_telegram','Owner Telegram',sub.get('owner_telegram')),
+            ('owner_email','Owner email',contact_email),
+            ('currency','Currency',sub.get('currency')),
+            ('club_code','Club ID',sub.get('club_code') if sub.get('club_code') is not None else sub.get('request_club_code')),
+        ):
+            edit_fields += f'<label>{label}<input name="{key}" value="{escape(_safe(value),quote=True)}" maxlength="320" placeholder="Optional" style="width:100%;box-sizing:border-box"></label>'
+        app_value = ''.join(ch for ch in _safe(sub.get('application')).lower() if ch.isalnum())
+        app_options = ''.join(f'<option value="{value}"'+(' selected' if app_value==key else '')+f'>{label}</option>' for key,value,label in
+            (('','','Not set'),('pppoker','PP Poker','PP Poker'),('pokerbros','Poker Bros','Poker Bros'),('clubgg','Club GG','Club GG'),('xpoker','X Poker','X Poker')))
 
         rows += f"""
         <div class="tr-subscription-row" style="
@@ -155,6 +171,16 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
 
                 {delete_form}
             </div>
+            <details style="grid-column:1/-1" class="tr-club-details">
+                <summary style="cursor:pointer">Edit club details</summary>
+                <form method="post" action="/admin/club-subscriptions/{sub_id}/edit" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px">{token}
+                    {edit_fields}
+                    <label>Application<select name="application" style="width:100%">{app_options}</select></label>
+                    <label style="grid-column:1/-1">Notes<textarea name="notes" maxlength="4000" style="width:100%;box-sizing:border-box">{escape(_safe(sub.get('notes')))}</textarea></label>
+                    <p style="grid-column:1/-1;margin:0;font-size:12px">All fields are optional. Set currency and application before adding tables. Contact changes update this club's tables; changing the contact email does not change account sign-in or membership. Use Extend above to add service days.</p>
+                    <button type="submit">Save club details</button>
+                </form>
+            </details>
         </div>
         """
 
@@ -315,6 +341,14 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                             </select>
                         </div>
 
+                        <div>
+                            <label style="font:700 12px Arial;color:#dce4db;">Currency</label>
+                            <input name="currency" maxlength="24" placeholder="USD, EUR… (optional)" style="width:100%;height:40px;box-sizing:border-box">
+                        </div>
+                        <div>
+                            <label style="font:700 12px Arial;color:#dce4db;">Club ID</label>
+                            <input name="club_code" maxlength="80" placeholder="Club ID (optional)" style="width:100%;height:40px;box-sizing:border-box">
+                        </div>
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Plan</label>
                             <select name="plan" style="

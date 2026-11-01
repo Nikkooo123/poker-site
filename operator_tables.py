@@ -39,15 +39,15 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
             try:
                 currency = normalize_currency(club.get('currency'))
             except ValueError:
-                raise ValueError("The club owner must provide the game currency and the manager must approve the updated club request before adding tables.") from None
+                raise ValueError("Set this club's Currency in Club subscriptions → Edit club details, then add the table again.") from None
             network = _normalize_network(club['application'])
             if network not in ('pppoker','pokerbros','clubgg','xpoker'):
                 raise ValueError("The manager must record a supported application for this club before tables can be added.")
             telegram = str(club.get('owner_telegram') or '').strip()
             if re.fullmatch(r'@[A-Za-z0-9_]{3,64}', telegram):
                 telegram = 'https://t.me/' + telegram[1:]
-            if not re.fullmatch(r'https://t\.me/[A-Za-z0-9_]{3,64}/?', telegram):
-                raise ValueError("The manager must save the club owner's Telegram in Club subscriptions before adding tables.")
+            if telegram and not re.fullmatch(r'https://t\.me/[A-Za-z0-9_]{3,64}/?', telegram):
+                raise ValueError("Set a Telegram @username or https://t.me/ link in Club subscriptions, or leave the contact blank.")
             return _insert_table(cur, dict(values, club_subscription_id=selected, currency=currency, game=game, tags=str(tags)[:250],
                 club=club['club_name'], network=network, affiliate_name=OFFICIAL_AFFILIATE_NAME,
                 affiliate_telegram=TELEGRAM_URL, owner_name=club['owner_name'], owner_telegram=telegram))
