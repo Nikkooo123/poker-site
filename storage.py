@@ -357,6 +357,8 @@ def inherit_club_currencies(rows, clubs):
             club = matches[0] if len(matches) == 1 else None
         if club:
             table['currency'] = normalize_currency(club.get('currency'), required=False)
+            # A verified legacy match also supplies the stable club identity.
+            table['club_subscription_id'] = club['id']
         result.append(table)
     return result
 
