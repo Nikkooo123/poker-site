@@ -1,5 +1,6 @@
 from player_access import friends_preview_enabled, join_access, directory_access, render_trial_notice, enabled as trial_enabled, remaining as trial_remaining
 from directory_preferences import saved_filters
+from favorite_clubs import club_record, club_catalogue, catalogue_attribute, render_club_controls, render_club_styles, render_club_script
 import json
 import secrets
 from currency_codes import normalize_currency, currency_badge
@@ -362,6 +363,9 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     tags_raw = _safe(table.get("tags", ""))
 
     network = _network_from_table(table)
+    club_identity = club_record(dict(table, network=network)) if show_club else None
+    club_key = escape(club_identity["key"], quote=True) if club_identity else ""
+    club_fav_button = f'<button type="button" class="tr-club-fav-toggle" data-club-key="{club_key}" data-club-name="{club_name}" aria-label="Save club to My clubs" aria-pressed="false">☆</button>' if club_identity else ""
     network_label = _network_label(network)
     overlay_color = _network_overlay_color(network)
 
@@ -391,6 +395,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
          data-id="{table_id}"
          data-game="{escape(game)}"
          data-club="{club_name.lower()}"
+         data-club-key="{club_key}"
          data-network="{escape(network)}"
          data-players="{escape(players_badge)}"
          data-blind="{big_blind}"
@@ -535,7 +540,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
                 font:700 10px Arial;
                 color:#bfc5cd;
                 margin-bottom:2px;">
-                Club
+                Club {club_fav_button}
             </div>
             <div class="tr-club-name" {name_help_attrs} style="
                 font:700 15px 'Trebuchet MS', Arial;
@@ -691,7 +696,7 @@ def render_public_script():
     let lastFilterPayload = "", pendingFilterPayload = null;
 
     function currentFilters() {
-        return {activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,sortPlayersDir,sortBlindsDir,sortPriority};
+        return {activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,favoriteClubs:window.trClubFavorites?.saved()||[],onlyFavoriteClubs:window.trClubFavorites?.only()||false,sortPlayersDir,sortBlindsDir,sortPriority};
     }
 
     async function flushFilterSave() {
@@ -812,7 +817,7 @@ def render_public_script():
         if (topBtn) {
             topBtn.textContent = showOnlyFavorites ? "★" : "☆";
             topBtn.setAttribute("aria-pressed", String(showOnlyFavorites));
-            topBtn.setAttribute("aria-label", "Show favorites only");
+            topBtn.setAttribute("aria-label", "Show favorite tables only");
             topBtn.style.color = showOnlyFavorites ? "#efb300" : "#d8d8d8";
         }
     }
@@ -944,6 +949,7 @@ def render_public_script():
             if (minBlindRaw !== "" && bigBlind < minBlind) visible = false;
             if (maxBlindRaw !== "" && bigBlind > maxBlind) visible = false;
             if (showOnlyFavorites && !favorites.includes(tableId)) visible = false;
+            if (window.trClubFavorites?.only() && !window.trClubFavorites.matches(row)) visible = false;
 
             row.dataset.visible = visible ? "1" : "0";
             row.style.display = "none";
@@ -962,9 +968,15 @@ def render_public_script():
         const count = $("#table-count");
         if (count) count.textContent = filtered.length + (filtered.length === 1 ? " table" : " tables") + (filtered.length > visibleCount ? " · showing " + visibleCount : "");
         const empty = $("#table-empty");
-        if (empty) empty.hidden = rows.length === 0 || filtered.length > 0;
+        if (empty) {
+            const myClubs = window.trClubFavorites?.only();
+            empty.hidden = filtered.length > 0 || (rows.length === 0 && !myClubs);
+            const title=empty.querySelector("strong"),hint=empty.querySelector("p");
+            if(title)title.textContent=myClubs?"No tables match in My clubs.":"No tables match your filters.";
+            if(hint)hint.textContent=myClubs?"Your clubs stay saved when tables close. Check your filters, or use Manage favorite clubs to add clubs.":"Try another club, game or blind range, or clear the filters above.";
+        }
         const reset = $("#clear-filters");
-        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || activeGames.length || activeNetworks.length || showOnlyFavorites);
+        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
         for (const [id,label,dir] of [["sort-players","Players",sortPlayersDir],["sort-blinds","Blinds",sortBlindsDir]]) {
             const button=$("#"+id);
             if(button){button.dataset.sort=dir;button.setAttribute("aria-label",label+" sort: "+(dir==="asc"?"ascending":dir==="desc"?"descending":"not sorted")+". Activate to change direction.");}
@@ -1105,6 +1117,7 @@ def render_public_script():
         setActiveGames([]);
         setActiveNetworks([]);
         showOnlyFavorites = false;
+        window.trClubFavorites?.clearFilter();
         ["#club-search", "#blinds-min", "#blinds-max"].forEach(selector => {
             const input = $(selector);
             if (input) input.value = "";
@@ -1156,6 +1169,7 @@ def render_public_script():
         applyAll();
     });
 
+    document.addEventListener("tr-favorite-clubs-change",()=>{ visibleCount=15; applyAll(); });
     restoreInputs();
     paintFavoriteStars();
     paintGameButtons();
@@ -1164,6 +1178,12 @@ def render_public_script():
     filtersReady = true;
     lastFilterPayload = JSON.stringify(currentFilters());
     if (FILTER_CSRF && (filterStorage.getItem(STORAGE_KEYS.pending) === "1" || !serverFilters)) queueFilterSave(true);
+    // Do not interrupt club selection or typing with the directory's periodic refresh.
+    setInterval(function() {
+        const picker = document.getElementById('favorite-clubs-panel');
+        const editing = document.activeElement?.matches('input,textarea,select');
+        if ((!picker || picker.hidden) && !editing) window.location.reload();
+    }, 60000);
     </script>
     """
 
@@ -1172,7 +1192,7 @@ def render_public_script():
 # PUBLIC PAGE
 # =========================
 
-def render_public_page(tables, request=None, user=None):
+def render_public_page(tables, request=None, user=None, clubs=None):
     username = None
     user_email = None
     plan = "inactive"
@@ -1201,6 +1221,9 @@ def render_public_page(tables, request=None, user=None):
 
     filter_csrf = request.session.setdefault("account_csrf", secrets.token_urlsafe(32)) if user and request else ""
     filters_json = escape(json.dumps(saved_filters(user),ensure_ascii=True),quote=True)
+
+    club_records = club_catalogue(tables, clubs or []) if directory_access(user) else []
+    clubs_json = catalogue_attribute(club_records)
 
     cards = "".join(render_public_card(t, show_club=directory_access(user), can_join=join_access(user)) for t in tables if players_value(t.get("players", "")) > 0)
 
@@ -1238,7 +1261,8 @@ def render_public_page(tables, request=None, user=None):
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>TableRadar</title>
-        <meta http-equiv="refresh" content="60">
+        <noscript><meta http-equiv="refresh" content="60"></noscript>
+        {render_club_styles()}
         <style>
             body {{
                 overflow-x: hidden;
@@ -1366,7 +1390,7 @@ def render_public_page(tables, request=None, user=None):
         </style>
         {render_site_theme()}
     </head>
-    <body class="tr-directory" data-username="{escape(display_name if display_name else 'guest')}" data-filter-csrf="{escape(filter_csrf,quote=True)}" data-filters="{filters_json}" style="
+    <body class="tr-directory" data-username="{escape(display_name if display_name else 'guest')}" data-filter-csrf="{escape(filter_csrf,quote=True)}" data-filters="{filters_json}" data-club-catalogue="{clubs_json}" style="
         margin:0;
         background:
             radial-gradient(circle at 14% 18%, rgba(91,199,255,.20), transparent 26%),
@@ -1410,7 +1434,7 @@ def render_public_page(tables, request=None, user=None):
                         width:28px;
                         display:flex;
                         justify-content:center;">
-                        <button id="favorite-only-btn" type="button" title="Favorite" style="
+                        <button id="favorite-only-btn" type="button" title="Favorite tables" style="
                             width:20px;
                             height:20px;
                             background:none;
@@ -1488,7 +1512,7 @@ def render_public_page(tables, request=None, user=None):
                         width:1030px;
                         min-width:1030px;
                         box-sizing:border-box;">
-                        <input id="club-search" maxlength="120" aria-label="Search club" type="text" placeholder="Search club" style="
+                        <div class="tr-club-search-tools"><input id="club-search" maxlength="120" aria-label="Search club" type="text" placeholder="Search club" style="
                             width:100%;
                             padding:12px 14px;
                             border:none;
@@ -1497,7 +1521,7 @@ def render_public_page(tables, request=None, user=None):
                             background:rgba(243,238,230,.96);
                             color:#111;
                             font-size:14px;
-                            box-shadow:0 10px 26px rgba(0,0,0,.18);">
+                            box-shadow:0 10px 26px rgba(0,0,0,.18);">{render_club_controls(directory_access(user), bool(user))}</div>
                     </div>
                 </div>
 
@@ -1731,6 +1755,7 @@ def render_public_page(tables, request=None, user=None):
         </script>
 
         {render_site_footer()}
+        {render_club_script()}
         {render_public_script()}
     </body>
     </html>

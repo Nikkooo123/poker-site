@@ -152,7 +152,9 @@ def require_login(request: Request):
 @app.get("/", response_class=HTMLResponse)
 def public_site(request: Request):
     tables = load_tables()
-    return render_public_page(tables, request, user=get_current_user(request))
+    user = get_current_user(request)
+    clubs = load_active_operator_clubs() if user and player_access.directory_access(user) else []
+    return render_public_page(tables, request, user=user, clubs=clubs)
 
 @app.get("/contact", response_class=HTMLResponse)
 def contact_page(request: Request):
