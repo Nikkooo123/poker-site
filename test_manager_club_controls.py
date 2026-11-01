@@ -164,6 +164,16 @@ class ManagerClubTests(unittest.TestCase):
         self.run_store(db, store.delete_club_subscription, 7)
         self.assertEqual(db.users[user['email']]['club_application']['club_name'], 'Different club')
 
+    def test_delete_former_host_club_preserves_current_player_membership(self):
+        user, sub, _ = fixture()
+        user.update(plan='player', days_left=12, auto_renew=True, membership_expires_at='2099-01-01')
+        db = Database({user['email']: user}, {7: sub})
+        self.run_store(db, store.delete_club_subscription, 7)
+        changed = db.users[user['email']]
+        for key in ('plan', 'is_active', 'days_left', 'auto_renew', 'membership_expires_at'):
+            self.assertEqual(changed[key], user[key])
+        self.assertNotIn('manual_subscription_id', changed)
+
     def test_delete_from_requests_removes_linked_subscription(self):
         user, sub, other = fixture()
         db = Database({user['email']: user}, {7: sub, 8: other})

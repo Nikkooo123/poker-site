@@ -245,9 +245,15 @@ def _unlink_deleted_club(cur, sub):
     if linked:
         user.pop("manual_subscription_id", None)
         user.pop("host_approved_submission", None)
-        user.update(is_active=False, days_left=0, auto_renew=False, host_service_state="disabled", host_paid_days=0)
-        if user.get("membership_test_enabled"):
-            user["test_expires_at"] = ""
+        if user.get("plan") == "host":
+            user.update(is_active=False, days_left=0, auto_renew=False, host_service_state="disabled", host_paid_days=0)
+            if user.get("membership_test_enabled"):
+                user["test_expires_at"] = ""
+        else:
+            # A former Host can now have a different paid membership. Remove stale
+            # club linkage without disabling that unrelated current entitlement.
+            user.pop("host_service_state", None)
+            user.pop("host_paid_days", None)
     if linked_preview:
         user.pop("friends_preview_host", None)
     cur.execute("UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s", (Jsonb(user), email))
