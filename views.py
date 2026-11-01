@@ -1767,7 +1767,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
 
 def render_table_feature_editor(table, csrf):
     selected = {token.strip() for token in str(table.get('tags', '')).split(',') if token.strip()}
-    choices = ''.join(f'<label style="display:flex;align-items:center;gap:7px;padding:6px"><input type="checkbox" name="tags" value="{key}" {"checked" if key in selected else ""}><span>{escape(label)}</span></label>' for key, (label, _, _) in ICONS.items())
+    choices = ''.join(f'<label class="tr-feature-choice" title="{escape(label,quote=True)}"><input type="checkbox" name="tags" value="{key}" aria-label="{escape(label,quote=True)}" {"checked" if key in selected else ""}>{render_feature_icon(key,focusable=False)}</label>' for key, (label, _, _) in ICONS.items())
     preserved = ''.join(f'<input type="hidden" name="tags" value="{escape(token,quote=True)}">' for token in selected if token == 'demo' or re.fullmatch(r'vpip(?: \d{1,2}%)?', token))
     return f'''<details class="tr-table-feature-editor"><summary>Edit features</summary><form method="post" action="/update_table_tags" aria-label="Edit features for {escape(str(table.get('table_name','')),quote=True)}"><input type="hidden" name="csrf" value="{escape(csrf,quote=True)}"><input type="hidden" name="table_id" value="{int(table['id'])}">{preserved}<div class="tr-feature-edit-options">{choices}</div><button type="submit" class="tr-button">Save features</button></form></details>'''
 
