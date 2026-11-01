@@ -2,6 +2,7 @@ from html import escape
 from auth.profile_view import render_account_menu
 from brand import render_brand_logo, render_site_theme
 from club_management_view import render_club_delete_form
+from currency_codes import currency_input
 
 
 def _safe(value, default=""):
@@ -80,6 +81,9 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
             ('currency','Currency',sub.get('currency')),
             ('club_code','Club ID',sub.get('club_code') if sub.get('club_code') is not None else sub.get('request_club_code')),
         ):
+            if key == 'currency':
+                edit_fields += '<label style="font-size:12px">Currency'+currency_input(value, required=False)+'</label>'
+                continue
             edit_fields += f'<label style="font-size:12px">{label}<input name="{key}" value="{escape(_safe(value),quote=True)}" maxlength="320" placeholder="Optional" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px"></label>'
         app_value = ''.join(ch for ch in _safe(sub.get('application')).lower() if ch.isalnum())
         app_options = ''.join(f'<option value="{value}"'+(' selected' if app_value==key else '')+f'>{label}</option>' for key,value,label in
@@ -175,7 +179,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                 <summary style="cursor:pointer">Edit club details</summary>
                 <form method="post" action="/admin/club-subscriptions/{sub_id}/edit" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px">{token}
                     {edit_fields}
-                    <label style="font-size:12px">Application<select name="application" style="display:block;width:100%;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px">{app_options}</select></label>
+                    <label style="font-size:12px">Application<select name="application" required style="display:block;width:100%;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px">{app_options}</select></label>
                     <label style="grid-column:1/-1">Notes<textarea name="notes" maxlength="4000" style="width:100%;box-sizing:border-box">{escape(_safe(sub.get('notes')))}</textarea></label>
                     <p style="grid-column:1/-1;margin:0;font-size:12px">All fields are optional. Set currency and application before adding tables. Contact changes update this club's tables; changing the contact email does not change account sign-in or membership. Use Extend above to add service days.</p>
                     <button type="submit" style="min-height:40px;border:1px solid #76998c;border-radius:8px;background:#285d47;color:#eef8f0;font-weight:700;padding:8px 16px;cursor:pointer">Save club details</button>
@@ -275,7 +279,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                     </div>
 
                     <div style="font:600 15px Arial;color:#c9d1d9;margin-bottom:20px;">
-                        Add a club directly without waiting for an application or an owner account. All fields are optional; blank plan and days use Host and 30 days. This creates a manual club entry, not a payment confirmation or an owner account.
+                        Add a club directly without waiting for an application or an owner account. Club name, application and Club ID are required. Owner contacts and notes are optional; blank plan and days use Host and 30 days. This creates a manual club entry, not a payment confirmation or an owner account.
                     </div>
 
                     {error_notice}
@@ -286,8 +290,8 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                         align-items:end;">{token}
 
                         <div>
-                            <label style="font:700 12px Arial;color:#dce4db;">Club name</label>
-                            <input name="club_name" placeholder="Club name (optional)" style="
+                            <label style="font:700 12px Arial;color:#dce4db;">Club name *</label>
+                            <input name="club_name" required maxlength="160" placeholder="Club name" style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -326,14 +330,14 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                         </div>
 
                         <div>
-                            <label style="font:700 12px Arial;color:#dce4db;">Application</label>
-                            <select name="application" style="
+                            <label style="font:700 12px Arial;color:#dce4db;">Application *</label>
+                            <select name="application" required style="
                                 width:100%;
                                 height:40px;
                                 border:none;
                                 border-radius:10px;
                                 padding:0 12px;">
-                                <option value="">Not set</option>
+                                <option value="">Choose application</option>
                                 <option value="PP Poker">PP Poker</option>
                                 <option value="Poker Bros">Poker Bros</option>
                                 <option value="Club GG">Club GG</option>
@@ -343,11 +347,11 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Currency</label>
-                            <input name="currency" maxlength="24" placeholder="USD, EUR… (optional)" style="width:100%;height:40px;box-sizing:border-box">
+                            {currency_input(required=False)}
                         </div>
                         <div>
-                            <label style="font:700 12px Arial;color:#dce4db;">Club ID</label>
-                            <input name="club_code" maxlength="80" placeholder="Club ID (optional)" style="width:100%;height:40px;box-sizing:border-box">
+                            <label style="font:700 12px Arial;color:#dce4db;">Club ID *</label>
+                            <input name="club_code" required maxlength="80" placeholder="Club ID" style="width:100%;height:40px;box-sizing:border-box">
                         </div>
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Plan</label>

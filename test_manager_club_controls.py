@@ -94,12 +94,12 @@ class ManagerClubTests(unittest.TestCase):
         with patch.object(store, 'init_club_subscriptions_db'), patch.object(store, '_connect', return_value=db):
             return function(*args, **kwargs)
 
-    def test_fully_blank_creation_needs_no_owner_account_or_request(self):
+    def test_required_club_identity_needs_no_owner_account_or_request(self):
         db = Database()
-        selected = self.run_store(db, store.add_club_subscription, duration_days='', plan='')
+        selected = self.run_store(db, store.add_club_subscription, club_name='Gift club', application='Club GG', club_code='123', duration_days='', plan='')
         self.assertEqual(selected, 1)
         sql, params = next(call for call in db.calls if call[0].startswith('INSERT'))
-        self.assertEqual(params[:5], ('', '', '', '', ''))
+        self.assertEqual(params[:5], ('Gift club', '', '', '', 'Club GG'))
         self.assertEqual((params[6] - params[5]).days, 30)
         self.assertIn("'active'", sql)
         self.assertIn('manager_created', sql)
@@ -109,10 +109,10 @@ class ManagerClubTests(unittest.TestCase):
         original = {'email': 'existing@example.test', 'plan': 'player', 'staff_role': 'manager'}
         db = Database(users={original['email']: original})
         for name in ('A', 'B'):
-            self.run_store(db, store.add_club_subscription, name, owner_email=original['email'], duration_days='12')
+            self.run_store(db, store.add_club_subscription, name, owner_email=original['email'], application='Club GG', club_code='123', duration_days='12')
         self.assertEqual(len(db.clubs), 2)
         self.assertEqual(db.users[original['email']], original)
-        self.run_store(db, store.add_club_subscription, owner_email='not-yet-registered', duration_days=None)
+        self.run_store(db, store.add_club_subscription, club_name='New', application='Club GG', club_code='124', owner_email='not-yet-registered', duration_days=None)
         self.assertEqual(len(db.clubs), 3)
 
     def test_days_validation_does_not_turn_blank_into_required_input(self):
@@ -122,14 +122,15 @@ class ManagerClubTests(unittest.TestCase):
                 self.run_store(db, store.add_club_subscription, duration_days=value)
             self.assertEqual(db.calls, [])
 
-    def test_creation_fields_are_optional_and_blank_days_pass_fastapi(self):
+    def test_club_identity_required_contacts_optional_and_blank_days_pass_fastapi(self):
         html = render_club_subscriptions_page([], 'csrf')
         parser = Fields()
         parser.feed(html)
-        names = {'club_name', 'owner_name', 'owner_telegram', 'owner_email', 'application', 'plan', 'duration_days', 'notes'}
+        names = {'club_name', 'owner_name', 'owner_telegram', 'owner_email', 'application', 'club_code', 'plan', 'duration_days', 'notes'}
         fields = [item for item in parser.inputs if item.get('name') in names]
         self.assertEqual({item['name'] for item in fields}, names)
-        self.assertTrue(all('required' not in item and 'readonly' not in item for item in fields))
+        self.assertEqual({item['name'] for item in fields if 'required' in item}, {'club_name','application','club_code'})
+        self.assertTrue(all('readonly' not in item for item in fields))
         with patch.object(main, 'require_manager', return_value=None), patch.object(main, 'get_current_user', return_value=None), \
                 patch.object(main, 'load_club_subscriptions', return_value=[]), patch.object(main, 'add_club_subscription') as create:
             client = TestClient(main.app, base_url='https://testserver')
@@ -137,7 +138,7 @@ class ManagerClubTests(unittest.TestCase):
                 page = client.get('/admin/club-subscriptions')
                 tokens = Fields(); tokens.feed(page.text)
                 token = next(item['value'] for item in tokens.inputs if item.get('name') == 'csrf')
-                response = client.post('/admin/club-subscriptions/add', data=dict.fromkeys(names, '') | {'csrf': token}, follow_redirects=False)
+                response = client.post('/admin/club-subscriptions/add', data=dict.fromkeys(names, '') | {'csrf': token,'club_name':'Gift','application':'Club GG','club_code':'123'}, follow_redirects=False)
                 self.assertEqual(response.status_code, 303)
                 self.assertEqual(create.call_args.kwargs['duration_days'], '')
             finally:

@@ -9,6 +9,25 @@ from club_subscriptions_view import render_club_subscriptions_page
 
 
 class ClubMetadataTests(unittest.TestCase):
+    def test_new_club_identity_is_required_on_server(self):
+        complete=dict(club_name='Gift',application='Club GG',club_code='123')
+        with patch.object(store,'init_club_subscriptions_db'),patch.object(store,'_connect') as connect:
+            for field in complete:
+                with self.assertRaises(ValueError):
+                    store.add_club_subscription(**(complete|{field:'   '}))
+            with self.assertRaises(ValueError):
+                store.add_club_subscription(**(complete|{'application':'not-supported'}))
+            connect.assert_not_called()
+
+    def test_currency_list_supports_optional_manager_and_required_owner_fields(self):
+        from currency_codes import currency_input
+        from test_manager_club_controls import Fields
+        for required in (True,False):
+            fields=Fields();fields.feed(currency_input(required=required))
+            search=next(field for field in fields.inputs if 'data-currency-search' in field)
+            self.assertEqual('required' in search,required)
+            self.assertIn('role="listbox"',currency_input(required=required))
+
     def test_edit_updates_only_selected_listing_and_tables_not_account_or_dates(self):
         db = MagicMock()
         db.__enter__.return_value = db

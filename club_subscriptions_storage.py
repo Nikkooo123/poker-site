@@ -195,6 +195,15 @@ def add_club_subscription(
     # Missing contacts must never cause an account to be created or granted access.
     email = _safe(owner_email).strip().lower()
     currency = normalize_currency(currency) if _safe(currency).strip() else ""
+    club_name = _safe(club_name).strip()
+    club_code = _safe(club_code).strip()
+    from storage import _normalize_network
+    if not club_name or len(club_name) > 160:
+        raise ValueError("Enter a club name (up to 160 characters).")
+    if _normalize_network(application) not in ('clubgg','xpoker','pppoker','pokerbros'):
+        raise ValueError("Choose an application.")
+    if not club_code or len(club_code) > 80:
+        raise ValueError("Enter a Club ID (up to 80 characters).")
     plan = _safe(plan).strip().lower() or "host"
     if plan != "host":
         raise ValueError("Choose the Host plan or leave it blank.")
