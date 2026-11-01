@@ -94,7 +94,7 @@ def _normalize_tags(tags: str) -> str:
         else:
             out.append("vpip")
 
-    if "bomb" in raw:
+    if "bomb" in {token.strip() for token in raw.split(',')} or ('bomb' in raw and 'double_board_bomb' not in raw):
         out.append("bomb")
 
     if "clock" in raw:
@@ -453,6 +453,20 @@ def update_players(table_id: int, players: str):
             """, (players, seats, int(table_id)))
 
         conn.commit()
+
+
+def update_table_tags(table_id: int, tags: str):
+    from table_features import ICONS
+    import re
+    selected = [token.strip() for token in str(tags).split(',') if token.strip()]
+    if len(selected) > 40 or any(token not in ICONS and token not in ('demo', 'vpip') and not re.fullmatch(r'vpip \d{1,2}%', token) for token in selected):
+        raise ValueError('Choose supported table features.')
+    init_db()
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute('UPDATE poker_tables SET tags=%s, updated_at=NOW() WHERE id=%s RETURNING id', (','.join(dict.fromkeys(selected)), int(table_id)))
+            if not cur.fetchone():
+                raise ValueError('This table no longer exists. Refresh the page.')
 
 
 def delete_table(table_id: int):

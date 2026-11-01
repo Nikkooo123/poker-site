@@ -4,7 +4,7 @@ from favorite_clubs import club_record, club_catalogue, catalogue_attribute, ren
 import json
 import secrets
 from currency_codes import normalize_currency, currency_badge
-from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
+from table_features import FEATURES, ICONS, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
@@ -69,7 +69,7 @@ def _render_tags(tags_raw: str) -> str:
     if 'vpip' in raw or 'vipip' in raw or 'vip' in raw:
         match = re.search(r'(?:vpip|vipip|vip)\s*(\d+)', raw)
         items.append(render_vpip_badge(match.group(1) if match else ''))
-    items.extend(render_feature_icon(key) for key in ('bomb', 'clock') if key in raw)
+    items.extend(render_feature_icon(key) for key in ('bomb', 'clock') if key in selected)
     items.extend(render_feature_icon(key) for key in FEATURES if key in selected)
     if not items:
         return ''
@@ -1765,7 +1765,14 @@ def render_public_page(tables, request=None, user=None, clubs=None):
 # ADMIN PAGE
 # =========================
 
-def render_admin_card(table: dict) -> str:
+def render_table_feature_editor(table, csrf):
+    selected = {token.strip() for token in str(table.get('tags', '')).split(',') if token.strip()}
+    choices = ''.join(f'<label style="display:flex;align-items:center;gap:7px;padding:6px"><input type="checkbox" name="tags" value="{key}" {"checked" if key in selected else ""}><span>{escape(label)}</span></label>' for key, (label, _, _) in ICONS.items())
+    preserved = ''.join(f'<input type="hidden" name="tags" value="{escape(token,quote=True)}">' for token in selected if token == 'demo' or re.fullmatch(r'vpip(?: \d{1,2}%)?', token))
+    return f'''<details class="tr-table-feature-editor"><summary>Edit features</summary><form method="post" action="/update_table_tags" aria-label="Edit features for {escape(str(table.get('table_name','')),quote=True)}"><input type="hidden" name="csrf" value="{escape(csrf,quote=True)}"><input type="hidden" name="table_id" value="{int(table['id'])}">{preserved}<div class="tr-feature-edit-options">{choices}</div><button type="submit" class="tr-button">Save features</button></form></details>'''
+
+
+def render_admin_card(table: dict, csrf="") -> str:
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
@@ -1891,6 +1898,7 @@ def render_admin_card(table: dict) -> str:
                             margin-top:2px;">
                             {blinds} · {buyin}{currency_badge(table.get("currency"))}
                         </div>
+                        <div class="tr-admin-features" aria-label="Table features">{_render_tags(table.get('tags', '')) or '<span class="tr-muted">No features selected</span>'}</div>
                     </div>
                 </div>
 
@@ -1939,6 +1947,7 @@ def render_admin_card(table: dict) -> str:
             </div>
 
         </div>
+        {render_table_feature_editor(table, csrf)}
     </div>
     """
 
@@ -1969,7 +1978,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
     entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
     error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
-    cards = "".join(render_admin_card(t) for t in tables)
+    cards = "".join(render_admin_card(t, csrf) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
     request_count = max(0, int(pending_requests)) if manager else 0
     request_badge = (f'<span class="tr-request-count" aria-label="{request_count} pending club requests" style="display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:21px;padding:0 6px;margin-left:7px;border-radius:999px;background:#b44f55;color:#fff0f0;font-size:12px;font-weight:700;line-height:1">{request_count}</span>' if request_count else '')

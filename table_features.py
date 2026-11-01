@@ -3,6 +3,7 @@ from html import escape
 
 # Label, colour, SVG artwork. These are TableRadar drawings, not copied app assets.
 FEATURES = {
+ 'double_board_bomb': ('Double Board Bomb Pot', '#aa5146', '<rect x="2" y="3" width="15" height="6" rx="1.5" fill="#f9d5b4"/><rect x="2" y="11" width="15" height="6" rx="1.5" fill="#e5aa88"/><path d="M7 4v4m5-4v4M7 12v4m5-4v4" stroke="#8b4940"/><circle cx="17" cy="17" r="5" fill="#fff0d4"/><path d="m19 12 2-3m-2-1 3 2M14 17c0-2 1-3 2-3" fill="none" stroke="#ffda92" stroke-width="1.5" stroke-linecap="round"/>'),
  'straddle': ('Straddle', '#ba8a13', '<ellipse cx="8" cy="16" rx="5" ry="2" fill="#ffe696"/><path d="M3 12v4m10-4v4M3 13c0 3 10 3 10 0M3 10c0 3 10 3 10 0" fill="none" stroke="#ffe696" stroke-width="1.5"/><ellipse cx="8" cy="10" rx="5" ry="2" fill="#ffedb1"/><path d="M17 4l-5 5h3v10h4V9h3z" fill="#fff0ac"/>'),
  'cucurucho': ('Cucurucho · Pot or Fold', '#9d32c0', '<path d="M5 10a7 7 0 0 1 14 0z" fill="#ffd7fb"/><path d="M5 11h14l-7 11z" fill="#eba2ec"/><path d="M8 13l6 5m2-5l-5 6" stroke="#cb77cd" stroke-width="1"/>'),
  'squid': ('Squid Game', '#b63c64', '<path d="M6 13c-2-5 1-10 6-11 5 1 8 6 6 11l-2 2H8z" fill="#ffcbdf"/><path d="M8 14c0 5-5 2-5 5m7-5c0 6-4 6-5 5m7-5v7m2-7c0 6 4 6 5 5m-3-5c0 5 5 2 5 5" fill="none" stroke="#ffcbdf" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="11" r=".8" fill="#9e3155"/><circle cx="14" cy="11" r=".8" fill="#9e3155"/>'),
@@ -30,7 +31,7 @@ BASE_FEATURES = {
  'clock': ('Clock / Timer', '#519c83', '<circle cx="12" cy="12" r="8" fill="#e0f6ed"/><circle cx="12" cy="12" r="5.8" fill="none" stroke="#6da18b" stroke-width=".7"/><path d="M12 7v5l3 2" fill="none" stroke="#315f50" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="1.1" fill="#315f50"/>'),
 }
 ICONS = dict(BASE_FEATURES, **FEATURES)
-PRIMARY_FEATURES = ('straddle', 'cucurucho', 'squid', 'double_board')
+PRIMARY_FEATURES = ('straddle', 'squid', 'double_board', 'double_board_bomb')
 
 def render_feature_icon(key, focusable=True):
     if key not in ICONS:

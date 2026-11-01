@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 from static_pages import render_contact_page, render_terms_page, render_faq_page, render_about_page, render_privacy_page
 from operator_tables import add_operator_table
-from storage import load_tables, add_table, update_players, delete_table, init_db
+from storage import load_tables, add_table, update_players, update_table_tags, delete_table, init_db
 from views import render_public_page, render_admin_page, minimum_buyin
 
 from auth.auth_storage import create_user, authenticate_user, get_user_by_email, set_user_plan
@@ -267,6 +267,20 @@ def update_players_route(
     except ValueError as error:
         return HTMLResponse(escape(str(error)), status_code=400)
     return RedirectResponse(url="/manager" if is_manager(request) else "/admin", status_code=303)
+
+
+@app.post('/update_table_tags')
+def update_table_tags_route(request: Request, table_id: int = Form(...), tags: list[str] = Form([]), csrf: str = Form('')):
+    check = require_login(request)
+    if check:
+        return check
+    if not valid_subscription_csrf(request, csrf):
+        return HTMLResponse('Refresh the page and try again.', status_code=403)
+    try:
+        update_table_tags(table_id, ','.join(tags))
+    except ValueError as error:
+        return HTMLResponse(escape(str(error)), status_code=400)
+    return RedirectResponse(url='/manager' if is_manager(request) else '/admin', status_code=303)
 
 
 @app.post("/delete")
