@@ -13,6 +13,7 @@ import club_subscriptions_storage as store
 from club_subscriptions_view import render_club_subscriptions_page
 from club_management_view import render_club_delete_form
 import main
+import host_lifecycle
 
 
 class Database:
@@ -214,6 +215,45 @@ class ManagerClubTests(unittest.TestCase):
                 response = endpoint(request, csrf=token, email='owner@example.test', submitted_at='request-1')
             self.assertEqual(response.status_code, 403)
             remove.assert_not_called()
+
+    def test_manager_code_correction_preserves_membership_and_request_version(self):
+        user, _, _ = fixture()
+        original = copy.deepcopy(user)
+        def mutate(email, transform):
+            self.assertEqual(email, user['email'])
+            changed = transform(copy.deepcopy(user))
+            user.clear(); user.update(changed)
+            return True
+        with patch.object(host_lifecycle.repository, 'mutate', side_effect=mutate):
+            host_lifecycle.update_club_request_code(user['email'], 'request-1', '273007')
+        self.assertEqual(user['club_application']['club_code'], '273007')
+        self.assertEqual(user['club_application']['submitted_at'], 'request-1')
+        self.assertEqual(user['club_application']['status'], 'approved')
+        for key in original:
+            if key != 'club_application':
+                self.assertEqual(user[key], original[key])
+
+    def test_code_correction_rejects_stale_or_overlong_input(self):
+        user, _, _ = fixture()
+        def mutate(email, transform):
+            transform(copy.deepcopy(user))
+            return True
+        with patch.object(host_lifecycle.repository, 'mutate', side_effect=mutate):
+            with self.assertRaisesRegex(ValueError, 'request changed'):
+                host_lifecycle.update_club_request_code(user['email'], 'stale', '273007')
+            with self.assertRaises(ValueError):
+                host_lifecycle.update_club_request_code(user['email'], 'request-1', 'x' * 81)
+
+    def test_code_correction_route_requires_manager_and_csrf(self):
+        app = FastAPI()
+        accounts.install_account_routes(app, lambda request: {})
+        endpoint = next(route.endpoint for route in app.routes if getattr(route, 'path', '') == '/admin/club-requests/club-code')
+        request = SimpleNamespace(session={'account_csrf': 'correct'})
+        for manager, token in ((False, 'correct'), (True, 'wrong')):
+            with patch.object(accounts, 'is_manager', return_value=manager), patch.object(host_lifecycle, 'update_club_request_code') as update:
+                response = endpoint(request, csrf=token, email='owner@example.test', submitted_at='request-1', club_code='273007')
+            self.assertEqual(response.status_code, 403)
+            update.assert_not_called()
 
 
 if __name__ == '__main__':

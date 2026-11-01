@@ -132,3 +132,18 @@ def delete_club_request(email, submitted_at):
         return user
     if not repository.mutate(email.strip().lower(),transform):
         raise ValueError('Account no longer exists.')
+
+
+def update_club_request_code(email, submitted_at, club_code):
+    """Manager correction of listing identity; never changes membership dates or approval."""
+    code = str(club_code or '').strip()
+    if len(code) > 80:
+        raise ValueError('Club ID must be no longer than 80 characters.')
+    def transform(user):
+        club = user.get('club_application') or {}
+        if not club or club.get('deleted_at') or club.get('submitted_at', '') != submitted_at:
+            raise ValueError('The request changed. Reload Club requests.')
+        user['club_application'] = dict(club, club_code=code, manager_corrected_at=datetime.now(timezone.utc).isoformat())
+        return user
+    if not repository.mutate(str(email).strip().lower(), transform):
+        raise ValueError('Account no longer exists.')

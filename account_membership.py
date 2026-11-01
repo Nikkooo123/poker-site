@@ -308,7 +308,8 @@ def install_account_routes(app, get_current_user):
                 state = membership_state(user)
                 review_options = ''.join(f'<option value="{value}"{" selected" if club.get("status", "pending") == value else ""}>{label}</option>' for value, label in (("pending", "Pending review"), ("approved", "Approve listing request"), ("needs_changes", "Request changes")))
                 launch = render_club_delete_form("/admin/club-requests/delete-club", request.session["account_csrf"], club.get("club_name"), {"email": user.get("email"), "submitted_at": club.get("submitted_at")})
-                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{field_html(club,"club_name")}</h2><p>{field_html(club,"owner_name","Owner name not provided")} · {field_html(club,"telegram","Telegram not provided")}</p><p>{safe(user.get("email"))} · {field_html(club,"application")}{(" · "+field_html(club,"currency")) if club.get("currency") else ""} · Club code: {field_html(club,"club_code")}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p>{changes_html(club)}<details class="tr-request-review"><summary>Review request</summary><p>{field_html(club,"notes")}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button> <button class="tr-button" type="submit" formaction="/admin/club-requests/approve">Approve listing request</button><p class="tr-muted" style="grid-column:1/-1">Approving starts the service period, activates Club subscriptions and adds the club to Clubs to monitor. Approve only when the placement is ready.</p></form></details>{launch}</section>')
+                code_form = f'<form method="post" action="/admin/club-requests/club-code" class="tr-request-code-form"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><label>Club ID<input name="club_code" value="{safe(club.get("club_code"))}" maxlength="80"></label><button class="tr-button" type="submit">Save Club ID</button></form>'
+                cards.append(f'<section class="tr-info-card tr-club-request"><h2>{field_html(club,"club_name")}</h2><p>{field_html(club,"owner_name","Owner name not provided")} · {field_html(club,"telegram","Telegram not provided")}</p><p>{safe(user.get("email"))} · {field_html(club,"application")}{(" · "+field_html(club,"currency")) if club.get("currency") else ""} · Club code: {field_html(club,"club_code")}</p><p>{safe(club.get("status", "pending"))} · Host access: {"paid - awaiting launch" if awaiting_launch(state) else "active" if state.get("is_active") and state.get("plan")=="host" else "inactive"}</p>{changes_html(club)}<details class="tr-request-review"><summary>Review request</summary><p>{field_html(club,"notes")}</p><form method="post" action="/admin/club-requests/review"><input type="hidden" name="csrf" value="{csrf}"><input type="hidden" name="email" value="{safe(user.get("email"))}"><input type="hidden" name="submitted_at" value="{safe(club.get("submitted_at"))}"><p><label>Review status<select name="status">{review_options}</select></label></p><p><label>Note to the owner<textarea name="review_note" maxlength="1000">{safe(club.get("review_note"))}</textarea></label></p><button class="tr-button" type="submit">Save review</button> <button class="tr-button" type="submit" formaction="/admin/club-requests/approve">Approve listing request</button><p class="tr-muted" style="grid-column:1/-1">Approving starts the service period, activates Club subscriptions and adds the club to Clubs to monitor. Approve only when the placement is ready.</p></form>{code_form}</details>{launch}</section>')
         return page("Club requests", ''.join(cards) or '<p>No club requests yet.</p>', get_current_user(request) or {}, manager=True)
 
     @app.post("/admin/club-requests/review")
@@ -325,6 +326,18 @@ def install_account_routes(app, get_current_user):
         except ValueError as error:
             return HTMLResponse(escape(str(error)),status_code=409)
         return RedirectResponse("/admin/club-requests", status_code=303)
+
+    @app.post('/admin/club-requests/club-code')
+    def correct_club_code(request: Request, csrf: str = Form(''), email: str = Form(''), submitted_at: str = Form(''), club_code: str = Form('')):
+        token = request.session.get('account_csrf', '')
+        if not is_manager(request) or not token or not secrets.compare_digest(token, csrf):
+            return HTMLResponse('Manager access required.', status_code=403)
+        from host_lifecycle import update_club_request_code
+        try:
+            update_club_request_code(email, submitted_at, club_code)
+        except ValueError as error:
+            return HTMLResponse(escape(str(error)), status_code=409)
+        return RedirectResponse('/admin/club-requests', status_code=303)
 
     @app.post('/admin/club-requests/delete-club')
     def remove_club_completely(request: Request, csrf: str = Form(''), email: str = Form(''), submitted_at: str = Form('')):
