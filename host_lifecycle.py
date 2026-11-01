@@ -33,7 +33,7 @@ def review_host_request(email, submitted_at, status, review_note):
     """Approval and placement activation share one account/subscription transaction."""
     if status == 'approved':
         return launch_host(email, submitted_at, approve=True, review_note=review_note)
-    if status not in ('pending', 'needs_changes') or len(review_note)>1000:
+    if status not in ('pending', 'needs_changes', 'rejected') or len(review_note)>1000:
         raise ValueError('Invalid review.')
     def transform(user):
         club=user.get('club_application') or {}

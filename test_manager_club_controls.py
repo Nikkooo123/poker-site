@@ -266,6 +266,31 @@ class ManagerClubTests(unittest.TestCase):
             self.assertEqual(response.status_code, 403)
             update.assert_not_called()
 
+    def test_reject_review_preserves_account_access_and_service_dates(self):
+        user, _, _ = fixture()
+        original = copy.deepcopy(user)
+        def mutate(email, transform):
+            changed = transform(copy.deepcopy(user))
+            user.clear(); user.update(changed)
+            return True
+        with patch.object(host_lifecycle.repository, 'mutate', side_effect=mutate), \
+             patch.object(host_lifecycle, 'launch_host') as activate:
+            host_lifecycle.review_host_request(user['email'],'request-1','rejected','Please contact us.')
+            activate.assert_not_called()
+        self.assertEqual(user['club_application']['status'],'rejected')
+        self.assertEqual(user['club_application']['review_note'],'Please contact us.')
+        for key in original:
+            if key != 'club_application': self.assertEqual(user[key],original[key])
+
+    def test_reject_review_refuses_changed_request(self):
+        user, _, _ = fixture()
+        def mutate(email, transform):
+            transform(copy.deepcopy(user))
+            return True
+        with patch.object(host_lifecycle.repository,'mutate',side_effect=mutate):
+            with self.assertRaisesRegex(ValueError,'request changed'):
+                host_lifecycle.review_host_request(user['email'],'old-request','rejected','')
+
 
 if __name__ == '__main__':
     unittest.main()

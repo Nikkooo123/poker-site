@@ -9,12 +9,13 @@ from table_features import PRIMARY_FEATURES
 
 
 class AdminFeaturesTests(unittest.TestCase):
-    def test_admin_shows_selected_features_and_edit_state(self):
+    def test_admin_shows_selected_features_without_inline_editor(self):
         html = render_admin_card(dict(id=7, table_name='<Test>', tags='bomb,clock,straddle', players='1/5'), 'csrf-value')
         self.assertIn('aria-label="Table features"', html)
         for key in ('bomb', 'clock', 'straddle'):
-            self.assertIn(f'value="{key}" checked', html)
-        self.assertIn('value="csrf-value"', html)
+            self.assertIn(f'data-feature="{key}"', html)
+        self.assertNotIn('Edit features', html)
+        self.assertNotIn('/update_table_tags', html)
         self.assertIn('&lt;Test&gt;', html)
         self.assertNotIn('for <Test>', html)
 
