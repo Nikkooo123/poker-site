@@ -40,7 +40,7 @@ def render_site_theme() -> str:
     }
 
     .tr-filter-summary{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:0 0 14px 36px;color:var(--tr-muted);font-size:12px}.tr-filter-summary .tr-button{padding:7px 12px;font-size:12px}.tr-sort-button{background:none;border:0;color:var(--tr-text);font-size:12px;font-weight:600;text-align:left;white-space:nowrap;padding:0}.tr-sort-button:hover{color:var(--tr-accent)}#table-empty[hidden]{display:none!important}
-    @media(max-width:680px){.tr-filter-summary{margin-left:0}}
+    @media(max-width:680px){.tr-filter-summary{margin-left:0}.tr-directory .tr-sort-row{justify-content:flex-start;padding-left:0}.tr-directory .tr-sort-row>div{display:none}.tr-directory #sort-players{padding-left:0!important}}
 
     .join-locked-btn{width:72px;height:46px;border:1px solid #91b9cc55!important;border-radius:12px;background:#243943!important;color:#c5dce5!important;box-shadow:none!important;font-weight:600;cursor:pointer}.join-locked-btn:hover{background:#304b58}.tr-guest-popover{max-width:min(480px,calc(100vw - 36px));padding:28px;border:1px solid #91b9cc66;border-radius:22px;background:#1c2c35;color:#edf3f2;box-shadow:0 20px 80px #0008}.tr-guest-popover::backdrop{background:#07121799;backdrop-filter:blur(4px)}.tr-guest-popover h2{margin:0 0 14px;font-size:25px}.tr-guest-popover p{line-height:1.6;color:#bdd0d4;margin:0 0 20px}.tr-guest-popover>div{display:flex;gap:10px;flex-wrap:wrap}
     .tr-site-header{border-bottom-color:#9fc9c22b}.tr-status-pill{border-color:#9cbfc85c!important;background:#25414c66!important}.tr-page-title{color:#f0f6f5}.tr-info-card h2{color:#c3ded7}
