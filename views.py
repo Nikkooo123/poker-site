@@ -4,7 +4,7 @@ from favorite_clubs import club_record, club_catalogue, catalogue_attribute, ren
 import json
 import secrets
 from currency_codes import normalize_currency, currency_badge
-from table_features import FEATURES, ICONS, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
+from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
@@ -1765,13 +1765,6 @@ def render_public_page(tables, request=None, user=None, clubs=None):
 # ADMIN PAGE
 # =========================
 
-def render_table_feature_editor(table, csrf):
-    selected = {token.strip() for token in str(table.get('tags', '')).split(',') if token.strip()}
-    choices = ''.join(f'<label class="tr-feature-choice" title="{escape(label,quote=True)}"><input type="checkbox" name="tags" value="{key}" aria-label="{escape(label,quote=True)}" {"checked" if key in selected else ""}>{render_feature_icon(key,focusable=False)}</label>' for key, (label, _, _) in ICONS.items())
-    preserved = ''.join(f'<input type="hidden" name="tags" value="{escape(token,quote=True)}">' for token in selected if token == 'demo' or re.fullmatch(r'vpip(?: \d{1,2}%)?', token))
-    return f'''<details class="tr-table-feature-editor"><summary>Edit features</summary><form method="post" action="/update_table_tags" aria-label="Edit features for {escape(str(table.get('table_name','')),quote=True)}"><input type="hidden" name="csrf" value="{escape(csrf,quote=True)}"><input type="hidden" name="table_id" value="{int(table['id'])}">{preserved}<div class="tr-feature-edit-options">{choices}</div><button type="submit" class="tr-button">Save features</button></form></details>'''
-
-
 def render_admin_card(table: dict, csrf="") -> str:
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
@@ -1947,7 +1940,6 @@ def render_admin_card(table: dict, csrf="") -> str:
             </div>
 
         </div>
-        {render_table_feature_editor(table, csrf)}
     </div>
     """
 
