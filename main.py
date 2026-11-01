@@ -461,7 +461,7 @@ def admin_add_club_subscription(
     owner_email: str = Form(""),
     application: str = Form(""),
     plan: str = Form("host"),
-    duration_days: int = Form(30),
+    duration_days: str = Form(""),
     notes: str = Form(""),
     csrf: str = Form(""),
 ):

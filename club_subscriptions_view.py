@@ -1,6 +1,7 @@
 from html import escape
 from auth.profile_view import render_account_menu
 from brand import render_brand_logo, render_site_theme
+from club_management_view import render_club_delete_form
 
 
 def _safe(value, default=""):
@@ -56,7 +57,8 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
 
     for sub in subscriptions:
         sub_id = int(sub.get("id", 0))
-        club_name = escape(_safe(sub.get("club_name", "")))
+        club_name = escape(_safe(sub.get("club_name")) or f"Untitled club #{sub_id}")
+        delete_form = render_club_delete_form(f"/admin/club-subscriptions/{sub_id}/delete", csrf, _safe(sub.get("club_name")) or f"Untitled club #{sub_id}")
         owner_name = escape(_safe(sub.get("owner_name", "")))
         owner_telegram = escape(_safe(sub.get("owner_telegram", "")))
         owner_email = escape(_safe(sub.get("owner_email", "")))
@@ -151,19 +153,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                     </button>
                 </form>
 
-                <form method="post" action="/admin/club-subscriptions/{sub_id}/delete" style="margin:0;">{token}
-                    <button type="submit" style="
-                        height:28px;
-                        border:none;
-                        border-radius:8px;
-                        background:#8f2e36;
-                        color:#fff1f1;
-                        font:700 12px Arial;
-                        padding:0 9px;
-                        cursor:pointer;">
-                        Delete
-                    </button>
-                </form>
+                {delete_form}
             </div>
         </div>
         """
@@ -259,7 +249,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                     </div>
 
                     <div style="font:600 15px Arial;color:#c9d1d9;margin-bottom:20px;">
-                        Confirm Host access only after verifying payment. The owner can submit their club now; the 30-day service period begins when you Approve listing request in Club requests. This form does not collect payment. Automatic renewal is off.
+                        Add a club directly without waiting for an application or an owner account. All fields are optional; blank plan and days use Host and 30 days. This creates a manual club entry, not a payment confirmation or an owner account.
                     </div>
 
                     {error_notice}
@@ -271,7 +261,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Club name</label>
-                            <input name="club_name" placeholder="Club name" required style="
+                            <input name="club_name" placeholder="Club name (optional)" style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -301,7 +291,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Owner email</label>
-                            <input type="email" name="owner_email" placeholder="Registered account email" required style="
+                            <input type="text" inputmode="email" name="owner_email" placeholder="Owner email (optional)" style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -317,6 +307,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                                 border:none;
                                 border-radius:10px;
                                 padding:0 12px;">
+                                <option value="">Not set</option>
                                 <option value="PP Poker">PP Poker</option>
                                 <option value="Poker Bros">Poker Bros</option>
                                 <option value="Club GG">Club GG</option>
@@ -332,13 +323,14 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                                 border:none;
                                 border-radius:10px;
                                 padding:0 12px;">
+                                <option value="">Default · Host</option>
                                 <option value="host">Host</option>
                             </select>
                         </div>
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Days</label>
-                            <input type="number" name="duration_days" value="30" min="30" max="30" readonly style="
+                            <input type="number" name="duration_days" placeholder="30 (default)" min="1" max="3660" style="
                                 width:100%;
                                 height:40px;
                                 border:none;
@@ -356,7 +348,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                                 color:#eef8f0;
                                 font:800 14px Arial;
                                 cursor:pointer;">
-                                Activate Host · 30 days
+                                Add club
                             </button>
                         </div>
 

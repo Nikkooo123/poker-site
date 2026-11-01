@@ -89,7 +89,7 @@ def launch_host(email, submitted_at, approve=False, review_note=''):
         sub_id=preview_host.get('manual_subscription_id', user.get('manual_subscription_id'))
         sub=conn.execute("SELECT id FROM club_subscriptions WHERE id=%s AND lower(trim(owner_email))=%s AND plan='host' FOR UPDATE",(sub_id,email)).fetchone() if sub_id else None
         if not sub:
-            matches=conn.execute("SELECT id FROM club_subscriptions WHERE lower(trim(owner_email))=%s AND plan='host' AND status IN ('active','preparing') ORDER BY id DESC FOR UPDATE",(email,)).fetchall()
+            matches=conn.execute("SELECT id FROM club_subscriptions WHERE lower(trim(owner_email))=%s AND plan='host' AND NOT manager_created AND status IN ('active','preparing') ORDER BY id DESC FOR UPDATE",(email,)).fetchall()
             if len(matches)>1:
                 raise ValueError('Multiple placements exist for this owner. Review Club subscriptions first.')
             sub=matches[0] if matches else None

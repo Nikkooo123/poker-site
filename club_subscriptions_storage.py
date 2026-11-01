@@ -3,7 +3,6 @@ from currency_codes import normalize_currency
 import os
 from datetime import date, datetime, timedelta, timezone
 from psycopg.types.json import Jsonb
-from host_lifecycle import prepare_paid_host, awaiting_launch
 from club_table_lifecycle import init_archive, remove_linked_tables
 
 import psycopg
@@ -102,6 +101,7 @@ def init_club_subscriptions_db():
 
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS access_expires_at TIMESTAMPTZ;")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS manager_created BOOLEAN NOT NULL DEFAULT FALSE;")
         conn.commit()
 
     _DB_READY = True
@@ -173,7 +173,7 @@ def load_active_operator_clubs():
 
 
 def add_club_subscription(
-    club_name: str,
+    club_name: str = "",
     owner_name: str = "",
     owner_telegram: str = "",
     owner_email: str = "",
@@ -184,36 +184,80 @@ def add_club_subscription(
 ):
     init_club_subscriptions_db()
 
-    email = owner_email.strip().lower()
-    if plan != "host" or not email or "@" not in email or not club_name.strip():
-        raise ValueError("Enter the registered owner's email and club name. This form activates Host access.")
-    if int(duration_days) != 30:
-        raise ValueError("New Host memberships start with 30 days. Use Extend for renewals.")
+    # A manager-created placement is independent of customer registration/payment.
+    # Missing contacts must never cause an account to be created or granted access.
+    email = _safe(owner_email).strip().lower()
+    plan = _safe(plan).strip().lower() or "host"
+    if plan != "host":
+        raise ValueError("Choose the Host plan or leave it blank.")
+    try:
+        days = int(_safe(duration_days).strip() or "30")
+    except ValueError:
+        raise ValueError("Days must be a whole number, or leave it blank for 30 days.") from None
+    if not 1 <= days <= 3660:
+        raise ValueError("Days must be between 1 and 3660, or leave it blank for 30 days.")
     now = datetime.now(timezone.utc)
-    expiry = now + timedelta(days=30)
+    expiry = now + timedelta(days=days)
     with _connect() as conn:
         with conn.cursor() as cur:
-            # Lock the account first: simultaneous submissions cannot create duplicate grants.
-            cur.execute("SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE", (email,))
-            account = cur.fetchone()
-            if not account:
-                raise ValueError("No registered account matches this email. Ask the owner to create an account first.")
-            user = dict(account["document"])
-            if awaiting_launch(user):
-                raise ValueError("This owner already has confirmed Host access awaiting launch. Review their Club request first.")
-            cur.execute("SELECT id FROM club_subscriptions WHERE lower(owner_email)=%s AND plan='host' AND (status='preparing' OR (status='active' AND COALESCE(access_expires_at, expires_at::timestamptz)>NOW()))", (email,))
-            if cur.fetchone():
-                raise ValueError("This owner already has an active club subscription. Use Extend on the existing entry.")
             cur.execute("""INSERT INTO club_subscriptions
-                (club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,notes,access_expires_at)
-                VALUES (%s,%s,%s,%s,%s,'host','preparing',%s,%s,%s,%s) RETURNING id""",
-                (club_name.strip(),owner_name.strip(),owner_telegram.strip(),email,application.strip(),now.date(),expiry.date(),notes.strip(),None))
+                (club_name,owner_name,owner_telegram,owner_email,application,plan,status,started_at,expires_at,notes,access_expires_at,manager_created)
+                VALUES (%s,%s,%s,%s,%s,'host','active',%s,%s,%s,%s,TRUE) RETURNING id""",
+                (_safe(club_name).strip(),_safe(owner_name).strip(),_safe(owner_telegram).strip(),email,_safe(application).strip(),now.date(),expiry.date(),_safe(notes).strip(),expiry))
             new_id = cur.fetchone()["id"]
-            prepare_paid_host(user, now)
-            user.update(membership_source="manager", manual_subscription_id=new_id)
-            # Staff permissions, passwords, favourites and the owner's application are preserved.
-            cur.execute("UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s", (Jsonb(user),email))
     return new_id
+
+
+def _request_matches_placement(user, club, sub):
+    """An owner's newer request may describe a different club; do not remove it by email alone."""
+    if not club:
+        return False
+    for state in (user, user.get("friends_preview_host") or {}):
+        if (str(state.get("manual_subscription_id", "")) == str(sub["id"])
+                and state.get("host_approved_submission")
+                and state.get("host_approved_submission") == club.get("submitted_at")):
+            return True
+    normalize = lambda value: "".join(char for char in _safe(value).casefold() if char.isalnum())
+    name = normalize(club.get("club_name"))
+    application = normalize(sub.get("application"))
+    return bool(name and name == normalize(sub.get("club_name"))
+                and (application == normalize(club.get("application"))
+                     or (not application and sub.get("status") == "preparing")))
+
+
+def _unlink_deleted_club(cur, sub):
+    """Remove only the request explicitly linked to this placement, never other owners/clubs."""
+    email = _safe(sub.get("owner_email")).strip().lower()
+    if not email:
+        return
+    cur.execute("SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE", (email,))
+    row = cur.fetchone()
+    if not row or not isinstance(row.get("document"), dict):
+        return
+    user = dict(row["document"])
+    linked = str(user.get("manual_subscription_id", "")) == str(sub["id"])
+    preview = dict(user.get("friends_preview_host") or {})
+    linked_preview = str(preview.get("manual_subscription_id", "")) == str(sub["id"])
+    if not linked and not linked_preview:
+        return
+    if _request_matches_placement(user, user.get("club_application") or {}, sub):
+        user.pop("club_application", None)
+    if linked:
+        user.pop("manual_subscription_id", None)
+        user.pop("host_approved_submission", None)
+        user.update(is_active=False, days_left=0, auto_renew=False, host_service_state="disabled", host_paid_days=0)
+        if user.get("membership_test_enabled"):
+            user["test_expires_at"] = ""
+    if linked_preview:
+        user.pop("friends_preview_host", None)
+    cur.execute("UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s", (Jsonb(user), email))
+
+
+def _delete_placement(cur, sub):
+    _unlink_deleted_club(cur, sub)
+    init_archive(cur)
+    remove_linked_tables(cur, [int(sub["id"])], "Club permanently removed by manager")
+    cur.execute("DELETE FROM club_subscriptions WHERE id=%s", (int(sub["id"]),))
 
 
 def _sync_linked_account(cur, sub, expiry=None, inactive=False):
@@ -260,10 +304,7 @@ def _change_subscription(subscription_id, action, days=30):
                 cur.execute("UPDATE club_subscriptions SET expires_at=%s,access_expires_at=%s,status='active',updated_at=NOW() WHERE id=%s", (expiry.date(),expiry,int(subscription_id)))
                 _sync_linked_account(cur,sub,expiry=expiry)
             elif action == "delete":
-                _sync_linked_account(cur,sub,inactive=True)
-                init_archive(cur)
-                remove_linked_tables(cur,[int(subscription_id)],'Club placement deleted')
-                cur.execute("DELETE FROM club_subscriptions WHERE id=%s", (int(subscription_id),))
+                _delete_placement(cur, sub)
             elif action == "disable":
                 _sync_linked_account(cur,sub,inactive=True)
                 init_archive(cur)
@@ -281,4 +322,43 @@ def disable_club_subscription(subscription_id: int):
 
 def delete_club_subscription(subscription_id: int):
     _change_subscription(subscription_id, "delete")
+
+
+def delete_club_request_and_subscription(email: str, submitted_at: str):
+    """Manager-only entry point: request and its explicitly linked placement are one transaction."""
+    init_club_subscriptions_db()
+    email = _safe(email).strip().lower()
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT document FROM tableradar_accounts WHERE email=%s FOR UPDATE", (email,))
+            row = cur.fetchone()
+            if not row:
+                raise ValueError("Account no longer exists. Refresh Club requests.")
+            user = dict(row["document"])
+            club = user.get("club_application") or {}
+            if not club or club.get("submitted_at", "") != submitted_at:
+                raise ValueError("The request changed. Reload Club requests before deleting it.")
+            preview = user.get("friends_preview_host") or {}
+            linked_ids = []
+            for value in (user.get("manual_subscription_id"), preview.get("manual_subscription_id")):
+                try:
+                    selected = int(value)
+                    if selected not in linked_ids:
+                        linked_ids.append(selected)
+                except (ValueError, TypeError):
+                    pass
+            placements = []
+            if linked_ids:
+                cur.execute("SELECT * FROM club_subscriptions WHERE id=ANY(%s) AND lower(trim(owner_email))=%s ORDER BY id FOR UPDATE", (linked_ids, email))
+                placements = cur.fetchall()
+            for sub in placements:
+                if _request_matches_placement(user, club, sub):
+                    _delete_placement(cur, sub)
+            # Pending requests can exist without a placement. Re-read after linked cleanup.
+            cur.execute("SELECT document FROM tableradar_accounts WHERE email=%s", (email,))
+            latest = dict(cur.fetchone()["document"])
+            current = latest.get("club_application") or {}
+            if current and current.get("submitted_at", "") == submitted_at:
+                latest.pop("club_application", None)
+                cur.execute("UPDATE tableradar_accounts SET document=%s,updated_at=NOW() WHERE email=%s", (Jsonb(latest), email))
 
