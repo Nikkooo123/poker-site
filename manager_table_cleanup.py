@@ -64,7 +64,7 @@ def install_routes(app,is_manager):
         if not is_manager(request):
             return page('Manager access required.',403)
         csrf=request.session.setdefault('account_csrf',secrets.token_urlsafe(32))
-        clubs=load_active_operator_clubs()
+        clubs=[dict(c,id=c['subscription_id']) for c in load_active_operator_clubs()]
         club=next((c for c in clubs if c['id']==keep_subscription_id),None)
         options=''.join('<option value="'+str(c['id'])+'"'+(' selected' if c['id']==keep_subscription_id else '')+'>'+escape(c['club_name'])+'</option>' for c in clubs)
         body='<h1>Remove tables outside one club</h1><form method="get"><label>Club to keep <select name="keep_subscription_id">'+options+'</select></label><button>Preview cleanup</button></form>'

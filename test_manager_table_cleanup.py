@@ -51,7 +51,7 @@ class CleanupTests(unittest.TestCase):
         app=FastAPI();app.add_middleware(SessionMiddleware,secret_key='test-only')
         clean.install_routes(app,lambda r:True)
         client=TestClient(app)
-        club=dict(id=18,club_name='VANs',application='ClubGG')
+        club=dict(subscription_id=18,club_name='VANs',application='ClubGG')
         tables=[dict(id=1,club_subscription_id=18,table_name='Kept',players='1/2',club='VANs'),
                 dict(id=2,club_subscription_id=19,table_name='Removed',players='1/2',club='Other')]
         with patch.object(clean,'load_active_operator_clubs',return_value=[club]),patch.object(clean,'load_tables',return_value=tables):
