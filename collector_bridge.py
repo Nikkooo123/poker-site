@@ -20,7 +20,7 @@ Incomplete, ambiguous or old results leave existing tables unchanged.</p>
 <button id="apply">Apply verified result</button></details>
 <a href="/manager">Back to manager workspace</a>
 <script>
-const csrf=__CSRF__; let folder=null, timer=null, busy=false, generation=0; const applied=new Map();
+const csrf=__CSRF__; let folder=null, timer=null, busy=false, generation=0; const applied=new Map(), failures=new Map();
 const status=document.querySelector('#status'), log=document.querySelector('#log');
 function report(message){status.textContent=message;log.textContent=(new Date().toLocaleTimeString()+' '+message+'\\n'+log.textContent).slice(0,12000)}
 function stop(){generation++;clearInterval(timer);timer=null;folder=null;document.querySelector('#stop').disabled=true;document.querySelector('#start').disabled=false;report('Stopped. No new results will be sent. An in-flight request may finish.')}
@@ -51,9 +51,11 @@ async function poll(){if(busy||!folder)return;busy=true;const own=generation;try
   if(handle.kind!=='file'||!/^club-[0-9]{1,32}\\.json$/.test(name))continue;
   const file=await handle.getFile();if(file.size>262144){report('Oversized result skipped: '+name);continue}
   const body=await file.text();if(applied.get(name)===body)continue;
+  const failed=failures.get(name);if(failed&&failed.body===body&&Date.now()-failed.at<60000)continue;
   const snapshot=JSON.parse(body);if(name!=='club-'+snapshot.club_code+'.json')throw Error('Result identity differs from its filename.');
   if(own!==generation||!folder)break;
-  await sendResult(body);applied.set(name,body);
+  try{await sendResult(body);applied.set(name,body);failures.delete(name)}
+  catch(error){failures.set(name,{body,at:Date.now()});report(name+': '+error.message)}
  }
 }catch(error){report(error.message)}finally{busy=false}}
 window.addEventListener('pagehide',()=>{generation++;clearInterval(timer);folder=null});
