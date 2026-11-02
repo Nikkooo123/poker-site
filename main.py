@@ -42,10 +42,12 @@ from support_chat import install_support_routes
 from telegram_support import install_routes as install_telegram_routes
 from crypto_checkout import checkout_page, install_crypto_routes
 from manager_table_cleanup import install_routes as install_table_cleanup_routes
+from collector_bridge import install_routes as install_collector_routes
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=True)
 install_table_cleanup_routes(app, is_manager)
+install_collector_routes(app, is_manager)
 
 @app.get('/assets/poker-lounge-v3.webp', include_in_schema=False)
 def poker_lounge_illustration():
