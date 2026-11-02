@@ -35,7 +35,7 @@ def timestamp(value):
 
 
 def validate_snapshot(document, now=None):
-    if not isinstance(document,dict) or type(document.get('schema_version')) is not int or document['schema_version']!=1:
+    if not isinstance(document,dict) or type(document.get('schema_version')) is not int or document['schema_version'] not in (1,2):
         raise ValueError('Unsupported collector snapshot.')
     required=('complete','club_identity_verified','running_tables_checked','end_of_list_verified','all_rows_verified')
     if any(document.get(key) is not True for key in required):
@@ -77,12 +77,21 @@ def validate_snapshot(document, now=None):
         tags=row.get('tags')
         features_verified=row.get('features_verified',True)
         if type(features_verified) is not bool:raise ValueError('Invalid feature verification state.')
+        required_features=row.get('required_features',[])
+        if not isinstance(required_features,list) or any(value!='hi_lo' for value in required_features):
+            raise ValueError('Unrecognized required game variant.')
+        if required_features and game not in ('PLO4','PLO5','PLO6'):
+            raise ValueError('Hi-Lo variant requires a verified Omaha format.')
         if not isinstance(tags,list) or len(tags)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in tags):
             raise ValueError('Unrecognized table features.')
+        confirmed=row.get('confirmed_tags',[])
+        if not isinstance(confirmed,list) or len(confirmed)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in confirmed):
+            raise ValueError('Unrecognized confirmed table feature.')
         small,big,*_=blinds.split('(')[0].split('/')
         if int(match[1])>0 and Decimal(small)>=Decimal('0.50') and Decimal(big)>=Decimal('1'):
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
-                               buyin=buyin,tags=','.join(sorted(set(tags))) if features_verified else '',
+                               buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
+                               required_features=','.join(sorted(set(required_features))),
                                features_verified=features_verified,union_name='-none-'))
     return dict(club_code=code, observed_at=observed, tables=active)
 
@@ -90,8 +99,23 @@ def validate_snapshot(document, now=None):
 def identity(row):
     # Names alone are not identities. A multiset preserves genuinely duplicate tables.
     name=unicodedata.normalize('NFKC',str(row.get('table_name',''))).replace('\u2019',"'").strip()
-    return (name,str(row.get('game','')),str(row.get('blinds','')).strip(),
+    variants=tag_set(row.get('tags'))|tag_set(row.get('required_features'))
+    return (name,str(row.get('game','')),'hi_lo' in variants,str(row.get('blinds','')).strip(),
             format(Decimal(str(row.get('buyin') or '0')).normalize(),'f'),str(row.get('players','')).split('/')[-1])
+
+
+def tag_set(value):
+    if isinstance(value,list):return set(value)
+    return {item.strip() for item in str(value or '').split(',') if item.strip()}
+
+
+def update_tags(existing,row):
+    if row['features_verified']:return row['tags']
+    # Partial icon evidence adds verified marks without erasing unread marks.
+    known=tag_set(row['tags'])-{'hi_lo'}
+    old=tag_set(existing)-{'hi_lo'}
+    if any(t.startswith('vpip ') for t in known):old={t for t in old if not t.startswith('vpip ')}
+    return ','.join(sorted(old|known|tag_set(row.get('required_features'))))
 
 
 def reconciliation(existing, incoming):
@@ -142,7 +166,8 @@ def apply_snapshot(document):
             cur.execute('SELECT * FROM poker_tables WHERE club_subscription_id=%s ORDER BY id FOR UPDATE',(selected,))
             if club.get('union_name') is not None:
                 for row in snapshot['tables']:row['union_name']=club['union_name']
-            updates,creates,removed=reconciliation(cur.fetchall(),snapshot['tables'])
+            existing=cur.fetchall();by_id={r['id']:r for r in existing}
+            updates,creates,removed=reconciliation(existing,snapshot['tables'])
             if removed:
                 init_archive(cur)
                 cur.execute('''WITH removed AS (
@@ -150,9 +175,9 @@ def apply_snapshot(document):
                 ) INSERT INTO tableradar_removed_club_tables(reason,document)
                 SELECT 'Absent from verified active ClubGG snapshot',to_jsonb(removed) FROM removed''',(selected,removed))
             for table_id,row in updates:
-                cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=CASE WHEN %s THEN %s ELSE tags END,union_name=%s,updated_at=NOW()
+                cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=%s,union_name=%s,updated_at=NOW()
                     WHERE id=%s AND club_subscription_id=%s''',
-                    (row['players'],row['players'].split('/')[1],row['features_verified'],row['tags'],row['union_name'],table_id,selected))
+                    (row['players'],row['players'].split('/')[1],update_tags(by_id[table_id].get('tags'),row),row['union_name'],table_id,selected))
             for row in creates:
                 _insert_table(cur,dict(row,club=club['club_name'],network='clubgg',currency=currency,
                     club_subscription_id=selected,owner_name=club.get('owner_name') or '',

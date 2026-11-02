@@ -16,6 +16,27 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
+    def test_partial_icons_add_confirmed_marks_without_erasing_other_marks(self):
+        doc=snapshot();doc['schema_version']=2
+        doc['tables'][0].update(features_verified=False,confirmed_tags=['clock','vpip 35%'])
+        row=sync.validate_snapshot(doc)['tables'][0]
+        self.assertEqual(row['tags'],'clock,vpip 35%')
+        self.assertEqual(sync.update_tags('bomb,vpip 20%',row),'bomb,clock,vpip 35%')
+        doc['tables'][0]['confirmed_tags']=['invented']
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
+    def test_hilo_is_a_required_variant_and_is_preserved_without_optional_icons(self):
+        doc=snapshot();doc['schema_version']=2
+        doc['tables'][0].update(required_features=['hi_lo'],features_verified=False)
+        row=sync.validate_snapshot(doc)['tables'][0]
+        self.assertEqual(row['tags'],'hi_lo')
+        self.assertEqual(sync.update_tags('clock',row),'clock,hi_lo')
+        self.assertNotEqual(sync.identity(row),sync.identity(row|{'tags':'','required_features':''}))
+        normal=row|{'required_features':''}
+        self.assertEqual(sync.update_tags('clock,hi_lo',normal),'clock')
+        doc['tables'][0]['required_features']=['unknown']
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
     def test_minimum_blinds_are_inclusive_and_ante_does_not_qualify(self):
         for blinds,expected in [('0.50/1',1),('0.5/1(2)',1),('1/2',1),('0.25/0.50(10)',0),('0.25/1',0),('0.50/0.75',0)]:
             doc=snapshot();doc['tables'][0]['blinds']=blinds
