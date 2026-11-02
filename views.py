@@ -1966,9 +1966,9 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
         ('Minimum buy-in','buyin','Minimum amount'),
         ('Players','players','Players (ex. 4/6)'),
     ]
-    options=''.join(f'<option value="{int(c["subscription_id"])}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
+    options=''.join(f'<option value="{int(c["subscription_id"])}" data-union-configured="{1 if c.get("union_name") is not None else 0}" data-union-name="{escape(str(c.get("union_name") or ""),quote=True)}"{" selected" if str(c["subscription_id"]) == str(form_values.get("subscription_id", "")) else ""}>{escape(str(c["club_name"]))} · {escape(str(c["application"]))}</option>' for c in (active_clubs or []) if c.get('subscription_id'))
     entry_fields='<label class="tr-entry-field">Club name *<select name="subscription_id" required style="width:100%;min-width:0;box-sizing:border-box;padding:9px;border-radius:8px;background:#20323a;color:#e6eeeb;border:1px solid #a6cdbb38;font:600 12px Arial"><option value="">Select an active club</option>'+options+'</select></label>'
-    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)} *<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}" required maxlength="160"></label>' for label,name,placeholder in fields)
+    entry_fields+=''.join(f'<label class="tr-entry-field">{escape(label)}{" *" if name!="union_name" else ""}<input name="{name}" placeholder="{escape(placeholder,quote=True)}" value="{escape(str(form_values.get(name, "")),quote=True)}"{" required" if name!="union_name" else ""} maxlength="160"></label>' for label,name,placeholder in fields)
     error_html=f'<p role="alert" style="color:#ffc1c7">{escape(error)}</p>' if error else ''
     cards = "".join(render_admin_card(t, csrf) for t in tables)
     title = "Manager workspace" if workspace == "manager" else "Table administration"
@@ -2198,7 +2198,17 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 const entryForm = document.getElementById("admin-add-form");
                 const entrySubmit = document.getElementById("admin-add-submit");
                 const feedback = document.getElementById("admin-form-feedback");
-                const fieldLabels = {{subscription_id:"Club name",table_name:"Table name",union_name:"Union name",blinds:"Blinds",buyin:"Minimum buy-in",players:"Players"}};
+                const fieldLabels = {{subscription_id:"Club name",table_name:"Table name",blinds:"Blinds",buyin:"Minimum buy-in",players:"Players"}};
+                const clubPicker=entryForm.elements.subscription_id, unionField=entryForm.elements.union_name;
+                function fillClubUnion() {{
+                    const selected=clubPicker.selectedOptions[0];
+                    const configured=selected?.dataset.unionConfigured==="1";
+                    unionField.readOnly=configured;
+                    if(configured) unionField.value=selected.dataset.unionName;
+                    unionField.title=configured ? "Set in Club subscriptions → Edit club details" : "Union name, if applicable";
+                    validateEntry();
+                }}
+                clubPicker.addEventListener("change",fillClubUnion);
                 function validateEntry() {{
                     const missing = Object.entries(fieldLabels).filter(([name])=>!entryForm.elements[name].value.trim()).map(([,label])=>label);
                     if (!gameInput.value) missing.push("Game format");
@@ -2208,6 +2218,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                     if (buyin && (!/^[0-9]{{1,10}}(?:[.,][0-9]{{1,2}})?$/.test(buyin) || Number(buyin.replace(',','.'))<=0)) invalid="Minimum buy-in: enter a positive amount.";
                     const seats = /^(\\d{{1,2}})\\s*\\/\\s*(\\d{{1,2}})$/.exec(players);
                     if (players && (!seats || +seats[1]>+seats[2] || +seats[2]<2 || +seats[2]>10)) invalid="Players: use occupied / total seats, for example 4/6.";
+                    if(unionField.value.length>160) invalid="Union name: use up to 160 characters.";
                     const tooLong = Object.keys(fieldLabels).find(name=>name!=="subscription_id" && entryForm.elements[name].value.length>160);
                     if (tooLong) invalid=fieldLabels[tooLong]+": use up to 160 characters.";
                     entrySubmit.disabled=!!(missing.length || invalid);
@@ -2220,7 +2231,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
                 let selectedTags = tagsInput.value.split(",").filter(Boolean);
                 document.querySelectorAll(".admin-game-btn").forEach(btn=>btn.classList.toggle("active",btn.dataset.value===gameInput.value));
                 document.querySelectorAll(".admin-tag-btn").forEach(btn=>{{const on=selectedTags.includes(btn.dataset.value);btn.classList.toggle("active",on);btn.setAttribute("aria-pressed",String(on));}});
-                validateEntry();
+                fillClubUnion();
 
                 function syncTags() {{
                     tagsInput.value = selectedTags.join(",");

@@ -468,6 +468,7 @@ def admin_add_club_subscription(
     notes: str = Form(""),
     currency: str = Form(""),
     club_code: str = Form(""),
+    union_name: str = Form(""),
     csrf: str = Form(""),
 ):
     check = require_manager(request)
@@ -488,6 +489,7 @@ def admin_add_club_subscription(
             notes=notes,
             currency=currency,
             club_code=club_code,
+            union_name=union_name,
         )
     except ValueError as error:
         return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(), csrf, str(error), user=get_current_user(request)), status_code=400)
@@ -499,7 +501,7 @@ def admin_add_club_subscription(
 def admin_edit_club_subscription(request: Request, subscription_id: int,
     club_name: str = Form(''), owner_name: str = Form(''), owner_telegram: str = Form(''),
     owner_email: str = Form(''), application: str = Form(''), currency: str = Form(''),
-    club_code: str = Form(''), notes: str = Form(''), csrf: str = Form('')):
+    club_code: str = Form(''), notes: str = Form(''), union_name: str = Form(''), csrf: str = Form('')):
     check = require_manager(request)
     if check:
         return check
@@ -508,7 +510,7 @@ def admin_edit_club_subscription(request: Request, subscription_id: int,
     try:
         edit_club_subscription(subscription_id, club_name=club_name,owner_name=owner_name,
             owner_telegram=owner_telegram,owner_email=owner_email,application=application,
-            currency=currency,club_code=club_code,notes=notes)
+            currency=currency,club_code=club_code,notes=notes,union_name=union_name)
     except ValueError as error:
         return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(),csrf,str(error),
             user=get_current_user(request)),status_code=400)

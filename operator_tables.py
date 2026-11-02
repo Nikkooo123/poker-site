@@ -7,11 +7,14 @@ from storage import _connect, _insert_table, _normalize_network
 
 
 def add_operator_table(subscription_id, *, table_name, union_name, game, blinds, buyin, players, tags=""):
-    values = dict(table_name=table_name, union_name=union_name, blinds=blinds, buyin=buyin, players=players)
+    values = dict(table_name=table_name, blinds=blinds, buyin=buyin, players=players)
     for field, value in values.items():
         values[field] = str(value or "").strip()
         if not values[field] or len(values[field]) > 160:
-            raise ValueError("Enter table name, union name, blinds, minimum buy-in and players (up to 160 characters each).")
+            raise ValueError("Enter table name, blinds, minimum buy-in and players (up to 160 characters each).")
+    values['union_name']=str(union_name or '').strip()
+    if len(values['union_name'])>160:
+        raise ValueError('Union name must be up to 160 characters.')
     if game not in ("NLH", "PLO4", "PLO5", "PLO6"):
         raise ValueError("Choose a game format.")
     if not re.fullmatch(r"[0-9]{1,10}(?:[.,][0-9]{1,2})?", values['buyin']) or float(values['buyin'].replace(',', '.')) <= 0:
@@ -27,13 +30,15 @@ def add_operator_table(subscription_id, *, table_name, union_name, game, blinds,
         with conn.cursor() as cur:
             # The placement lock serialises capacity checks and prevents changes mid-insert.
             # No account lock is acquired, preserving the account-first order used by approval.
-            cur.execute("""SELECT club_name, application, owner_name, owner_telegram, currency
+            cur.execute("""SELECT club_name, application, owner_name, owner_telegram, currency, union_name
                 FROM club_subscriptions WHERE id=%s AND plan='host' AND status='active'
                 AND COALESCE(access_expires_at,expires_at::timestamptz)>clock_timestamp()
                 FOR UPDATE""", (selected,))
             club = cur.fetchone()
             if not club:
                 raise ValueError("This club is not active in Clubs to monitor. Refresh the page and choose an active club.")
+            if club.get('union_name') is not None:
+                values['union_name']=club['union_name']
             if occupied(values['players']):
                 require_capacity(cur, selected)
             try:

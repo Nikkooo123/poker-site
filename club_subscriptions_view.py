@@ -75,6 +75,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
         edit_fields = ''
         for key, label, value in (
             ('club_name','Club name',sub.get('club_name')),
+            ('union_name','Union name',sub.get('union_name')),
             ('owner_name','Owner name',sub.get('owner_name')),
             ('owner_telegram','Owner Telegram',sub.get('owner_telegram')),
             ('owner_email','Owner email',contact_email),
@@ -308,6 +309,11 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                                 border-radius:10px;
                                 padding:0 12px;">
                         </div>
+
+                        <label style="font:700 12px Arial;color:#dce4db;">Union name
+                            <input name="union_name" maxlength="160" placeholder="Union name or none" style="display:block;width:100%;height:40px;border:none;border-radius:10px;padding:0 12px;margin-top:5px">
+                            <small style="display:block;margin-top:5px;font-weight:400">Used automatically by this club's tables. Enter none to display none.</small>
+                        </label>
 
                         <div>
                             <label style="font:700 12px Arial;color:#dce4db;">Owner Telegram</label>
