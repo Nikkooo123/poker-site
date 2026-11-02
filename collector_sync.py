@@ -75,9 +75,10 @@ def validate_snapshot(document, now=None):
         except InvalidOperation:
             raise ValueError('Unrecognized minimum buy-in.') from None
         tags=row.get('tags')
-        if not isinstance(tags,list) or len(tags)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip (?:30|35|40|45|50|55|60)%',t)) for t in tags):
+        if not isinstance(tags,list) or len(tags)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in tags):
             raise ValueError('Unrecognized table features.')
-        if int(match[1])>0:
+        small,big,*_=blinds.split('(')[0].split('/')
+        if int(match[1])>0 and Decimal(small)>=Decimal('0.50') and Decimal(big)>=Decimal('1'):
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
                                buyin=buyin,tags=','.join(sorted(set(tags))),union_name='-none-'))
     return dict(club_code=code, observed_at=observed, tables=active)

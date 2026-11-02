@@ -14,6 +14,10 @@ Only verified table data is sent to TableRadar. Screenshots and login credential
 Incomplete, ambiguous or old results leave existing tables unchanged.</p>
 <button id="start">Choose sync-outbox and start</button><button id="stop" disabled>Stop sync</button>
 <p id="status" role="status">Not connected. No background access has been granted.</p><pre id="log"></pre>
+<details><summary>Apply one verified local result</summary>
+<p>Paste a verified Collector JSON result. The same completeness, age and club checks apply.</p>
+<textarea id="manual" aria-label="Verified Collector JSON" rows="6" style="width:100%"></textarea>
+<button id="apply">Apply verified result</button></details>
 <a href="/manager">Back to manager workspace</a>
 <script>
 const csrf=__CSRF__; let folder=null, timer=null, busy=false, generation=0; const applied=new Map();
@@ -21,6 +25,19 @@ const status=document.querySelector('#status'), log=document.querySelector('#log
 function report(message){status.textContent=message;log.textContent=(new Date().toLocaleTimeString()+' '+message+'\\n'+log.textContent).slice(0,12000)}
 function stop(){generation++;clearInterval(timer);timer=null;folder=null;document.querySelector('#stop').disabled=true;document.querySelector('#start').disabled=false;report('Stopped. No new results will be sent. An in-flight request may finish.')}
 document.querySelector('#stop').onclick=stop;
+async function sendResult(body){
+ const snapshot=JSON.parse(body);
+ const response=await fetch('/manager/collector-sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Collector-CSRF':csrf},body});
+ let result;try{result=await response.json()}catch{throw Error('Manager login expired or server is unavailable. Existing data unchanged.')}
+ if(!response.ok)throw Error(result.detail||'Snapshot rejected.');
+ report(result.applied?'Club '+snapshot.club_code+': '+result.active+' active tables; '+result.added+' added, '+result.removed+' removed.':'Result was already applied.');
+ return result;
+}
+document.querySelector('#apply').onclick=async()=>{
+ if(busy)return;busy=true;document.querySelector('#apply').disabled=true;
+ try{await sendResult(document.querySelector('#manual').value)}catch(error){report(error.message)}
+ finally{busy=false;document.querySelector('#apply').disabled=false}
+};
 document.querySelector('#start').onclick=async()=>{try{
  if(!window.showDirectoryPicker)throw Error('Use a current Chrome or Edge browser on this computer.');
  const chosen=await window.showDirectoryPicker({mode:'read'});
@@ -36,10 +53,7 @@ async function poll(){if(busy||!folder)return;busy=true;const own=generation;try
   const body=await file.text();if(applied.get(name)===body)continue;
   const snapshot=JSON.parse(body);if(name!=='club-'+snapshot.club_code+'.json')throw Error('Result identity differs from its filename.');
   if(own!==generation||!folder)break;
-  const response=await fetch('/manager/collector-sync',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Collector-CSRF':csrf},body});
-  let result;try{result=await response.json()}catch{throw Error('Manager login expired or server is unavailable. Existing data unchanged.')}
-  if(!response.ok)throw Error(result.detail||'Snapshot rejected.');
-  applied.set(name,body); report(result.applied?'Club '+snapshot.club_code+': '+result.active+' active tables; '+result.added+' added, '+result.removed+' removed.':'Result was already applied.');
+  await sendResult(body);applied.set(name,body);
  }
 }catch(error){report(error.message)}finally{busy=false}}
 window.addEventListener('pagehide',()=>{generation++;clearInterval(timer);folder=null});
