@@ -38,6 +38,13 @@ class CollectorSyncTests(unittest.TestCase):
         self.assertEqual(len(sync.validate_snapshot(doc)['tables']),1)
         self.assertEqual(sync.validate_snapshot(snapshot()|{'tables':[],'empty_club_verified':True})['tables'],[])
 
+    def test_unverified_features_are_not_treated_as_verified_empty_tags(self):
+        doc=snapshot();doc['tables'][0]['features_verified']=False
+        row=sync.validate_snapshot(doc)['tables'][0]
+        self.assertFalse(row['features_verified']);self.assertEqual(row['tags'],'')
+        doc['tables'][0]['features_verified']='yes'
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
     def test_ambiguous_fields_fail_closed(self):
         for field,value in [('game','PLO?'),('players','1/?'),('players','3/2'),('buyin','NaN'),('tags',['unknown']),('blinds','?')]:
             doc=snapshot();doc['tables'][0][field]=value

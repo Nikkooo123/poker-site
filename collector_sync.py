@@ -75,12 +75,15 @@ def validate_snapshot(document, now=None):
         except InvalidOperation:
             raise ValueError('Unrecognized minimum buy-in.') from None
         tags=row.get('tags')
+        features_verified=row.get('features_verified',True)
+        if type(features_verified) is not bool:raise ValueError('Invalid feature verification state.')
         if not isinstance(tags,list) or len(tags)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in tags):
             raise ValueError('Unrecognized table features.')
         small,big,*_=blinds.split('(')[0].split('/')
         if int(match[1])>0 and Decimal(small)>=Decimal('0.50') and Decimal(big)>=Decimal('1'):
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
-                               buyin=buyin,tags=','.join(sorted(set(tags))),union_name='-none-'))
+                               buyin=buyin,tags=','.join(sorted(set(tags))) if features_verified else '',
+                               features_verified=features_verified,union_name='-none-'))
     return dict(club_code=code, observed_at=observed, tables=active)
 
 
@@ -147,9 +150,9 @@ def apply_snapshot(document):
                 ) INSERT INTO tableradar_removed_club_tables(reason,document)
                 SELECT 'Absent from verified active ClubGG snapshot',to_jsonb(removed) FROM removed''',(selected,removed))
             for table_id,row in updates:
-                cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=%s,union_name=%s,updated_at=NOW()
+                cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=CASE WHEN %s THEN %s ELSE tags END,union_name=%s,updated_at=NOW()
                     WHERE id=%s AND club_subscription_id=%s''',
-                    (row['players'],row['players'].split('/')[1],row['tags'],row['union_name'],table_id,selected))
+                    (row['players'],row['players'].split('/')[1],row['features_verified'],row['tags'],row['union_name'],table_id,selected))
             for row in creates:
                 _insert_table(cur,dict(row,club=club['club_name'],network='clubgg',currency=currency,
                     club_subscription_id=selected,owner_name=club.get('owner_name') or '',
