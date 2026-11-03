@@ -16,6 +16,14 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
+    def test_manager_import_cap_is_100_and_host_plan_stays_20(self):
+        from membership_plans import table_limit
+        self.assertEqual(table_limit({'host_tier':'pro'}),20)
+        doc=snapshot();doc['tables']=doc['tables']*100
+        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),100)
+        doc['tables'].append(doc['tables'][0])
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
     def test_partial_icons_add_confirmed_marks_without_erasing_other_marks(self):
         doc=snapshot();doc['schema_version']=2
         doc['tables'][0].update(features_verified=False,confirmed_tags=['clock','vpip 35%'])

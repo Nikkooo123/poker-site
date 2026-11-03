@@ -13,7 +13,6 @@ from psycopg.types.json import Jsonb
 from storage import _connect, _insert_table, _normalize_network, init_db
 from club_table_lifecycle import init_archive
 from currency_codes import normalize_currency
-from membership_plans import table_limit
 from table_features import ICONS
 from brand import OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL
 
@@ -154,8 +153,8 @@ def apply_snapshot(document):
             if len(clubs)!=1:
                 raise ValueError('Club ID must match exactly one active ClubGG placement.')
             club=clubs[0]; selected=club['id']
-            if len(snapshot['tables'])>table_limit(club):
-                raise ValueError('Snapshot exceeds this club placement table limit.')
+            # This bridge is manager-only. Its verified import cap is enforced
+            # by validate_snapshot (100); normal host-plan limits are unchanged.
             currency=normalize_currency(club.get('currency'))
             cur.execute('SELECT observed_at,snapshot FROM tableradar_collector_state WHERE club_subscription_id=%s',(selected,))
             previous=cur.fetchone()
