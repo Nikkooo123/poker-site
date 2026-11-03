@@ -16,11 +16,11 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
-    def test_manager_import_cap_is_100_and_host_plan_stays_20(self):
+    def test_manager_import_cap_is_30_and_host_plan_stays_20(self):
         from membership_plans import table_limit
         self.assertEqual(table_limit({'host_tier':'pro'}),20)
-        doc=snapshot();doc['tables']=doc['tables']*100
-        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),100)
+        doc=snapshot();doc['tables']=doc['tables']*30
+        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),30)
         doc['tables'].append(doc['tables'][0])
         with self.assertRaises(ValueError):sync.validate_snapshot(doc)
 
