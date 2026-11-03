@@ -88,7 +88,7 @@ def validate_snapshot(document, now=None):
         if not isinstance(confirmed,list) or len(confirmed)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in confirmed):
             raise ValueError('Unrecognized confirmed table feature.')
         small,big,*_=blinds.split('(')[0].split('/')
-        if int(match[1])>0 and Decimal(small)>=Decimal('0.50') and Decimal(big)>=Decimal('1'):
+        if int(match[1])>0 and Decimal(small)>=Decimal('0.25') and Decimal(big)>=Decimal('0.50'):
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
                                buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),

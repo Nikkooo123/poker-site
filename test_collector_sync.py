@@ -38,7 +38,7 @@ class CollectorSyncTests(unittest.TestCase):
         with self.assertRaises(ValueError):sync.validate_snapshot(doc)
 
     def test_minimum_blinds_are_inclusive_and_ante_does_not_qualify(self):
-        for blinds,expected in [('0.50/1',1),('0.5/1(2)',1),('1/2',1),('0.25/0.50(10)',0),('0.25/1',0),('0.50/0.75',0)]:
+        for blinds,expected in [('0.25/0.50',1),('0.25/0.5(10)',1),('0.50/1',1),('0.5/1(2)',1),('1/2',1),('0.24/0.50(10)',0),('0.25/0.49(10)',0),('0.10/0.20(10)',0)]:
             doc=snapshot();doc['tables'][0]['blinds']=blinds
             self.assertEqual(len(sync.validate_snapshot(doc)['tables']),expected,blinds)
 
