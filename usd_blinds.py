@@ -1,4 +1,5 @@
-"""Display-only USD equivalents using explicitly configured club unit rates."""
+"""Approximate USD equivalents with optional club-specific rate overrides."""
+from exchange_rates import market_usd_rate
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import re
 
@@ -21,9 +22,9 @@ def usd_equivalent(blinds, currency, configured_rate=None):
     except ValueError:
         return None
     if rate is None:
-        if str(currency or '').strip().upper() != 'USD':
+        rate = market_usd_rate(currency)
+        if rate is None:
             return None
-        rate = Decimal(1)
     match = re.fullmatch(r'\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)(?:\s*\(\s*([0-9]+(?:\.[0-9]+)?)\s*\))?\s*', str(blinds or ''))
     if not match:
         return None

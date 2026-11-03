@@ -8,7 +8,7 @@ from views import render_public_card,render_public_page
 class UsdFilterTests(unittest.TestCase):
     def test_native_usd_and_unknown_currency(self):
         self.assertEqual(usd_equivalent('5/10','USD')['big_blind'],'10')
-        self.assertIsNone(usd_equivalent('5/10','AED'))
+        self.assertIsNone(usd_equivalent('5/10','CHIPS'))
         self.assertIsNone(usd_equivalent('5/10',''))
     def test_rate_converts_blinds_and_ante_without_mutating_source(self):
         self.assertEqual(usd_equivalent('5/10(2)','AED','.25'),dict(big_blind='2.50000000',label='≈ 1.25/2.5(0.5) USD'))

@@ -980,7 +980,7 @@ def render_public_script():
         });
 
         const usdNote=$("#usd-mode-note");
-        if(usdNote)usdNote.textContent=usdMode ? "≈ USD at the configured club rate. Big-blind range in USD."+(unknownRates ? " "+unknownRates+(unknownRates===1 ? " table hidden: USD rate unavailable." : " tables hidden: USD rate unavailable.") : "") : "Blinds range uses the big blind. Original club currency by default.";
+        if(usdNote)usdNote.textContent=usdMode ? "≈ USD using weekly market rates or a club override. Big-blind range in USD."+(unknownRates ? " "+unknownRates+(unknownRates===1 ? " table hidden: USD rate unavailable." : " tables hidden: USD rate unavailable.") : "") : "Blinds range uses the big blind. Original club currency by default.";
         let filtered = rows.filter(r => r.dataset.visible === "1");
         filtered = sortRows(filtered);
 
@@ -1165,7 +1165,11 @@ def render_public_script():
         applyAll();
     });
 
-    ["#players-min","#players-max","#usd-mode"].forEach(id=>$(id)?.addEventListener("change",applyAll));
+    ["#players-min","#players-max"].forEach(id=>$(id)?.addEventListener("change",applyAll));
+    $("#usd-mode")?.addEventListener("change", function() {
+        if (this.checked) { sortBlindsDir = "desc"; touchPriority("blinds"); }
+        applyAll();
+    });
 
     $("#blinds-min")?.addEventListener("change", function() {
         applyAll();
@@ -1523,7 +1527,8 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             </div>
                         </div>
                         <div class="tr-usd-controls" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:0;font:12px Arial">
-                            <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input id="usd-mode" type="checkbox"> Show &amp; filter in USD</label>
+                            <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input id="usd-mode" type="checkbox"> Show USD equivalent</label>
+                            <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" style="color:#b8c8c5">Rates by ExchangeRate-API</a>
                             <span id="usd-mode-note" style="color:#b8c8c5">Blinds range uses the big blind. Original club currency by default.</span>
                         </div>
                     </div>
