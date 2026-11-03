@@ -518,8 +518,8 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
                         font:600 17px Arial;
                         color:#ffffff;
                         line-height:1;">
-                        {blinds}{currency_badge(table.get("currency"))}
-                        <span class="tr-usd-equivalent" hidden style="font:500 11px Arial;color:#b8d9ca;margin-left:6px" title="Approximate USD equivalent at the club’s configured unit rate">{usd_label}</span>
+                        {blinds}<span class="tr-currency-line">{currency_badge(table.get("currency"))}
+                        <span class="tr-usd-equivalent" hidden style="font:500 11px Arial;color:#b8d9ca;margin-left:6px" title="Approximate USD equivalent">{usd_label}</span></span>
                     </div>
                 </div>
             </div>
