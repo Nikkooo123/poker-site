@@ -8,7 +8,7 @@ FEATURES = {
  'cucurucho': ('Cucurucho · Pot or Fold', '#9d32c0', '<path d="M5 10a7 7 0 0 1 14 0z" fill="#ffd7fb"/><path d="M5 11h14l-7 11z" fill="#eba2ec"/><path d="M8 13l6 5m2-5l-5 6" stroke="#cb77cd" stroke-width="1"/>'),
  'squid': ('Squid Game', '#b63c64', '<path d="M6 13c-2-5 1-10 6-11 5 1 8 6 6 11l-2 2H8z" fill="#ffcbdf"/><path d="M8 14c0 5-5 2-5 5m7-5c0 6-4 6-5 5m7-5v7m2-7c0 6 4 6 5 5m-3-5c0 5 5 2 5 5" fill="none" stroke="#ffcbdf" stroke-width="1.7" stroke-linecap="round"/><circle cx="10" cy="11" r=".8" fill="#9e3155"/><circle cx="14" cy="11" r=".8" fill="#9e3155"/>'),
  'double_board': ('Double Board · DB', '#346da5', '<rect x="2" y="3" width="20" height="7" rx="2" fill="#d6edff"/><rect x="2" y="14" width="20" height="7" rx="2" fill="#a5d6ff"/><path d="M8 4v5m8-5v5M8 15v5m8-5v5" stroke="#477fae"/><text x="12" y="14" text-anchor="middle" fill="white" font-family="Arial" font-weight="bold" font-size="6">DB</text>'),
- 'bbj': ('Bad Beat Jackpot · BBJ', '#ba8625', 'BBJ'),
+ 'bbj': ('Bad Beat Jackpot · BBJ', '#30271c', '<g transform="rotate(-8 12 12)"><path d="M2 17Q11 23 22 15Q15 20 3 16" fill="#ef8323"/><path d="M3 7L1 10l3 1M20 9l3 2-2 3" fill="none" stroke="#ffbd48" stroke-width=".8"/><text x="12" y="10" text-anchor="middle" fill="#ffce62" font-family="Arial,sans-serif" font-weight="900" font-size="7">BAD</text><text x="12" y="16" text-anchor="middle" fill="#ffb13c" font-family="Arial,sans-serif" font-weight="900" font-style="italic" font-size="7">BEAT</text></g>'),
  'insurance': ('All-in Insurance', '#407d88', '<path d="M12 2l8 3v6c0 5-4 9-8 11-4-2-8-6-8-11V5z" fill="#d4f4ef"/><path d="M8 12l3 3 5-6" fill="none" stroke="#35727e" stroke-width="2"/>'),
  'ev_cashout': ('EV Cashout / EV Chop', '#418165', 'EV'),
  'run_multiple': ('Run It Multiple Times · RIT', '#5e65b3', 'RIT'),
@@ -32,6 +32,11 @@ BASE_FEATURES = {
 }
 ICONS = dict(BASE_FEATURES, **FEATURES)
 PRIMARY_FEATURES = ('straddle', 'squid', 'double_board', 'double_board_bomb')
+EXTRA_VPIP_VALUES = (15, 20, 25, 60, 65, 70, 75)
+
+
+def extra_vpip_buttons():
+    return ''.join(f'<button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip {value}%" aria-label="VPIP {value}%">{render_vpip_badge(value)}</button>' for value in EXTRA_VPIP_VALUES)
 
 def render_feature_icon(key, focusable=True):
     if key not in ICONS:

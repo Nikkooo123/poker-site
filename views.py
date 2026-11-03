@@ -4,7 +4,7 @@ from favorite_clubs import club_record, club_catalogue, catalogue_attribute, ren
 import json
 import secrets
 from currency_codes import normalize_currency, currency_badge
-from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge
+from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge, extra_vpip_buttons
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
 from auth.profile_view import render_account_menu
@@ -2112,12 +2112,11 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 45%" aria-label="VPIP 45%">{render_vpip_badge("45")}</button>
     <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 50%" aria-label="VPIP 50%">{render_vpip_badge("50")}</button>
     <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 55%" aria-label="VPIP 55%">{render_vpip_badge("55")}</button>
-    <button type="button" class="admin-pick-btn admin-tag-btn tr-vpip-pick" data-value="vpip 60%" aria-label="VPIP 60%">{render_vpip_badge("60")}</button>
 
     {feature_buttons(('bomb', 'clock'))}
     {feature_buttons(PRIMARY_FEATURES)}
 </div>
-<details class="tr-extra-features"><summary>More table features</summary><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">{feature_buttons((key for key in FEATURES if key not in PRIMARY_FEATURES), labels=True)}</div><small>Select only features enabled on this table. Availability varies by application.</small></details>
+<details class="tr-extra-features"><summary>More table features</summary><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">{extra_vpip_buttons()}{feature_buttons((key for key in FEATURES if key not in PRIMARY_FEATURES), labels=True)}</div><small>Select only features enabled on this table. Availability varies by application.</small></details>
 
                         </section><section><div style="font:700 12px Arial;margin-bottom:4px;">Game format</div>
                         <div style="display:grid;grid-template-columns:repeat(2,84px);gap:6px 6px;">
