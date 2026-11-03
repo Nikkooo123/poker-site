@@ -3,6 +3,7 @@ from html import escape
 
 # Label, colour, SVG artwork. These are TableRadar drawings, not copied app assets.
 FEATURES = {
+ 'cards_diamond': ('Purple cards & diamond · ClubGG', '#9534c9', '<rect x="2" y="3" width="8" height="11" rx="1.2" fill="#d5a5ff"/><rect x="11" y="3" width="8" height="11" rx="1.2" fill="#e6c2ff"/><path d="M3 7h6m-6 3h6m3-3h6m-6 3h6" stroke="#9a5cbe" stroke-width=".8"/><path d="m15 9 7 6-7 8-7-8z" fill="#f2b4e5"/><path d="m15 9-3 6 3 8 3-8z" fill="#ffc9ef"/>'),
  'double_board_bomb': ('Double Board Bomb Pot', '#aa5146', '<rect x="2" y="3" width="15" height="6" rx="1.5" fill="#f9d5b4"/><rect x="2" y="11" width="15" height="6" rx="1.5" fill="#e5aa88"/><path d="M7 4v4m5-4v4M7 12v4m5-4v4" stroke="#8b4940"/><circle cx="17" cy="17" r="5" fill="#fff0d4"/><path d="m19 12 2-3m-2-1 3 2M14 17c0-2 1-3 2-3" fill="none" stroke="#ffda92" stroke-width="1.5" stroke-linecap="round"/>'),
  'straddle': ('Straddle', '#ba8a13', '<ellipse cx="8" cy="16" rx="5" ry="2" fill="#ffe696"/><path d="M3 12v4m10-4v4M3 13c0 3 10 3 10 0M3 10c0 3 10 3 10 0" fill="none" stroke="#ffe696" stroke-width="1.5"/><ellipse cx="8" cy="10" rx="5" ry="2" fill="#ffedb1"/><path d="M17 4l-5 5h3v10h4V9h3z" fill="#fff0ac"/>'),
  'cucurucho': ('Cucurucho · Pot or Fold', '#9d32c0', '<path d="M5 10a7 7 0 0 1 14 0z" fill="#ffd7fb"/><path d="M5 11h14l-7 11z" fill="#eba2ec"/><path d="M8 13l6 5m2-5l-5 6" stroke="#cb77cd" stroke-width="1"/>'),
