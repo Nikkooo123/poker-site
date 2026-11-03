@@ -101,6 +101,7 @@ def init_club_subscriptions_db():
 
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS access_expires_at TIMESTAMPTZ;")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT '';")
+            cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS usd_per_unit NUMERIC(18,8);")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS manager_created BOOLEAN NOT NULL DEFAULT FALSE;")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS owner_contact_email TEXT;")
             cur.execute("ALTER TABLE club_subscriptions ADD COLUMN IF NOT EXISTS club_code TEXT;")
@@ -231,7 +232,7 @@ def add_club_subscription(
 
 
 def edit_club_subscription(subscription_id, *, club_name="", owner_name="", owner_telegram="",
-                           owner_email="", application="", currency="", club_code="", notes="",union_name=None):
+                           owner_email="", application="", currency="", club_code="", notes="",union_name=None,usd_per_unit=None):
     """Edit listing metadata only; contact email never transfers an owner's account/access."""
     init_club_subscriptions_db()
     values = {key: _safe(value).strip() for key, value in dict(club_name=club_name,
@@ -241,6 +242,8 @@ def edit_club_subscription(subscription_id, *, club_name="", owner_name="", owne
         if len(value) > (4000 if key == 'notes' else 320):
             raise ValueError("Club details are too long.")
     values['currency'] = normalize_currency(currency) if values['currency'] else ''
+    from usd_blinds import normalize_usd_rate
+    usd_rate = normalize_usd_rate(usd_per_unit)
     configured_union=None if union_name is None else _safe(union_name).strip()
     if configured_union is not None and len(configured_union)>160:
         raise ValueError('Union name must be up to 160 characters.')
@@ -259,10 +262,13 @@ def edit_club_subscription(subscription_id, *, club_name="", owner_name="", owne
             cur.execute("SELECT id FROM club_subscriptions WHERE id=%s FOR UPDATE", (int(subscription_id),))
             if not cur.fetchone():
                 raise ValueError("This club no longer exists. Refresh the page.")
+            # Old forms preserve the rate, unless they change its currency basis.
             cur.execute("""UPDATE club_subscriptions SET club_name=%s,owner_name=%s,owner_telegram=%s,
-                owner_contact_email=%s,application=%s,currency=%s,club_code=%s,notes=%s,union_name=COALESCE(%s,union_name),updated_at=NOW()
+                owner_contact_email=%s,application=%s,currency=%s,club_code=%s,notes=%s,
+                usd_per_unit=CASE WHEN %s THEN %s WHEN currency IS DISTINCT FROM %s THEN NULL ELSE usd_per_unit END,
+                union_name=COALESCE(%s,union_name),updated_at=NOW()
                 WHERE id=%s""", tuple(values[key] for key in ('club_name','owner_name','owner_telegram',
-                    'owner_email','application','currency','club_code','notes')) + (configured_union,int(subscription_id)))
+                    'owner_email','application','currency','club_code','notes')) + (usd_per_unit is not None,usd_rate,values['currency'],configured_union,int(subscription_id)))
             cur.execute("""UPDATE poker_tables SET club=%s,owner_name=%s,owner_telegram=%s,
                 network=%s,platform=%s,currency=%s,union_name=COALESCE(%s,union_name),updated_at=NOW() WHERE club_subscription_id=%s""",
                 (values['club_name'],values['owner_name'],telegram,network,network,values['currency'],configured_union,int(subscription_id)))

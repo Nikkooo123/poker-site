@@ -7,7 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from auth.auth_storage import update_user
 from favorite_clubs import normalize_favorite_clubs
 
-FIELDS = {'activeGames','activeNetworks','search','minBlind','maxBlind','onlyFav','sortPlayersDir','sortBlindsDir','sortPriority','favoriteClubs','onlyFavoriteClubs'}
+FIELDS = {'activeGames','activeNetworks','search','minBlind','maxBlind','minPlayers','maxPlayers','usdMode','onlyFav','sortPlayersDir','sortBlindsDir','sortPriority','favoriteClubs','onlyFavoriteClubs'}
 BLINDS = {'','0.5','1','2','4','5','6','8','10','15','20','25','30','50','100','200'}
 
 
@@ -26,6 +26,14 @@ def normalize_filters(value):
     if not isinstance(search,str) or len(search)>120 or any(not x.isprintable() for x in search):
         raise ValueError('Invalid club search.')
     result['search']=search
+    for key in ('minPlayers','maxPlayers'):
+        data=value.get(key,'')
+        if not isinstance(data,str) or data not in {'', *map(str,range(1,10))}:
+            raise ValueError('Players must be between 1 and 9.')
+        result[key]=data
+    result['usdMode']=value.get('usdMode',False)
+    if not isinstance(result['usdMode'],bool):
+        raise ValueError('Invalid USD filter.')
     for key in ('minBlind','maxBlind'):
         data=value.get(key,'')
         if not isinstance(data,str) or data not in BLINDS:
@@ -69,7 +77,7 @@ def install_preference_routes(app,get_current_user):
             values=normalize_filters(supplied_filters)
             # Older cached clients must not erase the new persistent club bookmarks.
             previous=saved_filters(user) or {}
-            for field in ('favoriteClubs','onlyFavoriteClubs'):
+            for field in ('favoriteClubs','onlyFavoriteClubs','minPlayers','maxPlayers','usdMode'):
                 if field not in supplied_filters and field in previous:
                     values[field]=previous[field]
         except (ValueError,TypeError):

@@ -357,6 +357,7 @@ def inherit_club_currencies(rows, clubs):
             club = matches[0] if len(matches) == 1 else None
         if club:
             table['currency'] = normalize_currency(club.get('currency'), required=False)
+            table['usd_per_unit'] = club.get('usd_per_unit')
             # A verified legacy match also supplies the stable club identity.
             table['club_subscription_id'] = club['id']
         result.append(table)
@@ -400,7 +401,7 @@ def load_tables():
             rows = cur.fetchall()
             # Explicit identity wins; legacy matches also require the same owner contact.
             if has_clubs:
-                cur.execute("SELECT id,club_name,application,owner_telegram,currency FROM club_subscriptions WHERE plan='host'")
+                cur.execute("SELECT id,club_name,application,owner_telegram,currency,to_jsonb(c)->>'usd_per_unit' AS usd_per_unit FROM club_subscriptions c WHERE plan='host'")
                 clubs = cur.fetchall()
             else:
                 clubs = []

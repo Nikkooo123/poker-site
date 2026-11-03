@@ -86,6 +86,7 @@ def render_club_subscriptions_page(subscriptions: list, csrf="", error="", user=
                 edit_fields += '<label style="font-size:12px">Currency'+currency_input(value, required=False)+'</label>'
                 continue
             edit_fields += f'<label style="font-size:12px">{label}<input name="{key}" value="{escape(_safe(value),quote=True)}" maxlength="320" placeholder="Optional" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px"></label>'
+        edit_fields += f'<label style="font-size:12px">USD per club unit<input type="hidden" name="usd_rate_present" value="1"><input type="number" name="usd_per_unit" value="{escape(_safe(sub.get("usd_per_unit")),quote=True)}" min="0.00000001" max="1000000" step="0.00000001" placeholder="USD: 1; otherwise unknown" style="display:block;width:100%;box-sizing:border-box;height:40px;padding:8px 10px;border-radius:8px;margin-top:5px"><small>Manual display rate: 1 club unit = this many USD. Leave blank for unknown; USD defaults to 1. Review when currency or chip value changes.</small></label>'
         app_value = ''.join(ch for ch in _safe(sub.get('application')).lower() if ch.isalnum())
         app_options = ''.join(f'<option value="{value}"'+(' selected' if app_value==key else '')+f'>{label}</option>' for key,value,label in
             (('','','Not set'),('pppoker','PP Poker','PP Poker'),('pokerbros','Poker Bros','Poker Bros'),('clubgg','Club GG','Club GG'),('xpoker','X Poker','X Poker')))

@@ -4,6 +4,7 @@ from favorite_clubs import club_record, club_catalogue, catalogue_attribute, ren
 import json
 import secrets
 from currency_codes import normalize_currency, currency_badge
+from usd_blinds import usd_equivalent
 from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge, extra_vpip_buttons
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
@@ -265,8 +266,11 @@ def club_filter_button(label: str, key: str) -> str:
     </button>
     """
 
-def blinds_select(select_id: str, label: str) -> str:
+def blinds_select(select_id: str, label: str, players=False) -> str:
     values = ["", "0.5", "1", "2", "4", "5", "6", "8", "10", "15", "20", "25", "30", "50", "100", "200"]
+    if players:
+        values = [""] + [str(n) for n in range(1, 10)]
+    accessible = ("Players " if players else "Big blind ") + ("minimum" if label == "MIN" else "maximum")
     options = []
     for v in values:
         if v == "":
@@ -275,7 +279,7 @@ def blinds_select(select_id: str, label: str) -> str:
             options.append(f'<option value="{v}">{v}</option>')
 
     return f"""
-    <select id="{escape(select_id)}" style="
+    <select id="{escape(select_id)}" aria-label="{accessible}" style="
         width:96px;
         height:38px;
         padding:0 12px;
@@ -338,7 +342,7 @@ def _network_overlay_color(network: str) -> str:
 def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
-        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency")}
+        table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency", "usd_per_unit")}
         table.update(club="***", table_name="***", union_name="", owner_name="", owner_telegram="", affiliate_name="", affiliate_telegram="")
     if not can_join:
         table = dict(table)
@@ -381,6 +385,9 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
         players_badge = f"{players_raw}/{seats_raw}"
 
     big_blind = _parse_big_blind(blinds)
+    usd = usd_equivalent(table.get("blinds"), table.get("currency"), table.get("usd_per_unit"))
+    usd_big_blind = usd["big_blind"] if usd else ""
+    usd_label = escape(usd["label"] if usd else "USD rate unavailable")
 
     game_colors = {
         "NLH": "#57b84f",
@@ -399,6 +406,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
          data-network="{escape(network)}"
          data-players="{escape(players_badge)}"
          data-blind="{big_blind}"
+         data-usd-blind="{usd_big_blind}"
          style="
             display:grid;
             grid-template-columns:28px 758px 160px 96px;
@@ -511,6 +519,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
                         color:#ffffff;
                         line-height:1;">
                         {blinds}{currency_badge(table.get("currency"))}
+                        <span class="tr-usd-equivalent" hidden style="font:500 11px Arial;color:#b8d9ca;margin-left:6px" title="Approximate USD equivalent at the club’s configured unit rate">{usd_label}</span>
                     </div>
                 </div>
             </div>
@@ -676,6 +685,9 @@ def render_public_script():
         search: userKey("club_search"),
         minBlind: userKey("blind_min_value"),
         maxBlind: userKey("blind_max_value"),
+        minPlayers: userKey("players_min_value"),
+        maxPlayers: userKey("players_max_value"),
+        usdMode: userKey("usd_mode"),
         sortPlayersDir: userKey("sort_players_dir"),
         sortBlindsDir: userKey("sort_blinds_dir"),
         sortPriority: userKey("sort_priority"),
@@ -689,14 +701,15 @@ def render_public_script():
     try { serverFilters = JSON.parse(document.body.dataset.filters || "null"); } catch(e) {}
     if (serverFilters && filterStorage.getItem(STORAGE_KEYS.pending) !== "1") {
         for (const key of ["activeGames","activeNetworks","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key]));
-        for (const key of ["search","minBlind","maxBlind","sortPlayersDir","sortBlindsDir"]) filterStorage.setItem(STORAGE_KEYS[key],serverFilters[key]);
+        for (const key of ["search","minBlind","maxBlind","minPlayers","maxPlayers","sortPlayersDir","sortBlindsDir"]) filterStorage.setItem(STORAGE_KEYS[key],serverFilters[key]);
         filterStorage.setItem(STORAGE_KEYS.onlyFav,serverFilters.onlyFav ? "1" : "0");
+        filterStorage.setItem(STORAGE_KEYS.usdMode,serverFilters.usdMode ? "1" : "0");
     }
     let filtersReady = false, filterSaveTimer = null, filterSaveBusy = false;
     let lastFilterPayload = "", pendingFilterPayload = null;
 
     function currentFilters() {
-        return {activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,favoriteClubs:window.trClubFavorites?.saved()||[],onlyFavoriteClubs:window.trClubFavorites?.only()||false,sortPlayersDir,sortBlindsDir,sortPriority};
+        return {usdMode:!!$("#usd-mode")?.checked,minPlayers:$("#players-min")?.value || "",maxPlayers:$("#players-max")?.value || "",activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,favoriteClubs:window.trClubFavorites?.saved()||[],onlyFavoriteClubs:window.trClubFavorites?.only()||false,sortPlayersDir,sortBlindsDir,sortPriority};
     }
 
     async function flushFilterSave() {
@@ -867,6 +880,8 @@ def render_public_script():
         if (searchEl) searchEl.value = filterStorage.getItem(STORAGE_KEYS.search) || "";
         if (minEl) minEl.value = filterStorage.getItem(STORAGE_KEYS.minBlind) || "";
         if (maxEl) maxEl.value = filterStorage.getItem(STORAGE_KEYS.maxBlind) || "";
+        for (const [id,key] of [["players-min","minPlayers"],["players-max","maxPlayers"]]) { const el=$("#"+id); if(el)el.value=filterStorage.getItem(STORAGE_KEYS[key]) || ""; }
+        if($("#usd-mode"))$("#usd-mode").checked=filterStorage.getItem(STORAGE_KEYS.usdMode)==="1";
     }
 
     function saveInputs() {
@@ -878,6 +893,8 @@ def render_public_script():
         if (minEl) filterStorage.setItem(STORAGE_KEYS.minBlind, minEl.value || "");
         if (maxEl) filterStorage.setItem(STORAGE_KEYS.maxBlind, maxEl.value || "");
 
+        for (const [id,key] of [["players-min","minPlayers"],["players-max","maxPlayers"]]) filterStorage.setItem(STORAGE_KEYS[key],$("#"+id)?.value || "");
+        filterStorage.setItem(STORAGE_KEYS.usdMode,$("#usd-mode")?.checked ? "1" : "0");
         filterStorage.setItem(STORAGE_KEYS.onlyFav, showOnlyFavorites ? "1" : "0");
         filterStorage.setItem(STORAGE_KEYS.sortPlayersDir, sortPlayersDir);
         filterStorage.setItem(STORAGE_KEYS.sortBlindsDir, sortBlindsDir);
@@ -905,8 +922,8 @@ def render_public_script():
                 }
 
                 if (key === "blinds" && sortBlindsDir) {
-                    const ab = parseBlindValue(a.dataset.blind);
-                    const bb = parseBlindValue(b.dataset.blind);
+                    const ab = parseBlindValue($("#usd-mode")?.checked ? a.dataset.usdBlind : a.dataset.blind);
+                    const bb = parseBlindValue($("#usd-mode")?.checked ? b.dataset.usdBlind : b.dataset.blind);
                     cmp = sortBlindsDir === "asc" ? ab - bb : bb - ab;
                 }
 
@@ -928,17 +945,21 @@ def render_public_script():
         const search = ($("#club-search")?.value || "").trim().toLowerCase();
         const minBlindRaw = $("#blinds-min")?.value || "";
         const maxBlindRaw = $("#blinds-max")?.value || "";
+        const usdMode=!!$("#usd-mode")?.checked;
+        const minPlayers=$("#players-min")?.value || "", maxPlayers=$("#players-max")?.value || "";
         const minBlind = parseBlindValue(minBlindRaw);
         const maxBlind = parseBlindValue(maxBlindRaw);
         const activeGames = getActiveGames();
         const activeNetworks = getActiveNetworks();
         const favorites = getFavorites();
-
+        let unknownRates=0;
         rows.forEach(row => {
             const club = row.dataset.club || "";
             const game = row.dataset.game || "";
             const network = row.dataset.network || "";
-            const bigBlind = parseBlindValue(row.dataset.blind);
+            const bigBlind = parseBlindValue(usdMode ? row.dataset.usdBlind : row.dataset.blind);
+            row.querySelectorAll(".tr-usd-equivalent").forEach(label=>label.hidden=!usdMode);
+            const occupied=parsePlayersValue(row.dataset.players);
             const tableId = Number(row.dataset.id);
 
             let visible = true;
@@ -946,6 +967,9 @@ def render_public_script():
             if (search && !club.includes(search)) visible = false;
             if (activeGames.length && !activeGames.includes(game)) visible = false;
             if (activeNetworks.length && !activeNetworks.includes(network)) visible = false;
+            if(minPlayers && occupied<Number(minPlayers))visible=false;
+            if(maxPlayers && occupied>Number(maxPlayers))visible=false;
+            if(usdMode && !row.dataset.usdBlind){if(visible)unknownRates++;visible=false;}
             if (minBlindRaw !== "" && bigBlind < minBlind) visible = false;
             if (maxBlindRaw !== "" && bigBlind > maxBlind) visible = false;
             if (showOnlyFavorites && !favorites.includes(tableId)) visible = false;
@@ -955,6 +979,8 @@ def render_public_script():
             row.style.display = "none";
         });
 
+        const usdNote=$("#usd-mode-note");
+        if(usdNote)usdNote.textContent=usdMode ? "≈ USD at the configured club rate. Big-blind range in USD."+(unknownRates ? " "+unknownRates+(unknownRates===1 ? " table hidden: USD rate unavailable." : " tables hidden: USD rate unavailable.") : "") : "Blinds range uses the big blind. Original club currency by default.";
         let filtered = rows.filter(r => r.dataset.visible === "1");
         filtered = sortRows(filtered);
 
@@ -976,7 +1002,7 @@ def render_public_script():
             if(hint)hint.textContent=myClubs?"Your clubs stay saved when tables close. Check your filters, or use Manage favorite clubs to add clubs.":"Try another club, game or blind range, or clear the filters above.";
         }
         const reset = $("#clear-filters");
-        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
+        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || minPlayers || maxPlayers || usdMode || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
         for (const [id,label,dir] of [["sort-players","Players",sortPlayersDir],["sort-blinds","Blinds",sortBlindsDir]]) {
             const button=$("#"+id);
             if(button){button.dataset.sort=dir;button.setAttribute("aria-label",label+" sort: "+(dir==="asc"?"ascending":dir==="desc"?"descending":"not sorted")+". Activate to change direction.");}
@@ -1118,7 +1144,8 @@ def render_public_script():
         setActiveNetworks([]);
         showOnlyFavorites = false;
         window.trClubFavorites?.clearFilter();
-        ["#club-search", "#blinds-min", "#blinds-max"].forEach(selector => {
+        if($("#usd-mode"))$("#usd-mode").checked=false;
+        ["#club-search", "#blinds-min", "#blinds-max", "#players-min", "#players-max"].forEach(selector => {
             const input = $(selector);
             if (input) input.value = "";
         });
@@ -1137,6 +1164,8 @@ def render_public_script():
     $("#club-search")?.addEventListener("input", function() {
         applyAll();
     });
+
+    ["#players-min","#players-max","#usd-mode"].forEach(id=>$(id)?.addEventListener("change",applyAll));
 
     $("#blinds-min")?.addEventListener("change", function() {
         applyAll();
@@ -1456,7 +1485,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                         border-radius:20px;
                         padding:12px 14px;
                         display:grid;
-                        grid-template-columns:170px 250px 96px;
+                        grid-template-columns:170px 250px 212px;
                         justify-content:space-between;
                         align-items:center;
                         box-sizing:border-box;">
@@ -1485,14 +1514,17 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             {club_filter_button("X Poker", "xpoker")}
                         </div>
 
-                        <div style="
-                            width:96px;
-                            display:grid;
-                            grid-template-columns:1fr;
-                            gap:8px;
-                            justify-items:end;">
-                            {blinds_select("blinds-min", "MIN")}
-                            {blinds_select("blinds-max", "MAX")}
+                        <div class="tr-range-filters" style="display:grid;grid-template-columns:96px 96px;gap:6px 12px;align-items:start">
+                            <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Blinds</strong>
+                                {blinds_select("blinds-min", "MIN")}{blinds_select("blinds-max", "MAX")}
+                            </div>
+                            <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Players</strong>
+                                {blinds_select("players-min", "MIN", players=True)}{blinds_select("players-max", "MAX", players=True)}
+                            </div>
+                        </div>
+                        <div class="tr-usd-controls" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:0;font:12px Arial">
+                            <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input id="usd-mode" type="checkbox"> Show &amp; filter in USD</label>
+                            <span id="usd-mode-note" style="color:#b8c8c5">Blinds range uses the big blind. Original club currency by default.</span>
                         </div>
                     </div>
                 </div>

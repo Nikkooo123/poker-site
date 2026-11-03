@@ -503,7 +503,7 @@ def admin_add_club_subscription(
 def admin_edit_club_subscription(request: Request, subscription_id: int,
     club_name: str = Form(''), owner_name: str = Form(''), owner_telegram: str = Form(''),
     owner_email: str = Form(''), application: str = Form(''), currency: str = Form(''),
-    club_code: str = Form(''), notes: str = Form(''), union_name: str = Form(''), csrf: str = Form('')):
+    club_code: str = Form(''), notes: str = Form(''), union_name: str = Form(''), csrf: str = Form(''), usd_per_unit: str | None = Form(None), usd_rate_present: str = Form('')):
     check = require_manager(request)
     if check:
         return check
@@ -512,7 +512,7 @@ def admin_edit_club_subscription(request: Request, subscription_id: int,
     try:
         edit_club_subscription(subscription_id, club_name=club_name,owner_name=owner_name,
             owner_telegram=owner_telegram,owner_email=owner_email,application=application,
-            currency=currency,club_code=club_code,notes=notes,union_name=union_name)
+            currency=currency,club_code=club_code,notes=notes,union_name=union_name,usd_per_unit=('' if usd_rate_present == '1' and usd_per_unit is None else usd_per_unit))
     except ValueError as error:
         return HTMLResponse(render_club_subscriptions_page(load_club_subscriptions(),csrf,str(error),
             user=get_current_user(request)),status_code=400)
