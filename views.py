@@ -1211,12 +1211,23 @@ def render_public_script():
     filtersReady = true;
     lastFilterPayload = JSON.stringify(currentFilters());
     if (FILTER_CSRF && (filterStorage.getItem(STORAGE_KEYS.pending) === "1" || !serverFilters)) queueFilterSave(true);
-    // Do not interrupt club selection or typing with the directory's periodic refresh.
-    setInterval(function() {
+    // Idle focus on a filter must not prevent new table data indefinitely.
+    const refreshDueAt = Date.now() + 60000;
+    let lastDirectoryInput = 0;
+    let directoryReloading = false;
+    ['input', 'change', 'keydown', 'pointerdown'].forEach(name => {
+        document.addEventListener(name, () => { lastDirectoryInput = Date.now(); }, {passive:true});
+    });
+    function refreshDirectoryWhenIdle() {
+        if (directoryReloading || document.visibilityState === 'hidden' || Date.now() < refreshDueAt) return;
         const picker = document.getElementById('favorite-clubs-panel');
-        const editing = document.activeElement?.matches('input,textarea,select');
-        if ((!picker || picker.hidden) && !editing) window.location.reload();
-    }, 60000);
+        if (picker && !picker.hidden) return;
+        if (Date.now() - lastDirectoryInput < 15000) return;
+        directoryReloading = true;
+        window.location.reload();
+    }
+    setInterval(refreshDirectoryWhenIdle, 5000);
+    document.addEventListener('visibilitychange', refreshDirectoryWhenIdle);
     </script>
     """
 
