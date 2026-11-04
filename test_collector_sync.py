@@ -50,12 +50,28 @@ class CollectorSyncTests(unittest.TestCase):
             doc=snapshot();doc['tables'][0]['blinds']=blinds
             self.assertEqual(len(sync.validate_snapshot(doc)['tables']),expected,blinds)
 
-    def test_incomplete_stale_future_and_unverified_empty_rejected_before_database(self):
+    def test_complete_round_observations_have_no_wall_clock_age_cutoff(self):
+        now=datetime.now(timezone.utc)
+        for age in (timedelta(minutes=11),timedelta(hours=2),timedelta(days=1)):
+            doc=snapshot()|{'observed_at':(now-age).isoformat()}
+            self.assertEqual(len(sync.validate_snapshot(doc,now=now)['tables']),1)
+
+    def test_older_snapshot_still_cannot_replace_a_newer_snapshot(self):
+        doc=snapshot()
+        db=MagicMock();db.__enter__.return_value=db
+        db.cursor.return_value.__enter__.return_value=db
+        db.fetchall.return_value=[dict(id=18,club_name='VANs',application='ClubGG',currency='USD',host_tier='pro')]
+        db.fetchone.return_value=dict(observed_at=sync.timestamp(doc['observed_at'])+timedelta(seconds=1),snapshot={})
+        with patch.object(sync,'init_db'),patch.object(sync,'_connect',return_value=db):
+            with self.assertRaisesRegex(ValueError,'equal or newer'):
+                sync.apply_snapshot(doc)
+        db.commit.assert_not_called()
+
+    def test_incomplete_future_and_unverified_empty_rejected_before_database(self):
         documents=[]
         for flag in ('complete','club_identity_verified','running_tables_checked','end_of_list_verified','all_rows_verified'):
             documents.append(snapshot()|{flag:False})
         documents += [snapshot()|{'observed_at':(datetime.now(timezone.utc)+timedelta(minutes=1)).isoformat()},
-                      snapshot()|{'observed_at':(datetime.now(timezone.utc)-timedelta(minutes=11)).isoformat()},
                       snapshot()|{'tables':[]}, snapshot()|{'schema_version':True}]
         with patch.object(sync,'_connect') as connect:
             for doc in documents:

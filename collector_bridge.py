@@ -11,11 +11,11 @@ PAGE='''<!doctype html><html lang="en"><meta charset="utf-8"><title>Collector sy
 <h1>Local Collector sync</h1><p>Choose the Collector's <b>sync-outbox</b> folder once, then leave this page open.
 Only verified table data is sent to TableRadar. Screenshots and login credentials stay on your computer.</p>
 <p>Each complete club result replaces its active table list. Tables with no players or missing from the complete result are removed from the directory and archived.
-Incomplete, ambiguous or old results leave existing tables unchanged.</p>
+Incomplete, ambiguous or superseded results leave existing tables unchanged.</p>
 <button id="start">Choose sync-outbox and start</button><button id="stop" disabled>Stop sync</button>
 <p id="status" role="status">Not connected. No background access has been granted.</p><pre id="log"></pre>
 <details><summary>Apply one verified local result</summary>
-<p>Paste a verified Collector JSON result. The same completeness, age and club checks apply.</p>
+<p>Paste a verified Collector JSON result. The same completeness, observation order and club checks apply.</p>
 <textarea id="manual" aria-label="Verified Collector JSON" rows="6" style="width:100%"></textarea>
 <button id="apply">Apply verified result</button></details>
 <a href="/manager">Back to manager workspace</a>

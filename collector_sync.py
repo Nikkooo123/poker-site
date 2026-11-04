@@ -41,8 +41,10 @@ def validate_snapshot(document, now=None):
         raise ValueError('Incomplete or unverified club snapshot. Existing tables were not changed.')
     observed=timestamp(document.get('observed_at'))
     now=now or datetime.now(timezone.utc)
-    if observed<now-timedelta(minutes=10) or observed>now+timedelta(seconds=30):
-        raise ValueError('Snapshot is stale or has a future observation time.')
+    # Complete rounds are reviewed and published together; early clubs can be
+    # older than ten minutes. apply_snapshot still rejects older/equal replays.
+    if observed>now+timedelta(seconds=30):
+        raise ValueError('Snapshot has a future observation time.')
     code=text(document.get('club_code'),32)
     if not re.fullmatch(r'[0-9]{1,32}',code):
         raise ValueError('A numeric ClubGG club ID is required.')
