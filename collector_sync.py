@@ -49,7 +49,7 @@ def validate_snapshot(document, now=None):
     if not re.fullmatch(r'[0-9]{1,32}',code):
         raise ValueError('A numeric ClubGG club ID is required.')
     rows=document.get('tables')
-    if not isinstance(rows,list) or len(rows)>30:
+    if not isinstance(rows,list) or len(rows)>50:
         raise ValueError('Invalid table list.')
     if not rows and document.get('empty_club_verified') is not True:
         raise ValueError('An empty result needs explicit verified empty-club evidence.')
@@ -156,7 +156,7 @@ def apply_snapshot(document):
                 raise ValueError('Club ID must match exactly one active ClubGG placement.')
             club=clubs[0]; selected=club['id']
             # This bridge is manager-only. Its verified import cap is enforced
-            # by validate_snapshot (30); normal host-plan limits are unchanged.
+            # by validate_snapshot (50); normal host-plan limits are unchanged.
             currency=normalize_currency(club.get('currency'))
             cur.execute('SELECT observed_at,snapshot FROM tableradar_collector_state WHERE club_subscription_id=%s',(selected,))
             previous=cur.fetchone()
