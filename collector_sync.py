@@ -1,4 +1,4 @@
-"""Manager-session bridge for complete, locally verified ClubGG snapshots.
+"""Manager-session bridge for complete, locally verified club snapshots.
 
 No screenshot upload, API keys or browser credentials in the desktop collector.
 Incomplete observations must never be treated as an empty club.
@@ -34,8 +34,11 @@ def timestamp(value):
 
 
 def validate_snapshot(document, now=None):
-    if not isinstance(document,dict) or type(document.get('schema_version')) is not int or document['schema_version'] not in (1,2):
+    if not isinstance(document,dict) or type(document.get('schema_version')) is not int or document['schema_version'] not in (1,2,3):
         raise ValueError('Unsupported collector snapshot.')
+    network=document.get('network') if document['schema_version']==3 else 'clubgg'
+    if network not in ('clubgg','pokerbros') or (document['schema_version']<3 and document.get('network','clubgg')!='clubgg'):
+        raise ValueError('An explicit supported collector network is required.')
     required=('complete','club_identity_verified','running_tables_checked','end_of_list_verified','all_rows_verified')
     if any(document.get(key) is not True for key in required):
         raise ValueError('Incomplete or unverified club snapshot. Existing tables were not changed.')
@@ -47,7 +50,7 @@ def validate_snapshot(document, now=None):
         raise ValueError('Snapshot has a future observation time.')
     code=text(document.get('club_code'),32)
     if not re.fullmatch(r'[0-9]{1,32}',code):
-        raise ValueError('A numeric ClubGG club ID is required.')
+        raise ValueError('A numeric club ID is required.')
     rows=document.get('tables')
     if not isinstance(rows,list) or len(rows)>50:
         raise ValueError('Invalid table list.')
@@ -66,7 +69,8 @@ def validate_snapshot(document, now=None):
         if not match or not 0<=int(match[1])<=int(match[2])<=10 or int(match[2])<2:
             raise ValueError('Unrecognized player count.')
         blinds=text(row.get('blinds'),80)
-        if not re.fullmatch(r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:\(\d+(?:\.\d+)?\))?',blinds):
+        blinds_pattern=r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:/Str)?(?:\(\d+(?:\.\d+)?\))?' if network=='pokerbros' else r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:\(\d+(?:\.\d+)?\))?'
+        if not re.fullmatch(blinds_pattern,blinds):
             raise ValueError('Unrecognized blinds.')
         buyin=text(row.get('buyin'),30)
         try:
@@ -94,7 +98,7 @@ def validate_snapshot(document, now=None):
                                buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),
                                features_verified=features_verified,union_name='-none-'))
-    return dict(club_code=code, observed_at=observed, tables=active)
+    return dict(network=network,club_code=code, observed_at=observed, tables=active)
 
 
 def identity(row):
@@ -151,9 +155,9 @@ def apply_snapshot(document):
                 AND COALESCE(c.access_expires_at,c.expires_at::timestamptz)>clock_timestamp()
                 FOR UPDATE OF c''',(snapshot['club_code'],))
             clubs=cur.fetchall()
-            clubs=[c for c in clubs if _normalize_network(c.get('application'))=='clubgg']
+            clubs=[c for c in clubs if _normalize_network(c.get('application'))==snapshot['network']]
             if len(clubs)!=1:
-                raise ValueError('Club ID must match exactly one active ClubGG placement.')
+                raise ValueError('Club ID and network must match exactly one active placement.')
             club=clubs[0]; selected=club['id']
             # This bridge is manager-only. Its verified import cap is enforced
             # by validate_snapshot (50); normal host-plan limits are unchanged.
@@ -174,13 +178,13 @@ def apply_snapshot(document):
                 cur.execute('''WITH removed AS (
                     DELETE FROM poker_tables WHERE club_subscription_id=%s AND id=ANY(%s) RETURNING *
                 ) INSERT INTO tableradar_removed_club_tables(reason,document)
-                SELECT 'Absent from verified active ClubGG snapshot',to_jsonb(removed) FROM removed''',(selected,removed))
+                SELECT %s,to_jsonb(removed) FROM removed''',(selected,removed,'Absent from verified active '+snapshot['network']+' snapshot'))
             for table_id,row in updates:
                 cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=%s,union_name=%s,updated_at=NOW()
                     WHERE id=%s AND club_subscription_id=%s''',
                     (row['players'],row['players'].split('/')[1],update_tags(by_id[table_id].get('tags'),row),row['union_name'],table_id,selected))
             for row in creates:
-                _insert_table(cur,dict(row,club=club['club_name'],network='clubgg',currency=currency,
+                _insert_table(cur,dict(row,club=club['club_name'],network=snapshot['network'],currency=currency,
                     club_subscription_id=selected,owner_name=club.get('owner_name') or '',
                     owner_telegram=club.get('owner_telegram') or '',affiliate_name=OFFICIAL_AFFILIATE_NAME,
                     affiliate_telegram=TELEGRAM_URL))

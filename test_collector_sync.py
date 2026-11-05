@@ -16,6 +16,45 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
+    def test_schema_three_requires_supported_explicit_network_and_legacy_stays_clubgg(self):
+        self.assertEqual(sync.validate_snapshot(snapshot())['network'],'clubgg')
+        for network in (None,'xpoker','pppoker','Poker Bros'):
+            with self.assertRaises(ValueError):
+                sync.validate_snapshot(snapshot()|{'schema_version':3,'network':network})
+        with self.assertRaises(ValueError):
+            sync.validate_snapshot(snapshot()|{'network':'pokerbros'})
+        self.assertEqual(sync.validate_snapshot(snapshot()|{'schema_version':3,'network':'pokerbros'})['network'],'pokerbros')
+
+    def test_pokerbros_preserves_visible_straddle_without_inventing_an_amount(self):
+        for blinds in ('0.5/1/Str','1/2/Str(0.4)'):
+            doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+            doc['tables'][0]['blinds']=blinds
+            self.assertEqual(sync.validate_snapshot(doc)['tables'][0]['blinds'],blinds)
+            doc['network']='clubgg'
+            with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
+    def test_pokerbros_import_matches_network_and_club_and_keeps_currency(self):
+        doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+        db=MagicMock();db.__enter__.return_value=db;db.cursor.return_value.__enter__.return_value=db
+        db.fetchall.side_effect=[[
+            dict(id=10,club_name='Other network',application='ClubGG',currency='USD'),
+            dict(id=20,club_name='Poker Bros club',application='Poker Bros',currency='GBP')],[]]
+        db.fetchone.return_value=None
+        with patch.object(sync,'init_db'),patch.object(sync,'_connect',return_value=db),patch.object(sync,'_insert_table') as insert:
+            result=sync.apply_snapshot(doc)
+        self.assertEqual(result['added'],1)
+        row=insert.call_args.args[1]
+        self.assertEqual((row['network'],row['club_subscription_id'],row['currency']),('pokerbros',20,'GBP'))
+        db.commit.assert_called_once()
+
+    def test_pokerbros_cannot_fall_back_to_same_code_on_another_network(self):
+        doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+        db=MagicMock();db.__enter__.return_value=db;db.cursor.return_value.__enter__.return_value=db
+        db.fetchall.return_value=[dict(id=10,club_name='Other network',application='ClubGG',currency='USD')]
+        with patch.object(sync,'init_db'),patch.object(sync,'_connect',return_value=db):
+            with self.assertRaisesRegex(ValueError,'network'):sync.apply_snapshot(doc)
+        db.commit.assert_not_called()
+
     def test_manager_import_cap_is_50_and_host_plan_stays_20(self):
         from membership_plans import table_limit
         self.assertEqual(table_limit({'host_tier':'pro'}),20)
@@ -119,7 +158,7 @@ class CollectorSyncTests(unittest.TestCase):
             result=sync.apply_snapshot(doc)
         self.assertEqual(result['active'],1);self.assertEqual(result['removed'],1)
         deletes=[args for args,_ in db.execute.call_args_list if 'DELETE FROM poker_tables' in args[0]]
-        self.assertEqual(deletes[0][1],(18,[2]));self.assertIn('tableradar_removed_club_tables',deletes[0][0])
+        self.assertEqual(deletes[0][1],(18,[2],'Absent from verified active clubgg snapshot'));self.assertIn('tableradar_removed_club_tables',deletes[0][0])
         db.commit.assert_called_once()
 
     def test_route_requires_manager_session_csrf_and_bounded_json(self):
