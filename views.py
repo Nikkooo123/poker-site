@@ -401,6 +401,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     <div class="table-row"
          data-id="{table_id}"
          data-game="{escape(game)}"
+         data-tags="{escape(_safe(table.get('tags', '')), quote=True)}"
          data-club="{club_name.lower()}"
          data-club-key="{club_key}"
          data-network="{escape(network)}"
@@ -965,7 +966,10 @@ def render_public_script():
             let visible = true;
 
             if (search && !club.includes(search)) visible = false;
-            if (activeGames.length && !activeGames.includes(game)) visible = false;
+            const formats = activeGames.filter(value => value !== "DB");
+            if (formats.length && !formats.includes(game)) visible = false;
+            const features = (row.dataset.tags || "").toLowerCase().split(",").map(value => value.trim());
+            if (activeGames.includes("DB") && !features.some(value => value === "double_board" || value === "double_board_bomb")) visible = false;
             if (activeNetworks.length && !activeNetworks.includes(network)) visible = false;
             if(minPlayers && occupied<Number(minPlayers))visible=false;
             if(maxPlayers && occupied>Number(maxPlayers))visible=false;
@@ -1515,6 +1519,8 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             {game_button("PLO4")}
                             {game_button("PLO5")}
                             {game_button("PLO6")}
+                            {game_button("OFC")}
+                            {game_button("DB")}
                         </div>
 
                         <div style="
