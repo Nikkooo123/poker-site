@@ -16,6 +16,24 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
+    def test_pokerbros_unknown_buyin_requires_explicit_verified_evidence(self):
+        doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+        doc['tables'][0]['buyin']=''
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+        doc['tables'][0]['buyin_unavailable_verified']=True
+        self.assertEqual(sync.validate_snapshot(doc)['tables'][0]['buyin'],'')
+        doc['network']='clubgg'
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
+    def test_fixed_limit_variant_is_explicit_and_not_merged_with_nlh(self):
+        doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+        doc['tables'][0].update(game='NLH',required_features=['fixed_limit'])
+        row=sync.validate_snapshot(doc)['tables'][0]
+        self.assertIn('fixed_limit',row['tags'])
+        self.assertNotEqual(sync.identity(row),sync.identity(row|{'tags':'clock','required_features':''}))
+        doc['tables'][0]['game']='PLO4'
+        with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
     def test_schema_three_requires_supported_explicit_network_and_legacy_stays_clubgg(self):
         self.assertEqual(sync.validate_snapshot(snapshot())['network'],'clubgg')
         for network in (None,'xpoker','pppoker','Poker Bros'):

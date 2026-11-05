@@ -3,6 +3,7 @@ from html import escape
 
 # Label, colour, SVG artwork. These are TableRadar drawings, not copied app assets.
 FEATURES = {
+ 'fixed_limit': ('Fixed Limit Hold’em · FLH', '#318f91', '<path d="M3 3h18v18H3z" fill="#b9f8ed"/><path d="M4 4h16v4H4z" fill="#69d8d0"/><text x="12" y="16" text-anchor="middle" fill="#125c69" font-family="Arial" font-weight="900" font-size="8">FLH</text>'),
  'pineapple': ('Pineapple · 3-card Hold’em', '#986d21', '<path d="m10 9-5-5 6 2 1-5 2 5 5-2-4 5" fill="#8cd48d"/><ellipse cx="12" cy="15" rx="6.5" ry="7" fill="#ffd271"/><path d="m7 12 10 7M7 17l9-7m-8 11 10-8M6 14l9 8" stroke="#ad6f24" stroke-width="1.1"/><text x="12" y="18" text-anchor="middle" fill="#4c3717" font-family="Arial" font-weight="bold" font-size="7">P</text>'),
  'crazy_pineapple': ('Crazy Pineapple · discard after flop', '#a94f27', '<path d="m10 9-5-5 6 2 1-5 2 5 5-2-4 5" fill="#9fe29a"/><ellipse cx="12" cy="15" rx="6.5" ry="7" fill="#ffbe62"/><path d="m7 12 10 7M7 17l9-7m-8 11 10-8M6 14l9 8" stroke="#b5652d" stroke-width="1.1"/><path d="m6 2 2 2m10-2-2 3" stroke="#fff0b9" stroke-width="1.4"/><text x="12" y="18" text-anchor="middle" fill="#6d2918" font-family="Arial" font-weight="bold" font-size="8">C</text>'),
  'nit_game': ('NIT Game', '#238c95', '<path d="M3 4h18v13H10l-5 5v-5H3z" fill="#c4faff"/><path d="M4 5h16" stroke="#49c3d4" stroke-width="1.5"/><text x="12" y="13" text-anchor="middle" fill="#176377" font-family="Arial" font-weight="900" font-size="7">NIT</text>'),

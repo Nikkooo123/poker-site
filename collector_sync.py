@@ -72,21 +72,26 @@ def validate_snapshot(document, now=None):
         blinds_pattern=r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:/Str)?(?:\(\d+(?:\.\d+)?\))?' if network=='pokerbros' else r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:\(\d+(?:\.\d+)?\))?'
         if not re.fullmatch(blinds_pattern,blinds):
             raise ValueError('Unrecognized blinds.')
-        buyin=text(row.get('buyin'),30)
-        try:
-            amount=Decimal(buyin)
-            if not amount.is_finite() or amount<=0:
-                raise InvalidOperation()
-        except InvalidOperation:
-            raise ValueError('Unrecognized minimum buy-in.') from None
+        if network=='pokerbros' and row.get('buyin')=='' and row.get('buyin_unavailable_verified') is True:
+            buyin=''
+        else:
+            buyin=text(row.get('buyin'),30)
+            try:
+                amount=Decimal(buyin)
+                if not amount.is_finite() or amount<=0:
+                    raise InvalidOperation()
+            except InvalidOperation:
+                raise ValueError('Unrecognized minimum buy-in.') from None
         tags=row.get('tags')
         features_verified=row.get('features_verified',True)
         if type(features_verified) is not bool:raise ValueError('Invalid feature verification state.')
         required_features=row.get('required_features',[])
-        if not isinstance(required_features,list) or any(value!='hi_lo' for value in required_features):
+        if not isinstance(required_features,list) or any(value not in ('hi_lo','fixed_limit') for value in required_features):
             raise ValueError('Unrecognized required game variant.')
-        if required_features and game not in ('PLO4','PLO5','PLO6'):
+        if 'hi_lo' in required_features and game not in ('PLO4','PLO5','PLO6'):
             raise ValueError('Hi-Lo variant requires a verified Omaha format.')
+        if 'fixed_limit' in required_features and game!='NLH':
+            raise ValueError('Fixed Limit Holdem requires the Holdem category.')
         if not isinstance(tags,list) or len(tags)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in tags):
             raise ValueError('Unrecognized table features.')
         confirmed=row.get('confirmed_tags',[])
@@ -105,7 +110,7 @@ def identity(row):
     # Names alone are not identities. A multiset preserves genuinely duplicate tables.
     name=unicodedata.normalize('NFKC',str(row.get('table_name',''))).replace('\u2019',"'").strip()
     variants=tag_set(row.get('tags'))|tag_set(row.get('required_features'))
-    return (name,str(row.get('game','')),'hi_lo' in variants,str(row.get('blinds','')).strip(),
+    return (name,str(row.get('game','')),'hi_lo' in variants,'fixed_limit' in variants,str(row.get('blinds','')).strip(),
             format(Decimal(str(row.get('buyin') or '0')).normalize(),'f'),str(row.get('players','')).split('/')[-1])
 
 
@@ -117,8 +122,8 @@ def tag_set(value):
 def update_tags(existing,row):
     if row['features_verified']:return row['tags']
     # Partial icon evidence adds verified marks without erasing unread marks.
-    known=tag_set(row['tags'])-{'hi_lo'}
-    old=tag_set(existing)-{'hi_lo'}
+    known=tag_set(row['tags'])-{'hi_lo','fixed_limit'}
+    old=tag_set(existing)-{'hi_lo','fixed_limit'}
     if any(t.startswith('vpip ') for t in known):old={t for t in old if not t.startswith('vpip ')}
     return ','.join(sorted(old|known|tag_set(row.get('required_features'))))
 
