@@ -169,18 +169,25 @@ def input_style() -> str:
 # =========================
 
 def game_button(game: str) -> str:
+    accent = {"NLH":"#9bd6ad", "PLO4":"#a9c6e8", "PLO5":"#8fd7df", "PLO6":"#c4b1eb", "OFC":"#e4c58b", "DB":"#f2aa91"}.get(game, "#b8dacf")
+    description = {"OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
     return f"""
     <button
         type="button"
         class="game-filter-btn"
+        title="{escape(description, quote=True)}"
         data-game="{escape(game)}"
-        data-bg="#24343b"
-        data-color="#eef2f5"
-        data-active-bg="#3c6055"
+        data-bg="linear-gradient(160deg,#2b4148,#21343c)"
+        data-color="{accent}"
+        data-active-bg="linear-gradient(145deg,#496d60,#314e46)"
         data-active-color="#ffffff"
         style="
             width:74px;
-            height:34px;
+            height:36px;
+            position:relative;
+            --game-accent:{accent};
+            letter-spacing:.35px;
+            transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
             border:none;
             border-radius:12px;
             background:#24343b;
@@ -1378,6 +1385,14 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                 transform: translateY(-2px);
             }}
 
+            .game-filter-btn::after {{
+                content:"";position:absolute;left:20px;right:20px;bottom:5px;height:2px;
+                border-radius:2px;background:var(--game-accent);opacity:.36;
+                transition:opacity .16s ease,transform .16s ease;transform:scaleX(.65);
+            }}
+            .game-filter-btn[aria-pressed="true"]::after {{opacity:1;transform:scaleX(1)}}
+            .game-filter-btn:focus-visible {{outline:2px solid var(--game-accent);outline-offset:3px}}
+            @media (prefers-reduced-motion:reduce) {{.game-filter-btn,.game-filter-btn::after {{transition:none}}}}
             .game-filter-btn:hover,
             .club-filter-btn:hover {{
                 transform: translateY(-1px);
@@ -1504,15 +1519,15 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                         border-radius:20px;
                         padding:12px 14px;
                         display:grid;
-                        grid-template-columns:170px 250px 212px;
+                        grid-template-columns:250px 250px 212px;
                         justify-content:space-between;
                         align-items:center;
                         box-sizing:border-box;">
 
                         <div style="
-                            width:170px;
+                            width:250px;
                             display:grid;
-                            grid-template-columns:repeat(2, 74px);
+                            grid-template-columns:repeat(3, 74px);
                             gap:8px 8px;
                             justify-content:start;">
                             {game_button("NLH")}
