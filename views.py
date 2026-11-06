@@ -169,7 +169,7 @@ def input_style() -> str:
 # =========================
 
 def game_button(game: str) -> str:
-    accent = {"NLH":"#9bd6ad", "PLO4":"#a9c6e8", "PLO5":"#8fd7df", "PLO6":"#c4b1eb", "OFC":"#e4c58b", "DB":"#f2aa91"}.get(game, "#b8dacf")
+    accent = {"NLH":"#b3f4cf", "PLO4":"#bddeff", "PLO5":"#89ecf2", "PLO6":"#d4c2ff", "OFC":"#ffdb9b", "DB":"#ffb79d"}.get(game, "#b8dacf")
     description = {"OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
     return f"""
     <button
@@ -177,16 +177,17 @@ def game_button(game: str) -> str:
         class="game-filter-btn"
         title="{escape(description, quote=True)}"
         data-game="{escape(game)}"
-        data-bg="linear-gradient(160deg,#2b4148,#21343c)"
+        data-bg="linear-gradient(180deg,#203139,#17272f)"
         data-color="{accent}"
-        data-active-bg="linear-gradient(145deg,#496d60,#314e46)"
-        data-active-color="#ffffff"
+        data-active-bg="{accent}"
+        data-active-color="#14282e"
         style="
             width:74px;
             height:36px;
             position:relative;
             --game-accent:{accent};
-            letter-spacing:.35px;
+            --game-edge:{accent}55;
+            letter-spacing:.45px;
             transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
             border:none;
             border-radius:12px;

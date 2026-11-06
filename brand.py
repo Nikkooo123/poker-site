@@ -105,7 +105,7 @@ def render_site_theme() -> str:
       .tr-directory .tr-filter-panel>.tr-usd-controls{gap:6px 10px!important;font-size:11px!important}.tr-directory #usd-mode-note{font-size:10px;line-height:1.35}
     }
     .tr-directory .tr-filter-panel{background:linear-gradient(115deg,#2c413dfa,#22383bfc)!important;border-color:#c4c29f3b!important}
-    .tr-directory .game-filter-btn{box-shadow:none!important}.tr-directory .game-filter-btn:hover{outline:1px solid #c4d2a955;outline-offset:1px}
+    .tr-directory .game-filter-btn{border:1px solid var(--game-edge)!important;border-radius:8px!important;box-shadow:inset 0 1px 0 #ffffff0a,0 1px 2px #0002!important;text-shadow:none!important;font-weight:700!important}.tr-directory .game-filter-btn:hover{border-color:var(--game-accent)!important;outline:none}.tr-directory .game-filter-btn[aria-pressed="true"]{border-color:var(--game-accent)!important;box-shadow:inset 0 1px 0 #ffffff45,0 0 0 1px var(--game-edge)!important}
     .tr-directory .table-row:hover .tr-game-cell,.tr-directory .table-row:hover .tr-club-cell{background:linear-gradient(115deg,#304843fc,#263d42fc)!important;border-color:#c7d5bb5c!important}
     .tr-directory .tr-club-cell{background:linear-gradient(115deg,#2a3e3dfa,#22363dfc)!important}
     .tr-directory .tr-join-cell{background:#22363c!important;border-color:#b6c3a92d!important}.tr-directory .join-open-btn{background:#b7d8c8!important;color:#18352c!important}.tr-directory .join-open-btn:hover{background:#d2e6d4!important}
