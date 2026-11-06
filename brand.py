@@ -128,7 +128,7 @@ def render_site_theme() -> str:
     }
     /* Clear emerald surfaces, retaining the directory's established geometry. */
     :root{--tr-bg:#0e1919;--tr-panel:#172a29;--tr-text:#eef8f5;--tr-muted:#a3bcb5;--tr-line:rgba(126,183,164,.20);--tr-accent:#66d8b5}
-    body{background-image:radial-gradient(ellipse at 18% -10%,#245b493d,transparent 52%),radial-gradient(ellipse at 100% 55%,#16444226,transparent 55%)!important;background-color:var(--tr-bg)!important;background-size:100% 100%!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+    body{background-color:var(--tr-bg)!important;background-size:660px 480px!important;background-repeat:repeat!important;background-attachment:fixed!important}
     .glass,.glass-bar{background:linear-gradient(125deg,#1c302efc,#142624fc)!important;border-color:#83b4a62d!important;box-shadow:inset 0 1px 0 #defff408,0 5px 18px #00000018!important;backdrop-filter:none!important}
     .tr-site-header{border-bottom-color:#79bea52b}.tr-site-header .tr-status-pill{background:#173c32!important;border-color:#55c59f50!important;color:#96e8ce!important}
     .tr-directory .tr-filter-panel{background:linear-gradient(125deg,#203c35,#172d2b)!important;border-color:#68b99c55!important;box-shadow:inset 0 1px #ddfff00b,0 8px 26px #0002!important}
