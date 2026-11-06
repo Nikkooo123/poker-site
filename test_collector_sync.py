@@ -16,6 +16,18 @@ def snapshot():
 
 
 class CollectorSyncTests(unittest.TestCase):
+    def test_ofc_uses_verified_point_stake_and_existing_blind_filter_value(self):
+        from views import _parse_big_blind
+        doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
+        doc['tables'][0].update(game='OFC',blinds='10',players='1/3',buyin='',buyin_unavailable_verified=True,tags=[])
+        row=sync.validate_snapshot(doc)['tables'][0]
+        self.assertEqual((row['game'],row['blinds'],_parse_big_blind(row['blinds'])),('OFC','10',10.0))
+        for invalid in ('0','-1','10/20','NaN'):
+            doc['tables'][0]['blinds']=invalid
+            with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+        doc['tables'][0].update(blinds='10',players='0/3')
+        self.assertEqual(sync.validate_snapshot(doc)['tables'],[])
+
     def test_pokerbros_unknown_buyin_requires_explicit_verified_evidence(self):
         doc=snapshot()|{'schema_version':3,'network':'pokerbros'}
         doc['tables'][0]['buyin']=''

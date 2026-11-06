@@ -533,14 +533,14 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
                 </div>
             </div>
 
-            <div style="
+            <div class="tr-table-metrics" style="
                 display:flex;
                 flex-direction:column;
                 justify-content:center;
                 align-items:flex-end;
                 padding:5px 12px 5px 0;
                 box-sizing:border-box;">
-                {f'<div style="font:700 10px Arial;color:#f0f0f0;opacity:.9;">Min. buy-in</div><div style="font:700 16px Arial;color:#fff;line-height:1.05;">{buyin}</div>' if buyin else ''}
+                {f'<div class="tr-buyin"><div style="font:700 10px Arial;color:#f0f0f0;opacity:.9;">Min. buy-in</div><div style="font:700 16px Arial;color:#fff;line-height:1.05;">{buyin}</div></div>' if buyin else ''}
                 {_render_tags(tags_raw)}
             </div>
         </div>

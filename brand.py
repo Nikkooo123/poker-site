@@ -114,6 +114,16 @@ def render_site_theme() -> str:
     .tr-site-footer{border-top-color:#c7b58826}.tr-site-footer a:hover{color:#e3ddbf}
     .tr-directory .tr-access-notice{margin-left:36px!important;width:calc(100% - 36px)!important;box-sizing:border-box}@media(max-width:1120px){.tr-directory .tr-access-notice{margin-left:0!important;width:100%!important}}
     @media(min-width:1121px){.tr-directory #sort-players{padding-left:56px!important}.tr-directory #table-count{margin-left:56px}}
+    @media(max-width:680px){
+      .tr-directory .tr-game-cell{grid-template-columns:28px 60px minmax(0,1fr) max-content!important;grid-template-rows:auto auto!important;row-gap:10px!important;padding-right:12px!important}
+      .tr-directory .tr-game-cell>.tr-table-identity{grid-column:3/5!important;grid-row:1!important;display:flex!important;flex-direction:column!important;gap:7px!important;padding-right:24px!important}
+      .tr-directory .tr-game-cell .tr-network-label{position:static!important;order:2;justify-content:center!important;align-self:center;font-size:11px!important;opacity:.85!important;line-height:1.2!important}
+      .tr-directory .tr-game-cell .tr-table-copy{order:1;align-self:stretch}
+      .tr-directory .tr-currency-line{display:inline-flex!important;vertical-align:middle;margin:0 0 0 7px!important;flex-wrap:wrap}
+      .tr-directory .tr-game-cell>.tr-table-metrics{display:contents!important}
+      .tr-directory .tr-game-cell .tr-buyin{grid-column:4;grid-row:2;text-align:right;align-self:end;padding:0 0 12px 8px;white-space:nowrap}
+      .tr-directory .tr-game-cell .tr-feature-tags{grid-column:2/4;grid-row:2;justify-content:flex-start!important;align-self:end;flex-wrap:wrap!important;max-width:100%!important;white-space:normal!important;margin:0!important;padding:0 0 12px 8px;box-sizing:border-box}
+    }
     </style>"""
 
 

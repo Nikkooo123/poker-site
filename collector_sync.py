@@ -62,7 +62,7 @@ def validate_snapshot(document, now=None):
             raise ValueError('Invalid table observation.')
         name=text(row.get('table_name'))
         game=row.get('game')
-        if game not in ('NLH','PLO4','PLO5','PLO6'):
+        if game not in ('NLH','PLO4','PLO5','PLO6','OFC'):
             raise ValueError('Unrecognized game format.')
         players=text(row.get('players'),8)
         match=re.fullmatch(r'(\d{1,2})/(\d{1,2})',players)
@@ -70,8 +70,12 @@ def validate_snapshot(document, now=None):
             raise ValueError('Unrecognized player count.')
         blinds=text(row.get('blinds'),80)
         blinds_pattern=r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:/Str)?(?:\(\d+(?:\.\d+)?\))?' if network=='pokerbros' else r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:\(\d+(?:\.\d+)?\))?'
+        if game=='OFC':
+            blinds_pattern=r'\d+(?:\.\d+)?'
         if not re.fullmatch(blinds_pattern,blinds):
             raise ValueError('Unrecognized blinds.')
+        if game=='OFC' and Decimal(blinds)<=0:
+            raise ValueError('OFC needs a positive verified stake per point.')
         if network=='pokerbros' and row.get('buyin')=='' and row.get('buyin_unavailable_verified') is True:
             buyin=''
         else:
@@ -97,8 +101,12 @@ def validate_snapshot(document, now=None):
         confirmed=row.get('confirmed_tags',[])
         if not isinstance(confirmed,list) or len(confirmed)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in confirmed):
             raise ValueError('Unrecognized confirmed table feature.')
-        small,big,*_=blinds.split('(')[0].split('/')
-        if int(match[1])>0 and Decimal(small)>=Decimal('0.25') and Decimal(big)>=Decimal('0.50'):
+        if game=='OFC':
+            eligible=True  # A point stake is not a small/big blind pair.
+        else:
+            small,big,*_=blinds.split('(')[0].split('/')
+            eligible=Decimal(small)>=Decimal('0.25') and Decimal(big)>=Decimal('0.50')
+        if int(match[1])>0 and eligible:
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
                                buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),
