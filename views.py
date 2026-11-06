@@ -1385,14 +1385,9 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                 transform: translateY(-2px);
             }}
 
-            .game-filter-btn::after {{
-                content:"";position:absolute;left:20px;right:20px;bottom:5px;height:2px;
-                border-radius:2px;background:var(--game-accent);opacity:.36;
-                transition:opacity .16s ease,transform .16s ease;transform:scaleX(.65);
-            }}
-            .game-filter-btn[aria-pressed="true"]::after {{opacity:1;transform:scaleX(1)}}
+            .tr-format-filters .game-filter-btn:nth-child(3n) {{left:4px}}
             .game-filter-btn:focus-visible {{outline:2px solid var(--game-accent);outline-offset:3px}}
-            @media (prefers-reduced-motion:reduce) {{.game-filter-btn,.game-filter-btn::after {{transition:none}}}}
+            @media (prefers-reduced-motion:reduce) {{.game-filter-btn {{transition:none}}}}
             .game-filter-btn:hover,
             .club-filter-btn:hover {{
                 transform: translateY(-1px);
@@ -1524,17 +1519,18 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                         align-items:center;
                         box-sizing:border-box;">
 
-                        <div style="
+                        <div class="tr-format-filters" style="
                             width:250px;
+                            padding-right:4px;
                             display:grid;
                             grid-template-columns:repeat(3, 74px);
                             gap:8px 8px;
                             justify-content:start;">
                             {game_button("NLH")}
                             {game_button("PLO4")}
+                            {game_button("OFC")}
                             {game_button("PLO5")}
                             {game_button("PLO6")}
-                            {game_button("OFC")}
                             {game_button("DB")}
                         </div>
 
