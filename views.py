@@ -398,7 +398,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     usd_label = escape(usd["label"] if usd else "USD rate unavailable")
 
     game_colors = {
-        "NLH": "#57b84f",
+        "NLH": "#23734d",
         "PLO4": "#56739a",
         "PLO5": "#58c1d2",
         "PLO6": "#7b65c4",
@@ -1861,7 +1861,7 @@ def render_admin_card(table: dict, csrf="") -> str:
         players_badge = f"{players_raw}/{seats_raw}"
 
     game_colors = {
-        "NLH": "#57b84f",
+        "NLH": "#23734d",
         "PLO4": "#56739a",
         "PLO5": "#58c1d2",
         "PLO6": "#7b65c4",
@@ -2044,7 +2044,7 @@ def render_admin_page(tables, manager=False, workspace="tables", active_clubs=No
     staff_nav = (f'<a class="tr-button" href="/manager">Manager workspace</a><a class="tr-button" href="/manager/team">Staff access</a><a class="tr-button" href="/manager/membership-test">Test Host / Player</a><a class="tr-button" href="/admin/club-requests">Club requests{request_badge}</a><a class="tr-button" href="/admin/club-subscriptions">Club subscriptions</a>' if manager else '')
     if manager:
         staff_nav += '<a class="tr-button" href="/manager/collector">Collector sync</a>'
-    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/staff/chat">Live chat inbox<span class="tr-support-count" data-support-count hidden></span></a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>' 
+    staff_nav += '<a class="tr-button" href="/admin">Tables</a><a class="tr-button" href="/staff/chat">Live chat inbox<span class="tr-support-count" data-support-count hidden></span></a><a class="tr-button" href="/">View website</a><a class="tr-button" href="/logout">Sign out</a>'
 
     return f"""
     <html>
