@@ -402,6 +402,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
         "PLO4": "#56739a",
         "PLO5": "#58c1d2",
         "PLO6": "#7b65c4",
+        "OFC": "#c85454",
     }
     game_color = game_colors.get(game, "#58c1d2")
 
