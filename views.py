@@ -471,7 +471,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
                 {escape(game)}
             </div>
 
-            <div style="
+            <div class="tr-player-count" style="
                 display:flex;
                 align-items:center;
                 justify-content:center;">
