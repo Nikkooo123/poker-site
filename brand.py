@@ -115,9 +115,9 @@ def render_site_theme() -> str:
     .tr-directory .tr-access-notice{margin-left:36px!important;width:calc(100% - 36px)!important;box-sizing:border-box}@media(max-width:1120px){.tr-directory .tr-access-notice{margin-left:0!important;width:100%!important}}
     @media(min-width:1121px){.tr-directory #sort-players{padding-left:56px!important}.tr-directory #table-count{margin-left:56px}}
     @media(max-width:680px){
-      .tr-directory .tr-game-cell{position:relative;min-height:180px!important;grid-template-columns:28px 60px minmax(0,1fr) max-content!important;grid-template-rows:minmax(130px,auto) auto!important;row-gap:10px!important;padding-right:12px!important}
-      .tr-directory .tr-game-cell>.tr-table-identity{position:static!important;grid-column:3/5!important;grid-row:1!important;display:flex!important;flex-direction:column!important;gap:7px!important;padding:32px 6px 6px 2px!important;align-self:center}
-      .tr-directory .tr-game-cell>.tr-player-count{grid-column:2;grid-row:1;padding-top:26px;align-self:center}
+      .tr-directory .tr-game-cell{position:relative;min-height:128px!important;grid-template-columns:28px 60px minmax(0,1fr) max-content!important;grid-template-rows:minmax(80px,auto) auto!important;row-gap:6px!important;padding-right:12px!important}
+      .tr-directory .tr-game-cell>.tr-table-identity{position:static!important;grid-column:3/5!important;grid-row:1!important;display:flex!important;flex-direction:column!important;gap:7px!important;padding:24px 6px 4px 2px!important;align-self:center}
+      .tr-directory .tr-game-cell>.tr-player-count{grid-column:2;grid-row:1;padding-top:20px;align-self:center}
       .tr-directory .tr-game-cell .tr-network-label{position:absolute!important;inset:auto 36px auto auto!important;top:12px!important;width:auto;justify-content:flex-end!important;align-self:auto;font-size:11px!important;opacity:.85!important;line-height:1.2!important;padding:0!important}
       .tr-directory .tr-game-cell .tr-table-copy{order:1;align-self:stretch}
       .tr-directory .tr-currency-line{display:inline-flex!important;vertical-align:middle;margin:0 0 0 7px!important;flex-wrap:wrap}

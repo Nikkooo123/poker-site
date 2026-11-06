@@ -52,7 +52,7 @@ def validate_snapshot(document, now=None):
     if not re.fullmatch(r'[0-9]{1,32}',code):
         raise ValueError('A numeric club ID is required.')
     rows=document.get('tables')
-    if not isinstance(rows,list) or len(rows)>50:
+    if not isinstance(rows,list) or len(rows)>100:
         raise ValueError('Invalid table list.')
     if not rows and document.get('empty_club_verified') is not True:
         raise ValueError('An empty result needs explicit verified empty-club evidence.')
@@ -101,12 +101,11 @@ def validate_snapshot(document, now=None):
         confirmed=row.get('confirmed_tags',[])
         if not isinstance(confirmed,list) or len(confirmed)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in confirmed):
             raise ValueError('Unrecognized confirmed table feature.')
-        if game=='OFC':
-            eligible=True  # A point stake is not a small/big blind pair.
-        else:
-            small,big,*_=blinds.split('(')[0].split('/')
-            eligible=Decimal(small)>=Decimal('0.25') and Decimal(big)>=Decimal('0.50')
-        if int(match[1])>0 and eligible:
+        # Include every positive cash stake, including microstakes and OFC points.
+        amounts=blinds.split('(')[0].split('/')[:(1 if game=='OFC' else 2)]
+        if any(Decimal(value)<=0 for value in amounts):
+            raise ValueError('Table stakes must be positive.')
+        if int(match[1])>0:
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
                                buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),
@@ -173,7 +172,7 @@ def apply_snapshot(document):
                 raise ValueError('Club ID and network must match exactly one active placement.')
             club=clubs[0]; selected=club['id']
             # This bridge is manager-only. Its verified import cap is enforced
-            # by validate_snapshot (50); normal host-plan limits are unchanged.
+            # by validate_snapshot (100); normal host-plan limits are unchanged.
             currency=normalize_currency(club.get('currency'))
             cur.execute('SELECT observed_at,snapshot FROM tableradar_collector_state WHERE club_subscription_id=%s',(selected,))
             previous=cur.fetchone()

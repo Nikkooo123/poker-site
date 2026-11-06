@@ -85,11 +85,11 @@ class CollectorSyncTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'network'):sync.apply_snapshot(doc)
         db.commit.assert_not_called()
 
-    def test_manager_import_cap_is_50_and_host_plan_stays_20(self):
+    def test_manager_import_cap_is_100_and_host_plan_stays_20(self):
         from membership_plans import table_limit
         self.assertEqual(table_limit({'host_tier':'pro'}),20)
-        doc=snapshot();doc['tables']=doc['tables']*50
-        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),50)
+        doc=snapshot();doc['tables']=doc['tables']*100
+        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),100)
         doc['tables'].append(doc['tables'][0])
         with self.assertRaises(ValueError):sync.validate_snapshot(doc)
 
@@ -114,8 +114,8 @@ class CollectorSyncTests(unittest.TestCase):
         doc['tables'][0]['required_features']=['unknown']
         with self.assertRaises(ValueError):sync.validate_snapshot(doc)
 
-    def test_minimum_blinds_are_inclusive_and_ante_does_not_qualify(self):
-        for blinds,expected in [('0.25/0.50',1),('0.25/0.5(10)',1),('0.50/1',1),('0.5/1(2)',1),('1/2',1),('0.24/0.50(10)',0),('0.25/0.49(10)',0),('0.10/0.20(10)',0)]:
+    def test_all_positive_microstakes_are_included(self):
+        for blinds,expected in [('0.25/0.50',1),('0.25/0.5(10)',1),('0.50/1',1),('0.5/1(2)',1),('1/2',1),('0.24/0.50(10)',1),('0.25/0.49(10)',1),('0.10/0.20(10)',1),('0.01/0.02',1)]:
             doc=snapshot();doc['tables'][0]['blinds']=blinds
             self.assertEqual(len(sync.validate_snapshot(doc)['tables']),expected,blinds)
 
