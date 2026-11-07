@@ -7,7 +7,7 @@ from starlette.concurrency import run_in_threadpool
 from auth.auth_storage import update_user
 from favorite_clubs import normalize_favorite_clubs
 
-FIELDS = {'activeGames','activeNetworks','search','minBlind','maxBlind','minPlayers','maxPlayers','usdMode','onlyFav','sortPlayersDir','sortBlindsDir','sortPriority','favoriteClubs','onlyFavoriteClubs'}
+FIELDS = {'tableSizes','activeGames','activeNetworks','search','minBlind','maxBlind','minPlayers','maxPlayers','usdMode','onlyFav','sortPlayersDir','sortBlindsDir','sortPriority','favoriteClubs','onlyFavoriteClubs'}
 BLINDS = {'','0.5','1','2','4','5','6','8','10','15','20','25','30','50','100','200'}
 
 
@@ -15,10 +15,12 @@ def normalize_filters(value):
     if not isinstance(value,dict) or set(value)-FIELDS:
         raise ValueError('Invalid filters.')
     result = {}
-    for key,allowed in [('activeGames',{'NLH','PLO4','PLO5','PLO6','OFC','DB'}),('activeNetworks',{'clubgg','pokerbros','pppoker','xpoker'}),('sortPriority',{'players','blinds'})]:
-        data=value.get(key,[] if key!='sortPriority' else ['players','blinds'])
+    for key,allowed in [('tableSizes',{'heads_up','multiway'}),('activeGames',{'NLH','PLO4','PLO5','PLO6','OFC','DB'}),('activeNetworks',{'clubgg','pokerbros','pppoker','xpoker'}),('sortPriority',{'players','blinds'})]:
+        data=value.get(key,['heads_up','multiway'] if key=='tableSizes' else [] if key!='sortPriority' else ['players','blinds'])
         if not isinstance(data,list) or len(data)>len(allowed) or any(not isinstance(x,str) or x not in allowed for x in data) or len(set(data))!=len(data):
             raise ValueError('Invalid filters.')
+        if key=='tableSizes' and not data:
+            raise ValueError('Select at least one table capacity.')
         if key=='sortPriority' and set(data)!=allowed:
             raise ValueError('Invalid sort priority.')
         result[key]=data
@@ -77,7 +79,7 @@ def install_preference_routes(app,get_current_user):
             values=normalize_filters(supplied_filters)
             # Older cached clients must not erase the new persistent club bookmarks.
             previous=saved_filters(user) or {}
-            for field in ('favoriteClubs','onlyFavoriteClubs','minPlayers','maxPlayers','usdMode'):
+            for field in ('favoriteClubs','onlyFavoriteClubs','minPlayers','maxPlayers','usdMode','tableSizes'):
                 if field not in supplied_filters and field in previous:
                     values[field]=previous[field]
         except (ValueError,TypeError):
