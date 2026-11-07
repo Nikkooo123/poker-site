@@ -817,7 +817,7 @@ def render_public_script():
     function getTableSizes() {
         try {
             const saved = JSON.parse(filterStorage.getItem(STORAGE_KEYS.tableSizes) || "null");
-            if (Array.isArray(saved) && saved.length && saved.every(value => ["heads_up","multiway"].includes(value))) return saved;
+            if (Array.isArray(saved) && saved.every(value => ["heads_up","multiway"].includes(value))) return saved;
         } catch (e) {}
         return ["heads_up","multiway"];
     }
@@ -1004,7 +1004,7 @@ def render_public_script():
             if (activeNetworks.length && !activeNetworks.includes(network)) visible = false;
             const seatsMatch = String(row.dataset.players || "").match(/\\/\\s*(\\d+)\\s*$/);
             const capacity = seatsMatch ? Number(seatsMatch[1]) : 0;
-            if (tableSizes.length < 2 && !tableSizes.includes(capacity === 2 ? "heads_up" : capacity > 2 ? "multiway" : "unknown")) visible = false;
+            if (tableSizes.length === 1 && !tableSizes.includes(capacity === 2 ? "heads_up" : capacity > 2 ? "multiway" : "unknown")) visible = false;
             if(minPlayers && occupied<Number(minPlayers))visible=false;
             if(maxPlayers && occupied>Number(maxPlayers))visible=false;
             if(usdMode && !row.dataset.usdBlind){if(visible)unknownRates++;visible=false;}
@@ -1040,7 +1040,7 @@ def render_public_script():
             if(hint)hint.textContent=myClubs?"Your clubs stay saved when tables close. Check your filters, or use Manage favorite clubs to add clubs.":"Try another club, game or blind range, or clear the filters above.";
         }
         const reset = $("#clear-filters");
-        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || minPlayers || maxPlayers || tableSizes.length < 2 || usdMode || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
+        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || minPlayers || maxPlayers || tableSizes.length === 1 || usdMode || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
         for (const [id,label,dir] of [["sort-players","Players",sortPlayersDir],["sort-blinds","Blinds",sortBlindsDir]]) {
             const button=$("#"+id);
             if(button){button.dataset.sort=dir;button.setAttribute("aria-label",label+" sort: "+(dir==="asc"?"ascending":dir==="desc"?"descending":"not sorted")+". Activate to change direction.");}
@@ -1207,7 +1207,7 @@ def render_public_script():
     $$(".table-size-btn").forEach(button => button.addEventListener("click", function() {
         const selected = getTableSizes();
         const value = this.dataset.tableSize;
-        const next = selected.length === 2 ? [value] : selected.includes(value) ? selected : ["heads_up","multiway"];
+        const next = selected.length === 2 ? [value] : selected.includes(value) ? [] : [...selected, value];
         filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify(next));
         visibleCount = 15;
         applyAll();

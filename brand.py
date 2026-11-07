@@ -151,6 +151,11 @@ def render_site_theme() -> str:
     .tr-directory input:not([type=checkbox]),.tr-directory select{background:#102522!important;border-color:#74a9963d!important;color:#edf7f1!important}.tr-directory input::placeholder{color:#99b5aa!important}
     .tr-directory .tr-sort-button,.tr-directory .tr-filter-summary{color:#a9c7ba}.tr-directory .tr-sort-button:hover{color:#88e9c6}
     @media(max-width:1120px){.tr-directory .table-row{background:#10231ff0!important;border-color:#6caf953d!important;box-shadow:0 5px 18px #0002}}
+    @media(min-width:1121px){
+      .tr-directory .tr-filter-panel{row-gap:8px!important}
+      .tr-directory .tr-filter-panel>.tr-range-filters{grid-column:3;grid-row:1/3;gap:6px 12px!important}
+      .tr-directory .tr-filter-panel>.tr-usd-controls{grid-column:1/3!important;grid-row:2;align-self:end;gap:6px 12px!important;margin:0!important}
+    }
     @media(prefers-reduced-motion:reduce){.tr-directory .game-filter-btn,.tr-directory .club-filter-btn{transition:none!important}}
     </style>"""
 
