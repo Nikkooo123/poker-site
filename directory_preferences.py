@@ -19,8 +19,6 @@ def normalize_filters(value):
         data=value.get(key,['heads_up','multiway'] if key=='tableSizes' else [] if key!='sortPriority' else ['players','blinds'])
         if not isinstance(data,list) or len(data)>len(allowed) or any(not isinstance(x,str) or x not in allowed for x in data) or len(set(data))!=len(data):
             raise ValueError('Invalid filters.')
-        if key=='tableSizes' and not data:
-            raise ValueError('Select at least one table capacity.')
         if key=='sortPriority' and set(data)!=allowed:
             raise ValueError('Invalid sort priority.')
         result[key]=data
