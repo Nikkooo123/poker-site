@@ -692,6 +692,7 @@ def render_public_script():
         favorites: userKey("favorite_tables"),
         activeGames: userKey("active_games"),
         activeNetworks: userKey("active_networks"),
+        tableSizes: userKey("table_sizes"),
         search: userKey("club_search"),
         minBlind: userKey("blind_min_value"),
         maxBlind: userKey("blind_max_value"),
@@ -710,7 +711,7 @@ def render_public_script():
     let serverFilters = null;
     try { serverFilters = JSON.parse(document.body.dataset.filters || "null"); } catch(e) {}
     if (serverFilters && filterStorage.getItem(STORAGE_KEYS.pending) !== "1") {
-        for (const key of ["activeGames","activeNetworks","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key]));
+        for (const key of ["activeGames","activeNetworks","tableSizes","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key] ?? (key === "tableSizes" ? ["heads_up","multiway"] : [])));
         for (const key of ["search","minBlind","maxBlind","minPlayers","maxPlayers","sortPlayersDir","sortBlindsDir"]) filterStorage.setItem(STORAGE_KEYS[key],serverFilters[key]);
         filterStorage.setItem(STORAGE_KEYS.onlyFav,serverFilters.onlyFav ? "1" : "0");
         filterStorage.setItem(STORAGE_KEYS.usdMode,serverFilters.usdMode ? "1" : "0");
@@ -719,7 +720,7 @@ def render_public_script():
     let lastFilterPayload = "", pendingFilterPayload = null;
 
     function currentFilters() {
-        return {usdMode:!!$("#usd-mode")?.checked,minPlayers:$("#players-min")?.value || "",maxPlayers:$("#players-max")?.value || "",activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,favoriteClubs:window.trClubFavorites?.saved()||[],onlyFavoriteClubs:window.trClubFavorites?.only()||false,sortPlayersDir,sortBlindsDir,sortPriority};
+        return {tableSizes:getTableSizes(),usdMode:!!$("#usd-mode")?.checked,minPlayers:$("#players-min")?.value || "",maxPlayers:$("#players-max")?.value || "",activeGames:getActiveGames(),activeNetworks:getActiveNetworks(),search:$("#club-search")?.value || "",minBlind:$("#blinds-min")?.value || "",maxBlind:$("#blinds-max")?.value || "",onlyFav:showOnlyFavorites,favoriteClubs:window.trClubFavorites?.saved()||[],onlyFavoriteClubs:window.trClubFavorites?.only()||false,sortPlayersDir,sortBlindsDir,sortPriority};
     }
 
     async function flushFilterSave() {
@@ -811,6 +812,25 @@ def render_public_script():
 
     function setActiveNetworks(arr) {
         filterStorage.setItem(STORAGE_KEYS.activeNetworks, JSON.stringify(arr));
+    }
+
+    function getTableSizes() {
+        try {
+            const saved = JSON.parse(filterStorage.getItem(STORAGE_KEYS.tableSizes) || "null");
+            if (Array.isArray(saved) && saved.length && saved.every(value => ["heads_up","multiway"].includes(value))) return saved;
+        } catch (e) {}
+        return ["heads_up","multiway"];
+    }
+
+    function paintTableSizes() {
+        const selected = getTableSizes();
+        $$(".table-size-btn").forEach(button => {
+            const active = selected.includes(button.dataset.tableSize);
+            button.setAttribute("aria-pressed", String(active));
+            button.style.background = active ? "#246b55" : "#102b25";
+            button.style.borderColor = active ? "#65b393" : "#33534b";
+            button.style.color = active ? "#ffffff" : "#a8beb6";
+        });
     }
 
     function parsePlayersValue(text) {
@@ -961,7 +981,9 @@ def render_public_script():
         const maxBlind = parseBlindValue(maxBlindRaw);
         const activeGames = getActiveGames();
         const activeNetworks = getActiveNetworks();
+        const tableSizes = getTableSizes();
         const favorites = getFavorites();
+        paintTableSizes();
         let unknownRates=0;
         rows.forEach(row => {
             const club = row.dataset.club || "";
@@ -980,6 +1002,9 @@ def render_public_script():
             const features = (row.dataset.tags || "").toLowerCase().split(",").map(value => value.trim());
             if (activeGames.includes("DB") && !features.some(value => value === "double_board" || value === "double_board_bomb")) visible = false;
             if (activeNetworks.length && !activeNetworks.includes(network)) visible = false;
+            const seatsMatch = String(row.dataset.players || "").match(/\\/\\s*(\\d+)\\s*$/);
+            const capacity = seatsMatch ? Number(seatsMatch[1]) : 0;
+            if (tableSizes.length < 2 && !tableSizes.includes(capacity === 2 ? "heads_up" : capacity > 2 ? "multiway" : "unknown")) visible = false;
             if(minPlayers && occupied<Number(minPlayers))visible=false;
             if(maxPlayers && occupied>Number(maxPlayers))visible=false;
             if(usdMode && !row.dataset.usdBlind){if(visible)unknownRates++;visible=false;}
@@ -1015,7 +1040,7 @@ def render_public_script():
             if(hint)hint.textContent=myClubs?"Your clubs stay saved when tables close. Check your filters, or use Manage favorite clubs to add clubs.":"Try another club, game or blind range, or clear the filters above.";
         }
         const reset = $("#clear-filters");
-        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || minPlayers || maxPlayers || usdMode || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
+        if (reset) reset.disabled = !(search || minBlindRaw || maxBlindRaw || minPlayers || maxPlayers || tableSizes.length < 2 || usdMode || activeGames.length || activeNetworks.length || showOnlyFavorites || window.trClubFavorites?.only());
         for (const [id,label,dir] of [["sort-players","Players",sortPlayersDir],["sort-blinds","Blinds",sortBlindsDir]]) {
             const button=$("#"+id);
             if(button){button.dataset.sort=dir;button.setAttribute("aria-label",label+" sort: "+(dir==="asc"?"ascending":dir==="desc"?"descending":"not sorted")+". Activate to change direction.");}
@@ -1155,6 +1180,7 @@ def render_public_script():
     $("#clear-filters")?.addEventListener("click", function() {
         setActiveGames([]);
         setActiveNetworks([]);
+        filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify(["heads_up","multiway"]));
         showOnlyFavorites = false;
         window.trClubFavorites?.clearFilter();
         if($("#usd-mode"))$("#usd-mode").checked=false;
@@ -1177,6 +1203,15 @@ def render_public_script():
     $("#club-search")?.addEventListener("input", function() {
         applyAll();
     });
+
+    $$(".table-size-btn").forEach(button => button.addEventListener("click", function() {
+        const selected = getTableSizes();
+        const value = this.dataset.tableSize;
+        const next = selected.length === 2 ? [value] : selected.includes(value) ? selected : ["heads_up","multiway"];
+        filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify(next));
+        visibleCount = 15;
+        applyAll();
+    }));
 
     ["#players-min","#players-max"].forEach(id=>$(id)?.addEventListener("change",applyAll));
     $("#usd-mode")?.addEventListener("change", function() {
@@ -1554,6 +1589,10 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             </div>
                             <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Players</strong>
                                 {blinds_select("players-min", "MIN", players=True)}{blinds_select("players-max", "MAX", players=True)}
+                            </div>
+                            <div role="group" aria-label="Table capacity" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+                                <button type="button" class="table-size-btn" data-table-size="heads_up" aria-pressed="true" title="Tables with a maximum of 2 seats" style="min-height:32px;border:1px solid #65b393;border-radius:9px;background:#246b55;color:white;font:700 12px Arial;cursor:pointer">Heads Up</button>
+                                <button type="button" class="table-size-btn" data-table-size="multiway" aria-pressed="true" title="Tables with more than 2 seats" style="min-height:32px;border:1px solid #65b393;border-radius:9px;background:#246b55;color:white;font:700 12px Arial;cursor:pointer">Multiway</button>
                             </div>
                         </div>
                         <div class="tr-usd-controls" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:0;font:12px Arial">
