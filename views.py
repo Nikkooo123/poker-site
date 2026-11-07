@@ -1207,7 +1207,7 @@ def render_public_script():
     $$(".table-size-btn").forEach(button => button.addEventListener("click", function() {
         const selected = getTableSizes();
         const value = this.dataset.tableSize;
-        const next = selected.length === 2 ? [value] : selected.includes(value) ? [] : [...selected, value];
+        const next = selected.includes(value) ? selected.filter(item => item !== value) : [...selected, value];
         filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify(next));
         visibleCount = 15;
         applyAll();
