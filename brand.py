@@ -154,7 +154,7 @@ def render_site_theme() -> str:
     @media(min-width:1121px){
       .tr-directory .tr-filter-panel{row-gap:8px!important}
       .tr-directory .tr-filter-panel>.tr-range-filters{grid-column:3;grid-row:1/3;gap:6px 12px!important}
-      .tr-directory .tr-filter-panel>.tr-usd-controls{grid-column:1/3!important;grid-row:2;align-self:end;gap:6px 12px!important;margin:0!important}
+      .tr-directory .tr-filter-panel>.tr-usd-controls{grid-column:1/3!important;grid-row:2;align-self:center;gap:6px 12px!important;margin:0!important;flex-wrap:nowrap!important;white-space:nowrap;font-size:11px!important}
     }
     @media(prefers-reduced-motion:reduce){.tr-directory .game-filter-btn,.tr-directory .club-filter-btn{transition:none!important}}
     </style>"""
