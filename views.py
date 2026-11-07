@@ -1018,7 +1018,7 @@ def render_public_script():
         });
 
         const usdNote=$("#usd-mode-note");
-        if(usdNote)usdNote.textContent=usdMode ? "≈ USD using weekly market rates or a club override. Big-blind range in USD."+(unknownRates ? " "+unknownRates+(unknownRates===1 ? " table hidden: USD rate unavailable." : " tables hidden: USD rate unavailable.") : "") : "Blinds range uses the big blind. Original club currency by default.";
+        if(usdNote)usdNote.textContent=usdMode ? "≈ USD using weekly market rates or a club override." : "Blinds range uses the big blind. Original club currency by default.";
         let filtered = rows.filter(r => r.dataset.visible === "1");
         filtered = sortRows(filtered);
 
