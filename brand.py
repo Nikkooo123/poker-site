@@ -117,9 +117,9 @@ def render_site_theme() -> str:
     @media(max-width:680px){
       .tr-directory .tr-game-cell{position:relative;min-height:128px!important;grid-template-columns:28px 60px minmax(0,1fr) max-content!important;grid-template-rows:minmax(80px,auto) auto!important;row-gap:6px!important;padding-right:12px!important}
       .tr-directory .tr-game-cell>.tr-table-identity{position:static!important;grid-column:3/5!important;grid-row:1!important;display:flex!important;flex-direction:column!important;gap:7px!important;padding:24px 6px 4px 2px!important;align-self:center}
-      .tr-directory .tr-game-cell>.tr-player-count{grid-column:2;grid-row:1;padding-top:20px;align-self:center}
+      .tr-directory .tr-game-cell>.tr-player-count{grid-column:2;grid-row:1;padding-top:20px;align-self:center;transform:translateY(6px)}
       .tr-directory .tr-game-cell .tr-network-label{position:absolute!important;inset:auto 36px auto auto!important;top:12px!important;width:auto;justify-content:flex-end!important;align-self:auto;font-size:11px!important;opacity:.85!important;line-height:1.2!important;padding:0!important}
-      .tr-directory .tr-game-cell .tr-table-copy{order:1;align-self:stretch}
+      .tr-directory .tr-game-cell .tr-table-copy{order:1;align-self:stretch;transform:translateY(6px)}
       .tr-directory .tr-currency-line{display:inline-flex!important;vertical-align:middle;margin:0 0 0 7px!important;flex-wrap:wrap}
       .tr-directory .tr-game-cell>.tr-table-metrics{display:contents!important}
       .tr-directory .tr-game-cell .tr-buyin{grid-column:4;grid-row:2;text-align:right;align-self:end;padding:0 0 12px 8px;white-space:nowrap}
@@ -144,7 +144,7 @@ def render_site_theme() -> str:
     .tr-directory .tr-table-copy>div:nth-child(2){font-family:'Segoe UI',Arial,sans-serif!important;font-weight:700!important;color:#f4fffb!important;letter-spacing:-.2px}
     .tr-directory .tr-club-name{font-family:'Segoe UI',Arial,sans-serif!important;font-style:normal!important;font-weight:650!important;letter-spacing:0!important;color:#f0faf5!important}
     .tr-directory .tr-player-count>div{background:#0b1e1e70;box-shadow:inset 0 0 0 1px #ffffff08!important;font-family:'Segoe UI',Arial,sans-serif!important}
-    .tr-directory .tr-network-label{color:#9cc6b9!important;text-shadow:none!important}
+    .tr-directory .tr-network-label{text-shadow:none!important}
     .tr-directory .tr-buyin>div:first-child{color:#a4bfb5!important;font-weight:500!important}.tr-directory .tr-buyin>div:last-child{color:#e9fbf2!important;font-family:'Segoe UI',Arial,sans-serif!important}
     .tr-directory .join-open-btn{background:linear-gradient(135deg,#7ee2bd,#53bc9a)!important;border-color:#93efce66!important;color:#0b3025!important;box-shadow:inset 0 1px #effff438,0 3px 9px #0002!important}
     .tr-directory .join-open-btn:hover{background:#96ebce!important}.tr-directory .join-locked-btn{background:#203831!important;border-color:#75bca84a!important;color:#bfd8ce!important}

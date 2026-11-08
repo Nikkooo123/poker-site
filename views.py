@@ -1588,7 +1588,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                         </div>
 
                         <div class="tr-range-filters" style="display:grid;grid-template-columns:96px 96px;gap:6px 12px;align-items:start">
-                            <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Blinds</strong>
+                            <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Blinds (BB)</strong>
                                 {blinds_select("blinds-min", "MIN")}{blinds_select("blinds-max", "MAX")}
                             </div>
                             <div class="tr-range-group" style="display:grid;gap:6px"><strong style="font:700 12px Arial">Players</strong>
