@@ -16,7 +16,7 @@ def normalize_filters(value):
         raise ValueError('Invalid filters.')
     result = {}
     for key,allowed in [('tableSizes',{'heads_up','multiway'}),('activeGames',{'NLH','PLO4','PLO5','PLO6','OFC','DB'}),('activeNetworks',{'clubgg','pokerbros','pppoker','xpoker'}),('sortPriority',{'players','blinds'})]:
-        data=value.get(key,['heads_up','multiway'] if key=='tableSizes' else [] if key!='sortPriority' else ['players','blinds'])
+        data=value.get(key,[] if key!='sortPriority' else ['players','blinds'])
         if not isinstance(data,list) or len(data)>len(allowed) or any(not isinstance(x,str) or x not in allowed for x in data) or len(set(data))!=len(data):
             raise ValueError('Invalid filters.')
         if key=='sortPriority' and set(data)!=allowed:

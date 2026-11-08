@@ -711,10 +711,14 @@ def render_public_script():
     let serverFilters = null;
     try { serverFilters = JSON.parse(document.body.dataset.filters || "null"); } catch(e) {}
     if (serverFilters && filterStorage.getItem(STORAGE_KEYS.pending) !== "1") {
-        for (const key of ["activeGames","activeNetworks","tableSizes","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key] ?? (key === "tableSizes" ? ["heads_up","multiway"] : [])));
+        for (const key of ["activeGames","activeNetworks","tableSizes","sortPriority"]) filterStorage.setItem(STORAGE_KEYS[key],JSON.stringify(serverFilters[key] ?? []));
         for (const key of ["search","minBlind","maxBlind","minPlayers","maxPlayers","sortPlayersDir","sortBlindsDir"]) filterStorage.setItem(STORAGE_KEYS[key],serverFilters[key]);
         filterStorage.setItem(STORAGE_KEYS.onlyFav,serverFilters.onlyFav ? "1" : "0");
         filterStorage.setItem(STORAGE_KEYS.usdMode,serverFilters.usdMode ? "1" : "0");
+    }
+    if (filterStorage.getItem(userKey("table_sizes_default_v2")) !== "1") {
+        filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify([]));
+        filterStorage.setItem(userKey("table_sizes_default_v2"), "1");
     }
     let filtersReady = false, filterSaveTimer = null, filterSaveBusy = false;
     let lastFilterPayload = "", pendingFilterPayload = null;
@@ -819,7 +823,7 @@ def render_public_script():
             const saved = JSON.parse(filterStorage.getItem(STORAGE_KEYS.tableSizes) || "null");
             if (Array.isArray(saved) && saved.every(value => ["heads_up","multiway"].includes(value))) return saved;
         } catch (e) {}
-        return ["heads_up","multiway"];
+        return [];
     }
 
     function paintTableSizes() {
@@ -1180,7 +1184,7 @@ def render_public_script():
     $("#clear-filters")?.addEventListener("click", function() {
         setActiveGames([]);
         setActiveNetworks([]);
-        filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify(["heads_up","multiway"]));
+        filterStorage.setItem(STORAGE_KEYS.tableSizes, JSON.stringify([]));
         showOnlyFavorites = false;
         window.trClubFavorites?.clearFilter();
         if($("#usd-mode"))$("#usd-mode").checked=false;
@@ -1591,8 +1595,8 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                                 {blinds_select("players-min", "MIN", players=True)}{blinds_select("players-max", "MAX", players=True)}
                             </div>
                             <div role="group" aria-label="Table capacity" style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
-                                <button type="button" class="table-size-btn" data-table-size="heads_up" aria-pressed="true" title="Tables with a maximum of 2 seats" style="min-height:32px;border:1px solid #65b393;border-radius:9px;background:#246b55;color:white;font:700 12px Arial;cursor:pointer">Heads Up</button>
-                                <button type="button" class="table-size-btn" data-table-size="multiway" aria-pressed="true" title="Tables with more than 2 seats" style="min-height:32px;border:1px solid #65b393;border-radius:9px;background:#246b55;color:white;font:700 12px Arial;cursor:pointer">Multiway</button>
+                                <button type="button" class="table-size-btn" data-table-size="heads_up" aria-pressed="false" title="Tables with a maximum of 2 seats" style="min-height:32px;border:1px solid #33534b;border-radius:9px;background:#102b25;color:#a8beb6;font:700 12px Arial;cursor:pointer">Heads Up</button>
+                                <button type="button" class="table-size-btn" data-table-size="multiway" aria-pressed="false" title="Tables with more than 2 seats" style="min-height:32px;border:1px solid #33534b;border-radius:9px;background:#102b25;color:#a8beb6;font:700 12px Arial;cursor:pointer">Multiway</button>
                             </div>
                         </div>
                         <div class="tr-usd-controls" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:0;font:12px Arial">
