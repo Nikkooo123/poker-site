@@ -68,11 +68,11 @@ class PublicPreviewTests(unittest.TestCase):
         response=self.client.get('/host')
         self.assertEqual(response.status_code,200)
         self.assertIn('Submit club for review',response.text)
-        self.assertIn('20 active tables',response.text)
+        self.assertIn('30 active tables',response.text)
         response=self.client.post('/host/club',data=dict(csrf=csrf,owner_name='Test owner',telegram='@fixturehost',club_name='My test club',application='ClubGG',club_code='123',notes='Rules: test games. Rakeback: none.',currency='USD',listing_conditions='accepted'))
         self.assertEqual(response.status_code,303)
         self.assertEqual(self.users[0]['club_application']['club_name'],'My test club')
-        self.assertEqual(self.users[0]['club_application']['table_limit'],20)
+        self.assertEqual(self.users[0]['club_application']['table_limit'],30)
         self.assertEqual(self.client.get('/manager/club-requests/count').status_code,403)
 
     def test_hidden_direct_links_and_invoice_creation(self):

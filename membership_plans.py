@@ -2,12 +2,15 @@
 PLANS = {
     'player': dict(name='Player', price='29.00', role='player', table_limit=0),
     'host_starter': dict(name='Host Starter', price='299.00', role='host', table_limit=6, tier='starter'),
-    'host_pro': dict(name='Host Pro', price='599.00', role='host', table_limit=20, tier='pro'),
+    'host_pro': dict(name='Host Pro', price='599.00', role='host', table_limit=30, tier='pro'),
 }
 
 # Retain historical products and entitlements; remove from new sales and previews.
 # Remove the key here to make the product available again.
 HIDDEN_PLANS = frozenset({'host_starter'})
+
+HOST_LISTING_POLICY_VERSION = '2026-11-09'
+HOST_GAME_COVERAGE = 'All supported cash game formats, including heads-up, are covered at any stakes.'
 
 
 def selectable(value):

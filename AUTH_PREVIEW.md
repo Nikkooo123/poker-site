@@ -20,7 +20,7 @@ separately from paid membership.
 Host Starter is retained in `PLANS` and historical orders/entitlements but hidden
 from all offers and blocked for new checkout, orders and manager test selection.
 `HIDDEN_PLANS` controls availability. Host Pro keeps its internal `host_pro` key,
-price and 20-table coverage, but its public display name is Host. Existing Starter
+price and 30-table coverage, but its public display name is Host. Existing Starter
 owners retain their 6-table paid entitlement (public label Host).
 
 Additional checks: `python -m unittest test_public_membership_preview -v` and

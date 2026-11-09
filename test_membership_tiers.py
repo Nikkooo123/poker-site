@@ -14,13 +14,13 @@ from host_capacity import require_capacity
 
 assert PLANS['player']['price']=='29.00'
 assert PLANS['host_starter']['price']=='299.00' and PLANS['host_starter']['table_limit']==6
-assert PLANS['host_pro']['price']=='599.00' and PLANS['host_pro']['table_limit']==20
-assert host_product({})=='host_pro' and table_limit({})==20
-for tier,limit in (('starter',6),('pro',20)):
+assert PLANS['host_pro']['price']=='599.00' and PLANS['host_pro']['table_limit']==30
+assert host_product({})=='host_pro' and table_limit({})==30
+for tier,limit in (('starter',6),('pro',30)):
  text=render_host_listing_notice(tier)
  assert f'{limit} active tables per club' in text and f'more than {limit} active tables' in text
  assert 'at least one seated player' in text and 'higher blinds and more seated players' in text
- assert 'Heads-up' in text and '$0.50/$1' in text
+ assert 'including heads-up' in text and 'at any stakes' in text and '$0.50/$1' not in text
  if tier=='starter':
   assert '/pay/host_pro' in text and 'more than 6 active tables' in text
   assert 'Live Chat' not in text and 'Telegram' not in text
@@ -50,7 +50,7 @@ class Cursor:
   if 'FOR UPDATE OF c' in q:self.stage=1
   else:assert self.stage==1;self.stage=2
  def fetchone(self):return {'host_tier':self.tier} if self.stage==1 else {'count':self.count}
-for tier,limit in (('starter',6),('pro',20)):
+for tier,limit in (('starter',6),('pro',30)):
  require_capacity(Cursor(tier,limit-1),4)
  try:require_capacity(Cursor(tier,limit),4)
  except ValueError as e:assert str(limit) in str(e)
@@ -66,7 +66,7 @@ with patch.object(orders.repository,'connection',connection):
   order=orders.create('fixture@example.test',key,'BTC','bitcoin')
   assert order['price_amount']==orders.PRICES[key]
   assert order['plan']==('player' if key=='player' else 'host')
-  if key!='player':assert order['table_limit']==(6 if key=='host_starter' else 20)
+  if key!='player':assert order['table_limit']==(6 if key=='host_starter' else 30)
 app=FastAPI();fixture={'email':'fixture@example.test'}
 accounts.install_account_routes(app,lambda request:fixture)
 endpoint=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/account/test-membership')
@@ -116,7 +116,7 @@ host_page=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host')
 request=SimpleNamespace(session={'account_csrf':'token'})
 with patch.object(accounts,'account_context',side_effect=lambda r,u:dict(u,_csrf='token')):
  body=host_page(request)
- assert 'Host Starter' not in body and 'Host ·' in body and 'up to 6 eligible tables' in body and '6 active tables per club' in body
+ assert 'Host Starter' not in body and 'Host ·' in body and 'up to 6 active tables' in body and '6 active tables per club' in body
  assert 'Notes for the operator *' in body and '<textarea name="notes" required' in body
  assert 'club terms, rules and rakeback' in body
 submit=next(r.endpoint for r in app.routes if getattr(r,'path','')=='/host/club')
