@@ -85,9 +85,9 @@ class CollectorSyncTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'network'):sync.apply_snapshot(doc)
         db.commit.assert_not_called()
 
-    def test_manager_import_cap_is_100_and_host_plan_stays_20(self):
+    def test_manager_import_cap_is_100_and_host_plan_cap_is_30(self):
         from membership_plans import table_limit
-        self.assertEqual(table_limit({'host_tier':'pro'}),20)
+        self.assertEqual(table_limit({'host_tier':'pro'}),30)
         doc=snapshot();doc['tables']=doc['tables']*100
         self.assertEqual(len(sync.validate_snapshot(doc)['tables']),100)
         doc['tables'].append(doc['tables'][0])

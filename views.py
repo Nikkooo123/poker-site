@@ -8,6 +8,7 @@ from usd_blinds import usd_equivalent
 from table_features import FEATURES, PRIMARY_FEATURES, render_feature_icon, feature_buttons, render_vpip_badge, extra_vpip_buttons
 from brand import BRAND_NAME, OFFICIAL_AFFILIATE_NAME, TELEGRAM_URL, render_brand_logo, normalize_affiliate_name, render_site_theme, render_site_footer
 from html import escape
+from membership_plans import PLANS
 from auth.profile_view import render_account_menu
 import re
 
@@ -2062,7 +2063,7 @@ def render_operator_clubs(clubs):
         application=escape(str(club.get('application') or 'Application not recorded'))
         expiry=escape(str(club.get('expires_at_display') or 'Not recorded'))
         code=escape(str(club.get('club_code') or ''))
-        items.append(f'<li><strong>{name}</strong><span>{application}{" · "+escape(normalize_currency(club.get("currency"),required=False)) if club.get("currency") else ""}{" · ID: "+code if code else ""}</span><small>{escape(str(club.get('host_plan') or 'Host'))} · up to {int(club.get('table_limit') or 20)} active tables · Active until {expiry}</small></li>')
+        items.append(f'<li><strong>{name}</strong><span>{application}{" · "+escape(normalize_currency(club.get("currency"),required=False)) if club.get("currency") else ""}{" · ID: "+code if code else ""}</span><small>{escape(str(club.get('host_plan') or 'Host'))} · up to {int(club.get('table_limit') or PLANS['host_pro']['table_limit'])} active tables · Active until {expiry}</small></li>')
     body='<ul>'+''.join(items)+'</ul>' if items else '<p>No active club placements. Ask the manager before adding tables.</p>'
     return f'<aside class="tr-operator-clubs" aria-label="Active clubs to monitor"><h2>Clubs to monitor <span>{len(items)}</span></h2><p>Check and add tables only for these active club placements. The manager controls activation and renewal.</p>{body}<small>Active placement does not by itself confirm payment.</small></aside>'
 
