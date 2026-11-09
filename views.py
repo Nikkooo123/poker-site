@@ -193,7 +193,7 @@ def game_button(game: str) -> str:
             border-radius:12px;
             background:#24343b;
             color:#eef2f5;
-            font:700 13px Arial;
+            font:600 13px system-ui,sans-serif;
             cursor:pointer;
             box-shadow:
                 inset 0 1px 0 rgba(255,255,255,.05),
