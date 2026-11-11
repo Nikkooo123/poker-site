@@ -39,8 +39,18 @@ def validate_snapshot(document, now=None):
     network=document.get('network') if document['schema_version']==3 else 'clubgg'
     if network not in ('clubgg','pokerbros') or (document['schema_version']<3 and document.get('network','clubgg')!='clubgg'):
         raise ValueError('An explicit supported collector network is required.')
-    required=('complete','club_identity_verified','running_tables_checked','end_of_list_verified','all_rows_verified')
+    mode=document.get('import_mode','replace')
+    if mode not in ('replace','merge') or (mode=='merge' and document['schema_version']!=3):
+        raise ValueError('Partial imports require schema 3 and import_mode=merge.')
+    required=('club_identity_verified','running_tables_checked','all_rows_verified')
     if any(document.get(key) is not True for key in required):
+        raise ValueError('Club, filter and submitted rows must be verified.')
+    if mode=='merge':
+        if document.get('complete') is not False or document.get('end_of_list_verified') is not False:
+            raise ValueError('A partial import must declare incomplete list coverage.')
+        if document.get('empty_club_verified',False) is not False:
+            raise ValueError('A partial import cannot verify an empty club.')
+    elif document.get('complete') is not True or document.get('end_of_list_verified') is not True:
         raise ValueError('Incomplete or unverified club snapshot. Existing tables were not changed.')
     observed=timestamp(document.get('observed_at'))
     now=now or datetime.now(timezone.utc)
@@ -110,7 +120,9 @@ def validate_snapshot(document, now=None):
                                buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),
                                features_verified=features_verified,union_name='-none-'))
-    return dict(network=network,club_code=code, observed_at=observed, tables=active)
+    if mode=='merge' and not active:
+        raise ValueError('A partial import requires at least one occupied table.')
+    return dict(network=network,club_code=code, observed_at=observed, tables=active, import_mode=mode)
 
 
 def identity(row):
@@ -135,7 +147,7 @@ def update_tags(existing,row):
     return ','.join(sorted(old|known|tag_set(row.get('required_features'))))
 
 
-def reconciliation(existing, incoming):
+def reconciliation(existing, incoming, *, remove_missing=True):
     available=defaultdict(deque)
     for row in sorted(existing,key=lambda r:r['id']):
         available[identity(row)].append(row)
@@ -146,7 +158,7 @@ def reconciliation(existing, incoming):
             updates.append((found.popleft()['id'],row))
         else:
             creates.append(row)
-    removed=[row['id'] for group in available.values() for row in group]
+    removed=[row['id'] for group in available.values() for row in group] if remove_missing else []
     return updates,creates,removed
 
 
@@ -184,7 +196,9 @@ def apply_snapshot(document):
             if club.get('union_name') is not None:
                 for row in snapshot['tables']:row['union_name']=club['union_name']
             existing=cur.fetchall();by_id={r['id']:r for r in existing}
-            updates,creates,removed=reconciliation(existing,snapshot['tables'])
+            updates,creates,removed=reconciliation(
+                existing,snapshot['tables'],remove_missing=snapshot['import_mode']=='replace')
+            active=len(existing)+len(creates)-len(removed)
             if removed:
                 init_archive(cur)
                 cur.execute('''WITH removed AS (
@@ -205,4 +219,4 @@ def apply_snapshot(document):
                 SET observed_at=excluded.observed_at,snapshot=excluded.snapshot''',
                 (selected,snapshot['observed_at'],Jsonb(document)))
         conn.commit()
-    return dict(applied=True,active=len(snapshot['tables']),updated=len(updates),added=len(creates),removed=len(removed))
+    return dict(applied=True,active=active,observed=len(snapshot['tables']),import_mode=snapshot['import_mode'],updated=len(updates),added=len(creates),removed=len(removed))
