@@ -946,7 +946,11 @@ def render_public_script():
 
         if (!activeSorts.length) return rows.sort((a, b) => defaultOrder.get(a) - defaultOrder.get(b));
 
+        const sortUsd = !!sortBlindsDir && !!$("#usd-mode")?.checked;
         rows.sort((a, b) => {
+            if (sortUsd && !!a.dataset.usdBlind !== !!b.dataset.usdBlind) {
+                return a.dataset.usdBlind ? -1 : 1;
+            }
             for (const key of activeSorts) {
                 let cmp = 0;
 
@@ -957,8 +961,8 @@ def render_public_script():
                 }
 
                 if (key === "blinds" && sortBlindsDir) {
-                    const ab = parseBlindValue(a.dataset.blind);
-                    const bb = parseBlindValue(b.dataset.blind);
+                    const ab = parseBlindValue(sortUsd ? a.dataset.usdBlind : a.dataset.blind);
+                    const bb = parseBlindValue(sortUsd ? b.dataset.usdBlind : b.dataset.blind);
                     cmp = sortBlindsDir === "asc" ? ab - bb : bb - ab;
                 }
 
