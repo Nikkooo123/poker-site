@@ -396,7 +396,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     big_blind = _parse_big_blind(blinds)
     usd = usd_equivalent(table.get("blinds"), table.get("currency"), table.get("usd_per_unit"))
     usd_big_blind = usd["big_blind"] if usd else ""
-    usd_label = escape(usd["label"] if usd else "USD rate unavailable")
+    usd_label = escape(usd["label"] if usd else "USD equivalent unavailable")
 
     game_colors = {
         "NLH": "#23734d",
@@ -957,8 +957,8 @@ def render_public_script():
                 }
 
                 if (key === "blinds" && sortBlindsDir) {
-                    const ab = parseBlindValue($("#usd-mode")?.checked ? a.dataset.usdBlind : a.dataset.blind);
-                    const bb = parseBlindValue($("#usd-mode")?.checked ? b.dataset.usdBlind : b.dataset.blind);
+                    const ab = parseBlindValue(a.dataset.blind);
+                    const bb = parseBlindValue(b.dataset.blind);
                     cmp = sortBlindsDir === "asc" ? ab - bb : bb - ab;
                 }
 
@@ -989,12 +989,11 @@ def render_public_script():
         const tableSizes = getTableSizes();
         const favorites = getFavorites();
         paintTableSizes();
-        let unknownRates=0;
         rows.forEach(row => {
             const club = row.dataset.club || "";
             const game = row.dataset.game || "";
             const network = row.dataset.network || "";
-            const bigBlind = parseBlindValue(usdMode ? row.dataset.usdBlind : row.dataset.blind);
+            const bigBlind = parseBlindValue(row.dataset.blind);
             row.querySelectorAll(".tr-usd-equivalent").forEach(label=>label.hidden=!usdMode);
             const occupied=parsePlayersValue(row.dataset.players);
             const tableId = Number(row.dataset.id);
@@ -1012,7 +1011,6 @@ def render_public_script():
             if (tableSizes.length === 1 && !tableSizes.includes(capacity === 2 ? "heads_up" : capacity > 2 ? "multiway" : "unknown")) visible = false;
             if(minPlayers && occupied<Number(minPlayers))visible=false;
             if(maxPlayers && occupied>Number(maxPlayers))visible=false;
-            if(usdMode && !row.dataset.usdBlind){if(visible)unknownRates++;visible=false;}
             if (minBlindRaw !== "" && bigBlind < minBlind) visible = false;
             if (maxBlindRaw !== "" && bigBlind > maxBlind) visible = false;
             if (showOnlyFavorites && !favorites.includes(tableId)) visible = false;
@@ -1023,7 +1021,7 @@ def render_public_script():
         });
 
         const usdNote=$("#usd-mode-note");
-        if(usdNote)usdNote.textContent=usdMode ? "≈ USD using weekly market rates or a club override." : "Blinds range uses the big blind. Original club currency by default.";
+        if(usdNote)usdNote.textContent=usdMode ? "USD equivalents use weekly market rates or a club override. Blinds range uses the original club currency." : "Blinds range uses the big blind in the original club currency.";
         let filtered = rows.filter(r => r.dataset.visible === "1");
         filtered = sortRows(filtered);
 
@@ -1220,7 +1218,6 @@ def render_public_script():
 
     ["#players-min","#players-max"].forEach(id=>$(id)?.addEventListener("change",applyAll));
     $("#usd-mode")?.addEventListener("change", function() {
-        if (this.checked) { sortBlindsDir = "desc"; touchPriority("blinds"); }
         applyAll();
     });
 
@@ -1603,7 +1600,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                         <div class="tr-usd-controls" style="grid-column:1/-1;display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:0;font:12px Arial">
                             <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input id="usd-mode" type="checkbox"> Show USD equivalent</label>
                             <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" style="color:#b8c8c5">Rates by ExchangeRate-API</a>
-                            <span id="usd-mode-note" style="color:#b8c8c5">Blinds range uses the big blind. Original club currency by default.</span>
+                            <span id="usd-mode-note" style="color:#b8c8c5">Blinds range uses the big blind in the original club currency.</span>
                         </div>
                     </div>
                 </div>
