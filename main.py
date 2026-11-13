@@ -49,6 +49,14 @@ app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=Tr
 install_table_cleanup_routes(app, is_manager)
 install_collector_routes(app, is_manager)
 
+@app.get('/assets/poker-background-approved.png', include_in_schema=False)
+def approved_poker_background():
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    return FileResponse(Path(__file__).with_name('poker-background-approved.png'), media_type='image/png',
+        headers={'Cache-Control':'public, max-age=31536000, immutable'})
+
+
 @app.get('/assets/poker-lounge-v3.webp', include_in_schema=False)
 def poker_lounge_illustration():
     from pathlib import Path
