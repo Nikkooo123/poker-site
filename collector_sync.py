@@ -79,7 +79,12 @@ def validate_snapshot(document, now=None):
         if not match or not 0<=int(match[1])<=int(match[2])<=10 or int(match[2])<2:
             raise ValueError('Unrecognized player count.')
         blinds=text(row.get('blinds'),80)
-        blinds_pattern=r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:/Str)?(?:\(\d+(?:\.\d+)?\))?' if network=='pokerbros' else r'\d+(?:\.\d+)?(?:/\d+(?:\.\d+)?)+(?:\(\d+(?:\.\d+)?\))?'
+        amount_pattern = r'\d+(?:\.\d+)?'
+        blinds_pattern = rf'{amount_pattern}(?:/{amount_pattern})+'
+        if network == 'pokerbros':
+            blinds_pattern += rf'(?:/Str)?(?:\({amount_pattern}(?:-{amount_pattern})?\))?'
+        else:
+            blinds_pattern += rf'(?:\({amount_pattern}\))?'
         if game=='OFC':
             blinds_pattern=r'\d+(?:\.\d+)?'
         if not re.fullmatch(blinds_pattern,blinds):
