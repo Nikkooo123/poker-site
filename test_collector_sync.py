@@ -86,13 +86,20 @@ class CollectorSyncTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'network'):sync.apply_snapshot(doc)
         db.commit.assert_not_called()
 
-    def test_manager_import_cap_is_100_and_host_plan_cap_is_30(self):
+    def test_manager_import_has_no_row_cap_and_host_plan_is_unchanged(self):
         from membership_plans import table_limit
         self.assertEqual(table_limit({'host_tier':'pro'}),30)
-        doc=snapshot();doc['tables']=doc['tables']*100
-        self.assertEqual(len(sync.validate_snapshot(doc)['tables']),100)
-        doc['tables'].append(doc['tables'][0])
+        for count in (100, 108, 1001):
+            doc=snapshot();doc['tables']=[copy.deepcopy(doc['tables'][0]) for _ in range(count)]
+            self.assertEqual(len(sync.validate_snapshot(doc)['tables']),count)
+        doc['tables']={}
         with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+
+    def test_verified_import_accepts_micro_and_high_stakes_without_thresholds(self):
+        for blinds in ('0.001/0.002', '0.05/0.10', '100000/200000'):
+            doc=snapshot()
+            doc['tables'][0]['blinds']=blinds
+            self.assertEqual(sync.validate_snapshot(doc)['tables'][0]['blinds'],blinds)
 
     def test_partial_icons_add_confirmed_marks_without_erasing_other_marks(self):
         doc=snapshot();doc['schema_version']=2

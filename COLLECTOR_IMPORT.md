@@ -26,8 +26,8 @@ Example shape (replace with actual reviewed data):
 
 Use real observation times. Never mark a partial or uncertain list complete.
 An empty list additionally requires `empty_club_verified: true`.
-Up to 50 reviewed rows are allowed per club. Only occupied tables at blinds
-of at least 0.25/0.50 remain active. Older or equal conflicting observations
+There is no table-count cap or minimum/maximum blind level for verified imports.
+Only occupied tables remain active. Older or equal conflicting observations
 cannot replace newer ones. Absent tables are archived, not silently retained.
 The existing ordinary Host table limits are unchanged.
 
