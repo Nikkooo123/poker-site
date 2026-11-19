@@ -37,7 +37,7 @@ def validate_snapshot(document, now=None):
     if not isinstance(document,dict) or type(document.get('schema_version')) is not int or document['schema_version'] not in (1,2,3):
         raise ValueError('Unsupported collector snapshot.')
     network=document.get('network') if document['schema_version']==3 else 'clubgg'
-    if network not in ('clubgg','pokerbros') or (document['schema_version']<3 and document.get('network','clubgg')!='clubgg'):
+    if network not in ('clubgg','pokerbros','xpoker','pppoker') or (document['schema_version']<3 and document.get('network','clubgg')!='clubgg'):
         raise ValueError('An explicit supported collector network is required.')
     mode=document.get('import_mode','replace')
     if mode not in ('replace','merge') or (mode=='merge' and document['schema_version']!=3):
@@ -81,7 +81,7 @@ def validate_snapshot(document, now=None):
         blinds=text(row.get('blinds'),80)
         amount_pattern = r'\d+(?:\.\d+)?'
         blinds_pattern = rf'{amount_pattern}(?:/{amount_pattern})+'
-        if network == 'pokerbros':
+        if network in ('pokerbros','xpoker'):
             blinds_pattern += rf'(?:/Str)?(?:\({amount_pattern}(?:-{amount_pattern})?\))?'
         else:
             blinds_pattern += rf'(?:\({amount_pattern}\))?'
@@ -91,7 +91,7 @@ def validate_snapshot(document, now=None):
             raise ValueError('Unrecognized blinds.')
         if game=='OFC' and Decimal(blinds)<=0:
             raise ValueError('OFC needs a positive verified stake per point.')
-        if network=='pokerbros' and row.get('buyin')=='' and row.get('buyin_unavailable_verified') is True:
+        if network in ('pokerbros','xpoker','pppoker') and row.get('buyin')=='' and row.get('buyin_unavailable_verified') is True:
             buyin=''
         else:
             buyin=text(row.get('buyin'),30)

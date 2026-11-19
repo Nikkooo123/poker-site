@@ -48,12 +48,13 @@ class CollectorSyncTests(unittest.TestCase):
 
     def test_schema_three_requires_supported_explicit_network_and_legacy_stays_clubgg(self):
         self.assertEqual(sync.validate_snapshot(snapshot())['network'],'clubgg')
-        for network in (None,'xpoker','pppoker','Poker Bros'):
+        for network in (None,'unknown','Poker Bros'):
             with self.assertRaises(ValueError):
                 sync.validate_snapshot(snapshot()|{'schema_version':3,'network':network})
         with self.assertRaises(ValueError):
             sync.validate_snapshot(snapshot()|{'network':'pokerbros'})
-        self.assertEqual(sync.validate_snapshot(snapshot()|{'schema_version':3,'network':'pokerbros'})['network'],'pokerbros')
+        for network in ('clubgg','pokerbros','xpoker','pppoker'):
+            self.assertEqual(sync.validate_snapshot(snapshot()|{'schema_version':3,'network':network})['network'],network)
 
     def test_pokerbros_preserves_visible_straddle_without_inventing_an_amount(self):
         for blinds in ('0.5/1/Str','1/2/Str(0.4)'):
@@ -205,5 +206,31 @@ class CollectorSyncTests(unittest.TestCase):
         forbidden=FastAPI();forbidden.add_middleware(SessionMiddleware,secret_key='test-only');bridge.install_routes(forbidden,lambda r:False)
         self.assertEqual(TestClient(forbidden).get('/manager/collector').status_code,403)
 
+
+
+    def test_xpoker_and_pppoker_unknown_buyin_and_verified_zero(self):
+        for network in ('xpoker','pppoker'):
+            doc=snapshot()|{'schema_version':3,'network':network}
+            doc['tables'][0].update(buyin='',buyin_unavailable_verified=True)
+            self.assertEqual(sync.validate_snapshot(doc)['tables'][0]['buyin'],'')
+            doc['tables'][0]['buyin_unavailable_verified']=False
+            with self.assertRaises(ValueError):sync.validate_snapshot(doc)
+            doc.update(tables=[],empty_club_verified=True)
+            self.assertEqual(sync.validate_snapshot(doc)['tables'],[])
+
+    def test_xpoker_and_pppoker_match_only_their_network_placement(self):
+        for network,label in (('xpoker','X-Poker'),('pppoker','PP Poker')):
+            doc=snapshot()|{'schema_version':3,'network':network}
+            db=MagicMock();db.__enter__.return_value=db;db.cursor.return_value.__enter__.return_value=db
+            db.fetchall.side_effect=[[
+                dict(id=10,club_name='Other network',application='ClubGG',currency='USD'),
+                dict(id=20,club_name='Target club',application=label,currency='GBP')],[]]
+            db.fetchone.return_value=None
+            with patch.object(sync,'init_db'),patch.object(sync,'_connect',return_value=db),patch.object(sync,'_insert_table') as insert:
+                result=sync.apply_snapshot(doc)
+            self.assertEqual(result['added'],1)
+            row=insert.call_args.args[1]
+            self.assertEqual((row['network'],row['club_subscription_id'],row['currency']),(network,20,'GBP'))
+            db.commit.assert_called_once()
 
 if __name__=='__main__':unittest.main()

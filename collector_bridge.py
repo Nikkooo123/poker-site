@@ -12,7 +12,7 @@ PAGE='''<!doctype html><html lang="en"><meta charset="utf-8"><title>Collector sy
 Only verified table data is sent to TableRadar. Screenshots and login credentials stay on your computer.</p>
 <p>Each complete club result replaces its active table list. Tables with no players or missing from the complete result are removed from the directory and archived.
 Incomplete, ambiguous or superseded results leave existing tables unchanged.</p>
-<p>ClubGG legacy results and schema 3 ClubGG / PokerBros results are supported, up to 100 tables per complete club.
+<p>ClubGG legacy results and schema 3 ClubGG / X-Poker / PPPoker / PokerBros results are supported, up to 100 tables per complete club.
 Schema 3 must identify the network explicitly. Verified JSON contains table data only.</p>
 <button id="start">Choose sync-outbox and start</button><button id="stop" disabled>Stop sync</button>
 <p id="status" role="status">Not connected. No background access has been granted.</p><pre id="log"></pre>
@@ -50,7 +50,7 @@ document.querySelector('#start').onclick=async()=>{try{
 async function poll(){if(busy||!folder)return;busy=true;const own=generation;try{
  for await(const [name,handle] of folder.entries()){
   if(own!==generation||!folder)break;
-  if(handle.kind!=='file'||!/^club-(?:(?:clubgg|pokerbros)-)?[0-9]{1,32}\\.json$/.test(name))continue;
+  if(handle.kind!=='file'||!/^club-(?:(?:clubgg|pokerbros|xpoker|pppoker)-)?[0-9]{1,32}\\.json$/.test(name))continue;
   const file=await handle.getFile();if(file.size>262144){report('Oversized result skipped: '+name);continue}
   const body=await file.text();if(applied.get(name)===body)continue;
   const failed=failures.get(name);if(failed&&failed.body===body&&Date.now()-failed.at<60000)continue;
