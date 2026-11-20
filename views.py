@@ -170,8 +170,8 @@ def input_style() -> str:
 # =========================
 
 def game_button(game: str) -> str:
-    accent = {"NLH":"#b3f4cf", "PLO4":"#bddeff", "PLO5":"#89ecf2", "PLO6":"#d4c2ff", "OFC":"#ffdb9b", "DB":"#ffb79d"}.get(game, "#b8dacf")
-    description = {"OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
+    accent = {"NLH":"#b3f4cf", "PLO4":"#bddeff", "PLO5":"#89ecf2", "PLO6":"#d4c2ff", "OFC":"#ffdb9b", "6+":"#e8c38d", "DB":"#ffb79d"}.get(game, "#b8dacf")
+    description = {"6+":"Short Deck Hold’em · 6+", "OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
     return f"""
     <button
         type="button"
@@ -394,6 +394,8 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
         players_badge = f"{players_raw}/{seats_raw}"
 
     big_blind = _parse_big_blind(blinds)
+    if game == "6+":
+        blinds = "Ante " + blinds
     usd = usd_equivalent(table.get("blinds"), table.get("currency"), table.get("usd_per_unit"))
     usd_big_blind = usd["big_blind"] if usd else ""
     usd_label = escape(usd["label"] if usd else "USD equivalent unavailable")
@@ -404,6 +406,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
         "PLO5": "#58c1d2",
         "PLO6": "#7b65c4",
         "OFC": "#c85454",
+        "6+": "#b88945",
     }
     game_color = game_colors.get(game, "#58c1d2")
 
@@ -1575,6 +1578,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             {game_button("PLO5")}
                             {game_button("PLO6")}
                             {game_button("DB")}
+                            {game_button("6+")}
                         </div>
 
                         <div style="
@@ -1887,6 +1891,8 @@ def render_admin_card(table: dict, csrf="") -> str:
     union_name = escape(union_name_raw if union_name_raw else "—")
 
     blinds = escape(_safe(table.get("blinds", "")))
+    if game == "6+":
+        blinds = "Ante " + blinds
     buyin = escape(minimum_buyin(table.get("buyin", "")))
     players_raw = _safe(table.get("players", "-")).strip()
     seats_raw = _safe(table.get("seats", "6")).strip()
