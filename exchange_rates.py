@@ -1,5 +1,6 @@
 """Weekly server-side market FX cache; never send club data to the provider."""
 import json
+from currency_codes import currency_unit
 import os
 import tempfile
 import threading
@@ -35,9 +36,9 @@ def validate(payload):
 
 def market_usd_rate(currency):
     global _snapshot, _retry_at
-    code = str(currency or '').strip().upper()
+    code,multiplier = currency_unit(currency)
     if code == 'USD':
-        return Decimal(1)
+        return multiplier
     if len(code) != 3 or not code.isalpha():
         return None
     with _lock:
@@ -64,4 +65,4 @@ def market_usd_rate(currency):
         if not _snapshot or now - _snapshot['time_last_update_unix'] > MAX_AGE:
             return None
         value = _snapshot['rates'].get(code)
-        return Decimal(1) / Decimal(str(value)) if value is not None else None
+        return multiplier / Decimal(str(value)) if value is not None else None

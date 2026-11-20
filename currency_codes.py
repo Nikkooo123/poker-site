@@ -8,6 +8,8 @@ Full third-party copyright and permission notices are embedded below.
 from html import escape
 import base64
 import json
+import re
+from decimal import Decimal
 import secrets
 import zlib
 
@@ -41,18 +43,34 @@ def _flag_for(code):
     return region if any(row[0].lower()==region and row[2]==code for row in _DATA['rows']) else ''
 
 
+def currency_unit(value):
+    """Return the currency behind a club chip and its amount, e.g. 100 RUB."""
+    code=normalize_currency(value,required=False)
+    match=re.fullmatch(r'([0-9]+(?:\.[0-9]+)?) ([A-Z]{3})',code)
+    if match:
+        amount=Decimal(match.group(1))
+        if Decimal('0') < amount <= Decimal('1000000'):
+            return match.group(2),amount
+    return code,Decimal('1')
+
+
 def currency_badge(value):
     code = normalize_currency(value, required=False)
     if not code:
         return ''
     safe = escape(code, quote=True)
-    flag = _flag_for(code)
+    base,multiplier = currency_unit(code)
+    flag = _flag_for(base)
     if flag and flag in _DATA['flags']:
-        width,height=(16,12) if code in ('USD','GBP') else (20,15)
+        width,height=(16,12) if base in ('USD','GBP') else (20,15)
         icon = '<img src="data:image/webp;base64,'+_DATA['flags'][flag]+'" width="'+str(width)+'" height="'+str(height)+'" alt="" style="display:block;border-radius:2px;object-fit:contain">'
     else:
         symbol = next((symbol for token,name,symbol in CRYPTO if token==code),'¤')
         icon = '<span aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:16px;border:1px solid #a8d8c455;border-radius:4px;color:#c7e8da;font-size:12px;line-height:1">'+symbol+'</span>'
+    if code != base:
+        label='1 chip = '+format(multiplier,'f')+' '+base
+        icon='<span style="display:inline-flex;align-items:center;gap:4px">'+icon+'<span class="tr-currency-unit" style="font-size:9px;white-space:nowrap">'+escape(label)+'</span></span>'
+        safe=escape(label,quote=True)
     return '<span class="tr-currency" role="img" tabindex="0" aria-label="Club '+safe+'" title="Club '+safe+'" style="display:block;width:max-content;max-width:100%;margin-top:4px;line-height:1">'+icon+'</span>'
 
 
