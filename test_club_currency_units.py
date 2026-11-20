@@ -21,6 +21,15 @@ class ClubCurrencyUnitTests(unittest.TestCase):
             self.assertIn('data-usd-blind="1"',card)
             self.assertIn('1 chip = 100 RUB',card)
         self.assertIn('1 chip = 100 RUB',currency_badge('100 RUB'))
+    def test_single_ofc_points_and_short_deck_antes_use_chip_value(self):
+        snap={'time_last_update_unix':time.time(),'rates':{'USD':1,'RUB':100}}
+        with patch('exchange_rates._snapshot',snap):
+            for game,stake in [('OFC','0.1'),('6+','5')]:
+                converted=usd_equivalent(stake,'100 RUB',game=game)
+                self.assertEqual(Decimal(converted['big_blind']),Decimal(stake))
+                card=render_public_card({'id':1,'game':game,'blinds':stake,'players':'1/6','network':'pppoker','currency':'100 RUB'})
+                self.assertIn('data-usd-blind="'+stake+'"',card)
+            self.assertIsNone(usd_equivalent('5','100 RUB',game='NLH'))
     def test_usd_unit_and_explicit_override_are_not_double_scaled(self):
         self.assertEqual(market_usd_rate('100 USD'),Decimal('100'))
         self.assertEqual(Decimal(usd_equivalent('0.5/1','100 RUB','2')['big_blind']),Decimal('2'))

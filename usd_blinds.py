@@ -16,7 +16,7 @@ def normalize_usd_rate(value):
     return rate.quantize(Decimal('0.00000001'), rounding=ROUND_HALF_UP)
 
 
-def usd_equivalent(blinds, currency, configured_rate=None):
+def usd_equivalent(blinds, currency, configured_rate=None, game=None):
     try:
         rate = normalize_usd_rate(configured_rate)
     except ValueError:
@@ -26,6 +26,13 @@ def usd_equivalent(blinds, currency, configured_rate=None):
         if rate is None:
             return None
     match = re.fullmatch(r'\s*([0-9]+(?:\.[0-9]+)?)\s*/\s*([0-9]+(?:\.[0-9]+)?)(?:\s*\(\s*([0-9]+(?:\.[0-9]+)?)\s*\))?\s*', str(blinds or ''))
+    if not match and str(game or '').upper() in ('OFC', '6+'):
+        single = re.fullmatch(r'\s*([0-9]+(?:\.[0-9]+)?)\s*', str(blinds or ''))
+        if single and Decimal(single.group(1)) > 0:
+            value = Decimal(single.group(1)) * rate
+            label = '<0.01' if value < Decimal('.01') else format(value.quantize(Decimal('.01'), rounding=ROUND_HALF_UP), 'f').rstrip('0').rstrip('.')
+            suffix = ' USD/point' if str(game).upper() == 'OFC' else ' USD ante'
+            return dict(big_blind=format(value, 'f'), label='≈ ' + label + suffix)
     if not match:
         return None
     values = [Decimal(x) * rate for x in match.groups() if x is not None]

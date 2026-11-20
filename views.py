@@ -396,7 +396,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     big_blind = _parse_big_blind(blinds)
     if game == "6+":
         blinds = "Ante " + blinds
-    usd = usd_equivalent(table.get("blinds"), table.get("currency"), table.get("usd_per_unit"))
+    usd = usd_equivalent(table.get("blinds"), table.get("currency"), table.get("usd_per_unit"), game=game)
     usd_big_blind = usd["big_blind"] if usd else ""
     usd_label = escape(usd["label"] if usd else "USD equivalent unavailable")
 
