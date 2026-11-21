@@ -79,7 +79,8 @@ def validate_snapshot(document, now=None):
             raise ValueError('Unrecognized game format.')
         players=text(row.get('players'),8)
         match=re.fullmatch(r'(\d{1,2})/(\d{1,2})',players)
-        if not match or not 0<=int(match[1])<=int(match[2])<=10 or int(match[2])<2:
+        pool = network == 'pppoker' and game == 'NLH' and row.get('fast_fold_pool_verified') is True and bool(re.fullmatch(r'[0-9]{1,4}',players))
+        if not pool and (not match or not 0<=int(match[1])<=int(match[2])<=10 or int(match[2])<2):
             raise ValueError('Unrecognized player count.')
         blinds=text(row.get('blinds'),80)
         amount_pattern = r'\d+(?:\.\d+)?'
@@ -123,9 +124,9 @@ def validate_snapshot(document, now=None):
         amounts=blinds.split('(')[0].split('/')[:(1 if game == 'OFC' else 2)]
         if any(Decimal(value)<=0 for value in amounts):
             raise ValueError('Table stakes must be positive.')
-        if int(match[1])>0:
+        if int(players if pool else match[1])>0:
             active.append(dict(table_name=name,game=game,players=players,blinds=blinds,
-                               buyin=buyin,tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
+                               buyin=buyin,seats=('pool' if pool else match[2]),tags=','.join(sorted(set(tags if features_verified else confirmed)|set(required_features))),
                                required_features=','.join(sorted(set(required_features))),
                                features_verified=features_verified,union_name='-none-'))
     if mode=='merge' and not active:
@@ -138,7 +139,7 @@ def identity(row):
     name=unicodedata.normalize('NFKC',str(row.get('table_name',''))).replace('\u2019',"'").strip()
     variants=tag_set(row.get('tags'))|tag_set(row.get('required_features'))
     return (name,str(row.get('game','')),'hi_lo' in variants,'fixed_limit' in variants,str(row.get('blinds','')).strip(),
-            format(Decimal(str(row.get('buyin') or '0')).normalize(),'f'),str(row.get('players','')).split('/')[-1])
+            format(Decimal(str(row.get('buyin') or '0')).normalize(),'f'),('pool' if row.get('seats') == 'pool' else str(row.get('players','')).split('/')[-1]))
 
 
 def tag_set(value):
@@ -216,7 +217,7 @@ def apply_snapshot(document):
             for table_id,row in updates:
                 cur.execute('''UPDATE poker_tables SET players=%s,seats=%s,tags=%s,union_name=%s,updated_at=NOW()
                     WHERE id=%s AND club_subscription_id=%s''',
-                    (row['players'],row['players'].split('/')[1],update_tags(by_id[table_id].get('tags'),row),row['union_name'],table_id,selected))
+                    (row['players'],row.get('seats') or row['players'].split('/')[1],update_tags(by_id[table_id].get('tags'),row),row['union_name'],table_id,selected))
             for row in creates:
                 _insert_table(cur,dict(row,club=club['club_name'],network=snapshot['network'],currency=currency,
                     club_subscription_id=selected,owner_name=club.get('owner_name') or '',
