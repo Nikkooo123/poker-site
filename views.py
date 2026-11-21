@@ -395,7 +395,7 @@ def render_public_card(table: dict, show_club=False, can_join=False) -> str:
     if "/" in players_raw:
         players_badge = players_raw
     else:
-        players_badge = f"{players_raw}/{seats_raw}"
+        players_badge = players_raw if seats_raw == "pool" else f"{players_raw}/{seats_raw}"
 
     big_blind = _parse_big_blind(blinds)
     if game == "6+":
@@ -1916,7 +1916,7 @@ def render_admin_card(table: dict, csrf="") -> str:
     if "/" in players_raw:
         players_badge = players_raw
     else:
-        players_badge = f"{players_raw}/{seats_raw}"
+        players_badge = players_raw if seats_raw == "pool" else f"{players_raw}/{seats_raw}"
 
     game_colors = {
         "NLH": "#23734d",
