@@ -70,9 +70,12 @@ def validate_snapshot(document, now=None):
     for row in rows:
         if not isinstance(row,dict):
             raise ValueError('Invalid table observation.')
+        # Short Deck is deliberately excluded from this directory.
+        if row.get('game') == '6+':
+            continue
         name=text(row.get('table_name'))
         game=row.get('game')
-        if game not in ('NLH','PLO4','PLO5','PLO6','OFC','6+'):
+        if game not in ('NLH','PLO4','PLO5','PLO6','OFC'):
             raise ValueError('Unrecognized game format.')
         players=text(row.get('players'),8)
         match=re.fullmatch(r'(\d{1,2})/(\d{1,2})',players)
@@ -85,11 +88,11 @@ def validate_snapshot(document, now=None):
             blinds_pattern += rf'(?:/Str)?(?:\({amount_pattern}(?:-{amount_pattern})?\))?'
         else:
             blinds_pattern += rf'(?:\({amount_pattern}\))?'
-        if game in ('OFC','6+'):
+        if game == 'OFC':
             blinds_pattern=r'\d+(?:\.\d+)?'
         if not re.fullmatch(blinds_pattern,blinds):
             raise ValueError('Unrecognized blinds.')
-        if game in ('OFC','6+') and Decimal(blinds)<=0:
+        if game == 'OFC' and Decimal(blinds)<=0:
             raise ValueError('A positive verified point stake or Short Deck ante is required.')
         if network in ('pokerbros','xpoker','pppoker') and row.get('buyin')=='' and row.get('buyin_unavailable_verified') is True:
             buyin=''
@@ -117,7 +120,7 @@ def validate_snapshot(document, now=None):
         if not isinstance(confirmed,list) or len(confirmed)>40 or any(not isinstance(t,str) or (t not in ICONS and not re.fullmatch(r'vpip [1-9][0-9]?%',t)) for t in confirmed):
             raise ValueError('Unrecognized confirmed table feature.')
         # Include every positive cash stake, including microstakes and OFC points.
-        amounts=blinds.split('(')[0].split('/')[:(1 if game in ('OFC','6+') else 2)]
+        amounts=blinds.split('(')[0].split('/')[:(1 if game == 'OFC' else 2)]
         if any(Decimal(value)<=0 for value in amounts):
             raise ValueError('Table stakes must be positive.')
         if int(match[1])>0:

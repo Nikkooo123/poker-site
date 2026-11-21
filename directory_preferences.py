@@ -15,8 +15,10 @@ def normalize_filters(value):
     if not isinstance(value,dict) or set(value)-FIELDS:
         raise ValueError('Invalid filters.')
     result = {}
-    for key,allowed in [('tableSizes',{'heads_up','multiway'}),('activeGames',{'NLH','PLO4','PLO5','PLO6','OFC','DB','6+'}),('activeNetworks',{'clubgg','pokerbros','pppoker','xpoker'}),('sortPriority',{'players','blinds'})]:
+    for key,allowed in [('tableSizes',{'heads_up','multiway'}),('activeGames',{'NLH','PLO4','PLO5','PLO6','OFC','DB'}),('activeNetworks',{'clubgg','pokerbros','pppoker','xpoker'}),('sortPriority',{'players','blinds'})]:
         data=value.get(key,[] if key!='sortPriority' else ['players','blinds'])
+        if key == 'activeGames' and isinstance(data,list):
+            data = [game for game in data if game != '6+']
         if not isinstance(data,list) or len(data)>len(allowed) or any(not isinstance(x,str) or x not in allowed for x in data) or len(set(data))!=len(data):
             raise ValueError('Invalid filters.')
         if key=='sortPriority' and set(data)!=allowed:

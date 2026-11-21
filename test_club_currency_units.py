@@ -24,7 +24,7 @@ class ClubCurrencyUnitTests(unittest.TestCase):
     def test_single_ofc_points_and_short_deck_antes_use_chip_value(self):
         snap={'time_last_update_unix':time.time(),'rates':{'USD':1,'RUB':100}}
         with patch('exchange_rates._snapshot',snap):
-            for game,stake in [('OFC','0.1'),('6+','5')]:
+            for game,stake in [('OFC','0.1')]:
                 converted=usd_equivalent(stake,'100 RUB',game=game)
                 self.assertEqual(Decimal(converted['big_blind']),Decimal(stake))
                 card=render_public_card({'id':1,'game':game,'blinds':stake,'players':'1/6','network':'pppoker','currency':'100 RUB'})

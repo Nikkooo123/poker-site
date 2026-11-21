@@ -170,6 +170,8 @@ def input_style() -> str:
 # =========================
 
 def game_button(game: str) -> str:
+    if game == "6+":
+        return ""
     accent = {"NLH":"#b3f4cf", "PLO4":"#bddeff", "PLO5":"#89ecf2", "PLO6":"#d4c2ff", "OFC":"#ffdb9b", "6+":"#e8c38d", "DB":"#ffb79d"}.get(game, "#b8dacf")
     description = {"6+":"Short Deck Hold’em · 6+", "OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
     return f"""
@@ -349,6 +351,8 @@ def _network_overlay_color(network: str) -> str:
     return colors.get(network, "rgba(255,255,255,.10)")
 
 def render_public_card(table: dict, show_club=False, can_join=False) -> str:
+    if _game_label(table.get("game", "NLH")) == "6+":
+        return ""
     if not show_club:
         # Whitelist public game metadata before rendering any HTML or data-* fields.
         table = {key: table.get(key, "") for key in ("id", "game", "blinds", "players", "seats", "tags", "network", "platform", "buyin", "currency", "usd_per_unit")}
@@ -1294,6 +1298,7 @@ def render_public_script():
 # =========================
 
 def render_public_page(tables, request=None, user=None, clubs=None):
+    tables = [t for t in tables if _game_label(t.get("game", "NLH")) != "6+"]
     username = None
     user_email = None
     plan = "inactive"
@@ -1578,7 +1583,7 @@ def render_public_page(tables, request=None, user=None, clubs=None):
                             {game_button("PLO5")}
                             {game_button("PLO6")}
                             {game_button("DB")}
-                            {game_button("6+")}
+                            
                         </div>
 
                         <div style="
@@ -1882,6 +1887,8 @@ def render_public_page(tables, request=None, user=None, clubs=None):
 # =========================
 
 def render_admin_card(table: dict, csrf="") -> str:
+    if _game_label(table.get("game", "NLH")) == "6+":
+        return ""
     table_id = int(table.get("id", 0))
     game = _game_label(table.get("game", "NLH"))
 
