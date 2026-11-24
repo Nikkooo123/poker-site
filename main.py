@@ -49,6 +49,14 @@ app.add_middleware(SessionMiddleware, secret_key=session_secret(), https_only=Tr
 install_table_cleanup_routes(app, is_manager)
 install_collector_routes(app, is_manager)
 
+@app.get('/assets/tableradar-radar.svg', include_in_schema=False)
+def radar_background():
+    from pathlib import Path
+    from fastapi.responses import FileResponse
+    return FileResponse(Path(__file__).with_name('tableradar-radar.svg'), media_type='image/svg+xml',
+        headers={'Cache-Control': 'public, max-age=3600'})
+
+
 @app.get('/assets/poker-background-approved-v2.png', include_in_schema=False)
 def approved_poker_background():
     from pathlib import Path
