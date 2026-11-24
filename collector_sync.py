@@ -171,6 +171,23 @@ def reconciliation(existing, incoming, *, remove_missing=True):
     return updates,creates,removed
 
 
+def completed_pass_replacement(previous, incoming):
+    """Allow only an explicit PPPoker merge-to-replace correction of the same observations."""
+    return (isinstance(previous, dict) and isinstance(incoming, dict)
+        and previous.get('schema_version') == incoming.get('schema_version') == 3
+        and previous.get('network') == incoming.get('network') == 'pppoker'
+        and previous.get('club_code') == incoming.get('club_code')
+        and previous.get('observed_at') == incoming.get('observed_at')
+        and previous.get('import_mode') == 'merge'
+        and incoming.get('import_mode') == 'replace'
+        and incoming.get('publication_policy') == 'replace_after_completed_pass'
+        and incoming.get('capture_pass_completed') is True
+        and incoming.get('complete') is True
+        and incoming.get('end_of_list_verified') is True
+        and incoming.get('tables') == previous.get('tables')
+        and bool(incoming.get('tables')))
+
+
 def apply_snapshot(document):
     snapshot=validate_snapshot(document)
     init_db()
@@ -200,7 +217,9 @@ def apply_snapshot(document):
             if previous and previous['observed_at']>=snapshot['observed_at']:
                 if previous['observed_at']==snapshot['observed_at'] and previous['snapshot']==document:
                     return dict(applied=False,reason='already applied')
-                raise ValueError('An equal or newer snapshot has already been applied.')
+                if (previous['observed_at'] != snapshot['observed_at']
+                        or not completed_pass_replacement(previous['snapshot'], document)):
+                    raise ValueError('An equal or newer snapshot has already been applied.')
             cur.execute('SELECT * FROM poker_tables WHERE club_subscription_id=%s ORDER BY id FOR UPDATE',(selected,))
             if club.get('union_name') is not None:
                 for row in snapshot['tables']:row['union_name']=club['union_name']
