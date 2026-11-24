@@ -172,7 +172,7 @@ def input_style() -> str:
 def game_button(game: str) -> str:
     if game == "6+":
         return ""
-    accent = {"NLH":"#b3f4cf", "PLO4":"#bddeff", "PLO5":"#89ecf2", "PLO6":"#d4c2ff", "OFC":"#ffdb9b", "6+":"#e8c38d", "DB":"#ffb79d"}.get(game, "#b8dacf")
+    accent = {"NLH":"#60b68a", "PLO4":"#9dbdeb", "PLO5":"#58c1d2", "PLO6":"#7b65c4", "OFC":"#efbf72", "6+":"#e8c38d", "DB":"#ffb79d"}.get(game, "#b8dacf")
     description = {"6+":"Short Deck Hold’em · 6+", "OFC":"Open-Face Chinese Poker", "DB":"Double Board · filter by table tag"}.get(game, game)
     return f"""
     <button
@@ -189,6 +189,7 @@ def game_button(game: str) -> str:
             height:36px;
             position:relative;
             --game-accent:{accent};
+            --game-selected-text:{"#fff" if game == "PLO6" else "#102027"};
             --game-edge:{accent}55;
             letter-spacing:.45px;
             transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;

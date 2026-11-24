@@ -133,8 +133,8 @@ def render_site_theme() -> str:
     .tr-site-header{border-bottom-color:#79bea52b}.tr-site-header .tr-status-pill{background:#173c32!important;border-color:#55c59f50!important;color:#96e8ce!important}
     .tr-directory .tr-filter-panel{background:linear-gradient(125deg,#1b2025,#15191d)!important;border-color:var(--tr-line)!important;box-shadow:inset 0 1px #ddfff00b,0 8px 26px #0002!important}
     .tr-directory .game-filter-btn,.tr-directory .club-filter-btn{font-family:'Segoe UI',Arial,sans-serif!important;font-weight:650!important;letter-spacing:.1px;transition:background-color .16s,border-color .16s,box-shadow .16s!important}
-    .tr-directory .game-filter-btn{background:#262b30!important;color:#eef2f5!important;border-color:var(--game-accent)!important;box-shadow:none!important}
-    .tr-directory .game-filter-btn[aria-pressed="true"]{background:var(--game-accent)!important;color:#14282e!important;border-color:var(--game-accent)!important;box-shadow:none!important}
+    .tr-directory .game-filter-btn{background:#262b30!important;color:#eef2f5!important;border-color:var(--game-accent)!important;box-shadow:none!important;font-weight:500!important}
+    .tr-directory .game-filter-btn[aria-pressed="true"]{background:var(--game-accent)!important;color:var(--game-selected-text)!important;border-color:var(--game-accent)!important;box-shadow:none!important}
     .tr-directory .game-filter-btn:focus-visible{outline:2px solid var(--game-accent);outline-offset:2px}
     .tr-directory .game-filter-btn:hover,.tr-directory .club-filter-btn:hover{filter:brightness(1.18);box-shadow:0 3px 10px #0002!important}
     .tr-directory .tr-game-cell{background:linear-gradient(110deg,#1a1f24,#15191d)!important;border-color:var(--tr-line)!important}
