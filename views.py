@@ -285,7 +285,7 @@ def blinds_select(select_id: str, label: str, players=False) -> str:
     options = []
     for v in values:
         if v == "":
-            options.append(f'<option value="">{label}</option>')
+            options.append(f'<option value="">{label.title()}</option>')
         else:
             options.append(f'<option value="{v}">{v}</option>')
 
