@@ -128,7 +128,7 @@ def render_site_theme() -> str:
     }
     /* Graphite surfaces with restrained green accents, retaining the directory's established geometry. */
     :root{--tr-bg:#090c0d;--tr-panel:#161a1e;--tr-text:#eef8f5;--tr-muted:#a3bcb5;--tr-line:rgba(171,185,194,.19);--tr-accent:#66d8b5}
-    body{background-color:var(--tr-bg)!important;background-image:url("/assets/tableradar-radar.svg?v=2")!important;background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+    body{background-color:var(--tr-bg)!important;background-image:url("/assets/tableradar-radar.svg?v=3")!important;background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
     .glass,.glass-bar{background:linear-gradient(125deg,#1b2025,#15191d)!important;border-color:var(--tr-line)!important;box-shadow:inset 0 1px 0 #defff408,0 5px 18px #00000018!important;backdrop-filter:none!important}
     .tr-site-header{border-bottom-color:#79bea52b}.tr-site-header .tr-status-pill{background:#173c32!important;border-color:#55c59f50!important;color:#96e8ce!important}
     .tr-directory .tr-filter-panel{background:linear-gradient(125deg,#1b2025,#15191d)!important;border-color:var(--tr-line)!important;box-shadow:inset 0 1px #ddfff00b,0 8px 26px #0002!important}

@@ -14,7 +14,7 @@
     <circle cx="800" cy="530" r="794" stroke-width="10" stroke-dasharray="1 18" stroke-opacity=".075"/>
     <path d="M0 530h1600M800 0v1050M0 240l1600 580M0 820l1600-580"/>
   </g>
-  <g fill="none" stroke="#659981" stroke-opacity=".23" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+  <g fill="none" stroke="#659981" stroke-opacity=".055" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
     <g transform="translate(60 735)"><circle r="9"/><path d="m6-7 3-4m2-3 3-3m0 6 4-1m-8-4v-4"/></g>
     <g transform="translate(650 390)"><circle r="13"/><path d="m8-10 4-5m2-3 4-4m-1 8 4-1m-9-6v-4"/></g>
     <g transform="translate(875 51)"><path d="M-7-4q-12-5-10-20 11 4 13 16m8 0q2-12 13-16 2 15-10 20M-7-4q7-8 14 0l2 11q0 8-9 8t-9-8z"/><ellipse cy="9" rx="5" ry="3"/></g>
